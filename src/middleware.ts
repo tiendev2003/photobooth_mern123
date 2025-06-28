@@ -13,65 +13,88 @@ interface JWTPayload {
 const publicPaths = [
   '/api/auth/login',
   '/api/auth/register',
-  '/'
+  '/',
+  '/login'
 ];
 
 // Middleware function
 export async function middleware(request: NextRequest) {
   // Check if the path is public
   const path = request.nextUrl.pathname;
-  if (!path.startsWith('/api/') || publicPaths.includes(path) || path.match(/\.(jpg|jpeg|png|gif|svg|ico|css|js)$/)) {
+  
+  // Allow public paths and static assets
+  if (publicPaths.includes(path) || path.match(/\.(jpg|jpeg|png|gif|svg|ico|css|js)$/)) {
     return NextResponse.next();
   }
-
-  try {
-    // Get the token from the Authorization header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split(' ')[1];
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    console.log('Token:', token);
-
-    // Verify the token
-    const secretKey = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-key');
-    const { payload } = await jwtVerify(token, secretKey);
-    const decodedToken = payload as JWTPayload;
-    if (!decodedToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Admin-only routes
-    if ((path.startsWith('/api/users') && request.method !== 'GET') || path.startsWith('/api/admin')) {
-      if (decodedToken.role !== 'ADMIN' && decodedToken.role !== 'KETOAN') {
-        return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+  
+  // For admin routes or protected API routes
+  if (path.startsWith('/admin/') || path.startsWith('/api/')) {
+    try {
+      // For API routes, get token from Authorization header
+      if (path.startsWith('/api/')) {
+        const authHeader = request.headers.get('authorization');
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        
+        const token = authHeader.split(' ')[1];
+        if (!token) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        
+        // Verify the token
+        const secretKey = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-key');
+        const { payload } = await jwtVerify(token, secretKey);
+        const decodedToken = payload as JWTPayload;
+        
+        // Admin-only routes
+        if ((path.startsWith('/api/users') && request.method !== 'GET') || path.startsWith('/api/admin')) {
+          if (decodedToken.role !== 'ADMIN' && decodedToken.role !== 'KETOAN') {
+            return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
+          }
+        }
+        
+        // Add the user to the request headers
+        const requestHeaders = new Headers(request.headers);
+        requestHeaders.set('x-user-id', decodedToken.id);
+        requestHeaders.set('x-user-role', decodedToken.role);
+        
+        // Continue with the request
+        return NextResponse.next({
+          request: {
+            headers: requestHeaders,
+          },
+        });
       }
+      
+      // For admin routes, redirect to login if no token in cookies or local storage
+      // Client-side AuthGuard component will handle this, so we can just let it proceed
+      return NextResponse.next();
+      
+    } catch (error) {
+      console.error('Authentication error:', error);
+      
+      // For API routes, return JSON error
+      if (path.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      
+      // For admin routes, redirect to login
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('from', request.nextUrl.pathname);
+      return NextResponse.redirect(url);
     }
-
-    // Add the user to the request headers
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-user-id', decodedToken.id);
-    requestHeaders.set('x-user-role', decodedToken.role);
-
-    // Continue with the request
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    });
-  } catch (error) {
-    console.error('Authentication error:', error);
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+  
+  // Allow all other routes
+  return NextResponse.next();
 }
 
 // Configure which paths the middleware will run on
 export const config = {
   matcher: [
-    '/api/:path*'
+    '/api/:path*',
+    '/admin/:path*'
   ],
 }

@@ -24,14 +24,14 @@ model User {
 }
 
 model Coupon {
-  id         String    @id @default(auto()) @map("_id") @db.ObjectId
-  code       String    @unique
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  code       String   @unique
   discount   Float
   expires_at DateTime
-  user_id    String?   @db.ObjectId
-  user       User?     @relation(fields: [user_id], references: [id])
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  user_id    String?  @db.ObjectId
+  user       User?    @relation(fields: [user_id], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Image {
@@ -39,8 +39,8 @@ model Image {
   filename  String   @unique
   path      String
   fileType  FileType @default(IMAGE)
-  size      Int?     // file size in bytes
-  duration  Int?     // duration in seconds (for videos)
+  size      Int? // file size in bytes
+  duration  Int? // duration in seconds (for videos)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -48,10 +48,10 @@ model Image {
 model FrameType {
   id          String          @id @default(auto()) @map("_id") @db.ObjectId
   name        String          @unique // ví dụ: "1 tấm", "1x2", "2x3", "2x2"
-  description String?         // mô tả chi tiết frame
-  columns     Int             // số cột ảnh
-  rows        Int             // số hàng ảnh
-  totalImages Int             // tổng số ảnh trong frame
+  description String? // mô tả chi tiết frame
+  columns     Int // số cột ảnh
+  rows        Int // số hàng ảnh
+  totalImages Int // tổng số ảnh trong frame
   isActive    Boolean         @default(true)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
@@ -60,17 +60,17 @@ model FrameType {
 
 model FrameTemplate {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  name        String    // tên template
+  name        String // tên template
   filename    String    @unique
-  path        String    // đường dẫn đến file template
-  preview     String?   // đường dẫn ảnh preview
+  path        String // đường dẫn đến file template
+  preview     String? // đường dẫn ảnh preview
   frameTypeId String    @db.ObjectId
   frameType   FrameType @relation(fields: [frameTypeId], references: [id], onDelete: Cascade)
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
- 
+
 enum FileType {
   IMAGE
   GIF
