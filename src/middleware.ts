@@ -13,8 +13,20 @@ interface JWTPayload {
 const publicPaths = [
   '/api/auth/login',
   '/api/auth/register',
+  '/api/frame-types',
+  '/api/frame-templates',
   '/',
-  '/login'
+  '/login',
+  '/step/step1',
+  '/step/step2',
+  '/step/step3',
+  '/step/step4',
+  '/step/step5',
+  '/step/step6',
+  '/step/step7',
+  '/step/step8',
+  '/step/step9',
+  '/step/step10'
 ];
 
 // Middleware function
@@ -23,7 +35,12 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   
   // Allow public paths and static assets
-  if (publicPaths.includes(path) || path.match(/\.(jpg|jpeg|png|gif|svg|ico|css|js)$/)) {
+  if (
+    publicPaths.includes(path) || 
+    path.match(/\.(jpg|jpeg|png|gif|svg|ico|css|js)$/) ||
+    // Check for routes with patterns like /api/frame-types/123
+    publicPaths.some(publicPath => path.startsWith(publicPath + '/'))
+  ) {
     return NextResponse.next();
   }
   

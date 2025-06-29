@@ -49,6 +49,7 @@ model FrameType {
   id          String          @id @default(auto()) @map("_id") @db.ObjectId
   name        String          @unique // ví dụ: "1 tấm", "1x2", "2x3", "2x2"
   description String? // mô tả chi tiết frame
+  image       String? // đường dẫn đến ảnh tượng trưng cho loại frame
   columns     Int // số cột ảnh
   rows        Int // số hàng ảnh
   totalImages Int // tổng số ảnh trong frame

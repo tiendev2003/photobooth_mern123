@@ -79,10 +79,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
     if (!validTypes.includes(file.type)) {
       return NextResponse.json({ 
-        error: 'Invalid file type. Only jpeg, png, and webp are allowed. Use /api/images/gif for GIFs or /api/images/video for videos.'
+        error: 'Invalid file type. Only jpeg, png, webp, and svg are allowed. Use /api/images/gif for GIFs or /api/images/video for videos.'
       }, { status: 400 });
     }
 
@@ -109,7 +109,10 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    return NextResponse.json(newImage, { status: 201 });
+    return NextResponse.json({ 
+      success: true, 
+      data: newImage 
+    }, { status: 201 });
   } catch (error) {
     console.error('Error uploading image:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

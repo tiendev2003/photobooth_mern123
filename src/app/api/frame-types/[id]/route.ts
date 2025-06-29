@@ -51,8 +51,12 @@ export async function PUT(
     const { id } = await params;
     const body: UpdateFrameTypeInput = await request.json();
 
+    // Create a clean update data object, ensuring no 'id' field is included
+    const { id: bodyId, ...cleanBody } = body as UpdateFrameTypeInput & { id?: string };
+    console.log(bodyId);
+
     // Calculate totalImages if columns or rows are updated
-    const updateData: UpdateFrameTypeInput & { totalImages?: number } = { ...body };
+    const updateData: UpdateFrameTypeInput & { totalImages?: number } = { ...cleanBody };
     if (body.columns || body.rows) {
       const currentFrameType = await prisma.frameType.findUnique({
         where: { id },

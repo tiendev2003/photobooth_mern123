@@ -1,12 +1,13 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface FrameType {
   id: string;
   name: string;
   description: string | null;
+  image?: string;
   columns: number;
   rows: number;
   totalImages: number;
@@ -19,7 +20,7 @@ export default function FrameTypesManagement() {
   const [frameTypes, setFrameTypes] = useState<FrameType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Pagination state
   const [pagination, setPagination] = useState({
     total: 0,
@@ -30,7 +31,7 @@ export default function FrameTypesManagement() {
     hasPrevPage: false
   });
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -38,43 +39,42 @@ export default function FrameTypesManagement() {
     id: '',
     name: '',
     description: '',
+    image: '',
     columns: 1,
     rows: 1,
     totalImages: 1,
     isActive: true
   });
-  
-  // Fetch frame types when component mounts or pagination changes
-  useEffect(() => {
-    if (token) {
-      fetchFrameTypes(pagination.page, pagination.limit, searchQuery);
-    }
-  }, [token, pagination.page, pagination.limit, searchQuery]);
-  
-  const fetchFrameTypes = async (page = 1, limit = 10, search = '') => {
+
+  // State for file upload
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Define fetchFrameTypes with useCallback
+  const fetchFrameTypes = useCallback(async (page = 1, limit = 10, search = '') => {
     try {
       setLoading(true);
-      
+
       // Build query string with pagination and search parameters
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString()
       });
-      
+
       if (search) {
         queryParams.append('search', search);
       }
-      
+
       const response = await fetch(`/api/frame-types?${queryParams.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch frame types');
       }
-      
+
       const data = await response.json();
       setFrameTypes(data.data);
       setPagination(data.pagination);
@@ -84,103 +84,208 @@ export default function FrameTypesManagement() {
     } finally {
       setLoading(false);
     }
-  };
-  
+  }, [token]);
+
+  // Fetch frame types when component mounts or pagination changes
+  useEffect(() => {
+    if (token) {
+      fetchFrameTypes(pagination.page, pagination.limit, searchQuery);
+    }
+  }, [token, pagination.page, pagination.limit, searchQuery, fetchFrameTypes]);
+
   // Handle page change
   const handlePageChange = (newPage: number) => {
     if (newPage > 0 && newPage <= pagination.totalPages) {
       setPagination(prev => ({ ...prev, page: newPage }));
     }
   };
-  
+
   // Handle search input
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
-  
+
   // Handle search submission
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     fetchFrameTypes(1, pagination.limit, searchQuery); // Reset to page 1 when searching
   };
-  
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
-    
+
     // Handle checkboxes
     if (type === 'checkbox') {
       const target = e.target as HTMLInputElement;
       setFormData((prev) => ({ ...prev, [name]: target.checked }));
-    } 
+    }
     // Handle number inputs
     else if (type === 'number') {
       setFormData((prev) => ({ ...prev, [name]: parseInt(value, 10) }));
-    } 
+    }
     // Handle other inputs
     else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
-  
+
   const handleCreateFrameType = () => {
     setIsEditing(false);
     setFormData({
       id: '',
       name: '',
       description: '',
+      image: '',
       columns: 1,
       rows: 1,
       totalImages: 1,
       isActive: true
     });
+    setImageFile(null);
+    setImagePreview(null);
     setIsFormOpen(true);
   };
-  
+
   const handleEditFrameType = (frameType: FrameType) => {
     setIsEditing(true);
     setFormData({
       id: frameType.id,
       name: frameType.name,
       description: frameType.description || '',
+      image: frameType.image || '',
       columns: frameType.columns,
       rows: frameType.rows,
       totalImages: frameType.totalImages,
       isActive: frameType.isActive
     });
+
+    // Set image preview if exists
+    if (frameType.image) {
+      setImagePreview(frameType.image);
+    } else {
+      setImagePreview(null);
+    }
+    setImageFile(null);
     setIsFormOpen(true);
   };
-  
+
+  // Handle image file selection
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload image and return the image path
+  const uploadImage = async (file: File): Promise<string> => {
+    try {
+      console.log('Uploading image:', file.name, 'Type:', file.type);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/images', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Upload error response:', errorData);
+        throw new Error(`Failed to upload image: ${errorData.error || response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Upload successful:', result);
+
+      // Kiểm tra đúng cấu trúc response
+      if (result.success && result.data && result.data.path) {
+        return result.data.path;
+      } else if (result.path) {
+        return result.path;
+      } else {
+        console.log('Unexpected response format:', result);
+        throw new Error('Invalid response format from server');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
+      let imagePath = formData.image;
+
+      // Upload image if a new one is selected
+      if (imageFile) {
+        try {
+          setLoading(true);
+          imagePath = await uploadImage(imageFile);
+          console.log("Image uploaded successfully:", imagePath);
+        } catch (error) {
+          console.error("Failed to upload image:", error);
+          alert("Failed to upload image. Please try again.");
+          return; // Stop form submission if image upload fails
+        } finally {
+          setLoading(false);
+        }
+      }
+
       const url = isEditing ? `/api/frame-types/${formData.id}` : '/api/frame-types';
       const method = isEditing ? 'PUT' : 'POST';
-      
+
+      // Create a copy of formData without the id field for PUT requests
+      const requestBody = isEditing ?
+        {
+          name: formData.name,
+          description: formData.description,
+          image: imagePath,
+          columns: formData.columns,
+          rows: formData.rows,
+          totalImages: formData.totalImages,
+          isActive: formData.isActive
+        } : {
+          ...formData,
+          image: imagePath
+        };
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(requestBody),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to ${isEditing ? 'update' : 'create'} frame type`);
       }
-      
+
       setIsFormOpen(false);
       fetchFrameTypes(); // Refresh frame types list
-      
+
     } catch (err) {
       console.error('Error submitting form:', err);
       setError(`Failed to ${isEditing ? 'update' : 'create'} frame type`);
     }
   };
-  
+
   const handleToggleActive = async (id: string, currentIsActive: boolean) => {
     try {
       const response = await fetch(`/api/frame-types/${id}`, {
@@ -191,24 +296,24 @@ export default function FrameTypesManagement() {
         },
         body: JSON.stringify({ isActive: !currentIsActive }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to update frame type status');
       }
-      
+
       fetchFrameTypes(); // Refresh frame types list
-      
+
     } catch (err) {
       console.error('Error toggling active status:', err);
       setError('Failed to update frame type status');
     }
   };
-  
+
   const handleDeleteFrameType = async (id: string) => {
     if (!confirm('Are you sure you want to delete this frame type? This will also delete all associated templates.')) {
       return;
     }
-    
+
     try {
       const response = await fetch(`/api/frame-types/${id}`, {
         method: 'DELETE',
@@ -216,19 +321,19 @@ export default function FrameTypesManagement() {
           Authorization: `Bearer ${token}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to delete frame type');
       }
-      
+
       fetchFrameTypes(); // Refresh frame types list
-      
+
     } catch (err) {
       console.error('Error deleting frame type:', err);
       setError('Failed to delete frame type');
     }
   };
-  
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -236,7 +341,7 @@ export default function FrameTypesManagement() {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="bg-red-50 border-l-4 border-red-400 p-4">
@@ -251,12 +356,15 @@ export default function FrameTypesManagement() {
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Frame Types Management</h1>
         <button
           onClick={handleCreateFrameType}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
         >
-          Create Frame Type
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          <span>Create Frame Type</span>
         </button>
       </div>
-      
+
       {/* Search bar */}
       <div className="mb-6">
         <form onSubmit={handleSearch} className="flex gap-2">
@@ -267,7 +375,7 @@ export default function FrameTypesManagement() {
             onChange={handleSearchChange}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
-          <button 
+          <button
             type="submit"
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
@@ -275,7 +383,7 @@ export default function FrameTypesManagement() {
           </button>
         </form>
       </div>
-      
+
       {/* Frame Type Form Modal */}
       {isFormOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
@@ -293,7 +401,7 @@ export default function FrameTypesManagement() {
                 </svg>
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
@@ -307,7 +415,7 @@ export default function FrameTypesManagement() {
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
-              
+
               <div>
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description</label>
                 <textarea
@@ -319,7 +427,61 @@ export default function FrameTypesManagement() {
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 ></textarea>
               </div>
-              
+
+              <div>
+                <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Frame Image</label>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Chấp nhận định dạng: JPG, PNG, WEBP, SVG</p>
+                <div className="mt-2 flex items-center space-x-2">
+                  <input
+                    type="file"
+                    id="image"
+                    name="image"
+                    accept="image/jpeg, image/png, image/webp, image/svg+xml"
+                    onChange={handleImageChange}
+                    className="block w-full text-sm text-gray-900 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {imageFile && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageFile(null);
+                        setImagePreview(formData.image || null);
+                      }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+
+                {/* Preview section */}
+                <div className="mt-3">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    {imageFile
+                      ? "Preview of new image:"
+                      : formData.image
+                        ? "Current image:"
+                        : "No image selected"}
+                  </p>
+
+                  {imagePreview && (
+                    <div className="border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700 max-w-xs">
+                      <img
+                        src={imagePreview.startsWith('data:') ? imagePreview : `/${imagePreview}`}
+                        alt="Frame preview"
+                        className="w-full h-auto max-h-32 object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {!imagePreview && (
+                    <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-gray-50 dark:bg-gray-700 text-center">
+                      <span className="text-gray-500 dark:text-gray-400">No image</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label htmlFor="columns" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Columns</label>
@@ -334,7 +496,7 @@ export default function FrameTypesManagement() {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                 </div>
-                
+
                 <div>
                   <label htmlFor="rows" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Rows</label>
                   <input
@@ -348,7 +510,7 @@ export default function FrameTypesManagement() {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                 </div>
-                
+
                 <div>
                   <label htmlFor="totalImages" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Total Images</label>
                   <input
@@ -363,7 +525,7 @@ export default function FrameTypesManagement() {
                   />
                 </div>
               </div>
-              
+
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -377,33 +539,49 @@ export default function FrameTypesManagement() {
                   Active
                 </label>
               </div>
-              
+
+              {/* Form submission status */}
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3">
+                  <p className="text-sm">{error}</p>
+                </div>
+              )}
+
               <div className="flex justify-end space-x-3 pt-3">
                 <button
                   type="button"
                   onClick={() => setIsFormOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  disabled={loading}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
                 >
-                  {isEditing ? 'Update' : 'Create'}
+                  {loading && (
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  <span>{isEditing ? 'Update' : 'Create'}</span>
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-      
+
       {/* Frame Types Table */}
       <div className="bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Image</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Layout</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total Images</th>
@@ -418,6 +596,32 @@ export default function FrameTypesManagement() {
                 frameTypes.map((frameType) => (
                   <tr key={frameType.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      {frameType.image ? (
+                        <img
+                          src={`${frameType.image}`}
+                          alt={frameType.name}
+                          className="w-16 h-16 object-fill rounded"
+                          onError={(e) => {
+                            // Backup handling nếu ảnh không load được
+                            console.error('Image failed to load:', frameType.image);
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.style.display = 'none';
+                            const parent = e.currentTarget.parentElement;
+                            if (parent) {
+                              const fallback = document.createElement('div');
+                              fallback.className = 'w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center';
+                              fallback.innerHTML = '<span class="text-gray-500 dark:text-gray-400 text-xs">Image Error</span>';
+                              parent.appendChild(fallback);
+                            }
+                          }}
+                        />
+                      ) : (
+                        <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                          <span className="text-gray-500 dark:text-gray-400 text-xs">No Image</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">{frameType.name}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">{frameType.description || '-'}</div>
                     </td>
@@ -428,36 +632,49 @@ export default function FrameTypesManagement() {
                       {frameType.totalImages}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        frameType.isActive
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                      }`}>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${frameType.isActive
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                        }`}>
                         {frameType.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
                       <button
                         onClick={() => handleEditFrameType(frameType)}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200"
+                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 p-1 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900"
+                        title="Edit frame type"
                       >
-                        Edit
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
                       </button>
                       <button
                         onClick={() => handleToggleActive(frameType.id, frameType.isActive)}
-                        className={`${
-                          frameType.isActive
-                            ? 'text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200'
-                            : 'text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-200'
-                        }`}
+                        className={`p-1 rounded-full ${frameType.isActive
+                          ? 'text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900'
+                          : 'text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-200 hover:bg-green-100 dark:hover:bg-green-900'
+                          }`}
+                        title={frameType.isActive ? 'Deactivate frame type' : 'Activate frame type'}
                       >
-                        {frameType.isActive ? 'Deactivate' : 'Activate'}
+                        {frameType.isActive ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        )}
                       </button>
                       <button
                         onClick={() => handleDeleteFrameType(frameType.id)}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200"
+                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900"
+                        title="Delete frame type"
                       >
-                        Delete
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
                     </td>
                   </tr>
@@ -472,7 +689,7 @@ export default function FrameTypesManagement() {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination controls */}
         {pagination.totalPages > 0 && (
           <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
@@ -483,26 +700,24 @@ export default function FrameTypesManagement() {
               <button
                 onClick={() => handlePageChange(1)}
                 disabled={!pagination.hasPrevPage}
-                className={`px-3 py-1 rounded ${
-                  pagination.hasPrevPage 
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600' 
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                }`}
+                className={`px-3 py-1 rounded ${pagination.hasPrevPage
+                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                  }`}
               >
                 &laquo; First
               </button>
               <button
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={!pagination.hasPrevPage}
-                className={`px-3 py-1 rounded ${
-                  pagination.hasPrevPage 
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600' 
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                }`}
+                className={`px-3 py-1 rounded ${pagination.hasPrevPage
+                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                  }`}
               >
                 &lsaquo; Prev
               </button>
-              
+
               {/* Page number buttons - show up to 5 pages */}
               <div className="flex space-x-1">
                 {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
@@ -517,42 +732,39 @@ export default function FrameTypesManagement() {
                       pageNum = pagination.totalPages - (4 - i);
                     }
                   }
-                  
+
                   return (
                     <button
                       key={i}
                       onClick={() => handlePageChange(pageNum)}
-                      className={`px-3 py-1 rounded ${
-                        pagination.page === pageNum
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                      }`}
+                      className={`px-3 py-1 rounded ${pagination.page === pageNum
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                        }`}
                     >
                       {pageNum}
                     </button>
                   );
                 })}
               </div>
-              
+
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={!pagination.hasNextPage}
-                className={`px-3 py-1 rounded ${
-                  pagination.hasNextPage 
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600' 
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                }`}
+                className={`px-3 py-1 rounded ${pagination.hasNextPage
+                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                  }`}
               >
                 Next &rsaquo;
               </button>
               <button
                 onClick={() => handlePageChange(pagination.totalPages)}
                 disabled={!pagination.hasNextPage}
-                className={`px-3 py-1 rounded ${
-                  pagination.hasNextPage 
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600' 
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                }`}
+                className={`px-3 py-1 rounded ${pagination.hasNextPage
+                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                  }`}
               >
                 Last &raquo;
               </button>

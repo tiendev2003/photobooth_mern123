@@ -8,9 +8,12 @@ export interface FrameType {
   id: string;
   name: string;
   description?: string;
+  image?: string;
   columns: number;
+  isHot?: boolean;
   rows: number;
-  totalImages: number;
+  isCustom?: boolean;
+  totalImages?: number;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -20,6 +23,7 @@ export interface FrameType {
 export interface CreateFrameTypeInput {
   name: string;
   description?: string;
+  image?: string;
   columns: number;
   rows: number;
   totalImages: number;
@@ -29,6 +33,7 @@ export interface CreateFrameTypeInput {
 export interface UpdateFrameTypeInput {
   name?: string;
   description?: string;
+  image?: string;
   columns?: number;
   rows?: number;
   totalImages?: number;

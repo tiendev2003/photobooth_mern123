@@ -2,90 +2,123 @@
 
 import { useAuth } from "@/lib/context/AuthContext";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function Home() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // If user is admin or ketoan, redirect to admin dashboard
-    if (user && isAdmin) {
-      router.push('/admin');
+    if (!isLoading) {
+      // If user is not logged in, redirect to login
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+
+
     }
-  }, [user, isAdmin, router]);
+  }, [user, isAdmin, isLoading, router]);
+
+  // If still loading or user not authenticated, show nothing
+  if (isLoading || !user) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  const handleNext = () => {
+    router.push("/step/step2");
+  };
 
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+    <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
+      {/* Background graphics */}
+      <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
+      <div className="absolute top-0 left-0 right-0 w-full h-full">
         <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
+          src="/anh/bg.png"
+          alt="Background"
+          layout="fill"
+          objectFit="cover"
+          className="opacity-30"
           priority
         />
-        
-        <h1 className="text-3xl font-bold mb-8 text-center">PhotoBooth Application</h1>
-        
-        <div className="flex flex-col gap-4 items-center">
-          {!user ? (
-            <Link
-              href="/login"
-              className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-blue-600 text-white gap-2 hover:bg-blue-700 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            >
-              Admin Login
-            </Link>
-          ) : (
-            <div className="text-center space-y-2">
-              <p className="text-lg">Welcome, {user.name}!</p>
-              {isAdmin ? (
-                <Link
-                  href="/admin"
-                  className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-blue-600 text-white gap-2 hover:bg-blue-700 font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-                >
-                  Go to Admin Dashboard
-                </Link>
-              ) : (
-                <p className="text-gray-600">You are logged in as a regular user.</p>
-              )}
-            </div>
-          )}
+      </div>
+
+      {/* Header */}
+      <header className="flex justify-between items-center w-full p-6 z-10">
+        <div className="flex items-center">
+          <Image
+            src="/logo.svg"
+            alt="Music Box Photobooth"
+            width={150}
+            height={50}
+            className="glow-image"
+          />
         </div>
+        <div className="text-3xl font-bold">TRANG CHỦ</div>
+      </header>
+
+      {/* Main content */}
+      <main className="flex flex-col items-center justify-center flex-grow z-10 px-4">
+        <h1 className="text-5xl font-bold mb-6 text-center">Chào mừng quý khách</h1>
+        <div className="text-9xl font-bold text-white glow-text">SBOOTH</div>
+
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="#"
-          rel="noopener noreferrer"
+
+      {/* Navigation buttons */}
+      <div className="flex justify-between w-full px-12 py-16 z-10">
+        <button className="rounded-full p-6 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition opacity-50 cursor-not-allowed glow-button">
+          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
+            &#8592;
+          </div>
+        </button>
+
+        <button
+          onClick={handleNext}
+          className="rounded-full p-6 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition glow-button"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          About
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="#"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Contact Us
-        </a>
-      </footer>
+          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl glow-text-small">
+            &#8594;
+          </div>
+        </button>
+      </div>
+
+      <style jsx global>{`
+        .glow-text {
+          text-shadow: 0 0 15px rgba(255, 0, 255, 0.7), 0 0 30px rgba(255, 0, 255, 0.5);
+          letter-spacing: 2px;
+        }
+        
+        .glow-text-small {
+          text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(255, 0, 255, 0.6);
+        }
+        
+        .glow-image {
+          filter: drop-shadow(0 0 8px rgba(236, 72, 153, 0.8));
+        }
+        
+        .glow-button {
+          box-shadow: 0 0 15px rgba(236, 72, 153, 0.7), 0 0 30px rgba(236, 72, 153, 0.3);
+          backdrop-filter: blur(3px);
+          animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.7), 0 0 30px rgba(236, 72, 153, 0.3);
+            border-color: rgba(236, 72, 153, 0.8);
+          }
+          50% {
+            box-shadow: 0 0 20px rgba(236, 72, 153, 0.9), 0 0 40px rgba(236, 72, 153, 0.5);
+            border-color: rgba(236, 72, 153, 1);
+          }
+          100% {
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.7), 0 0 30px rgba(236, 72, 153, 0.3);
+            border-color: rgba(236, 72, 153, 0.8);
+          }
+        }
+      `}</style>
     </div>
   );
 }

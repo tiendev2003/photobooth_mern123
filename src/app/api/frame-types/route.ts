@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: body.name,
         description: body.description,
+        image: body.image,
         columns: body.columns,
         rows: body.rows,
         totalImages,

@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
-import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useCallback, useEffect, useState } from 'react';
 
 interface Image {
   id: string;
@@ -28,14 +29,8 @@ export default function ImagesManagement() {
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
   
-  // Fetch images when component mounts
-  useEffect(() => {
-    if (token) {
-      fetchImages();
-    }
-  }, [token, currentPage, filterType]);
-  
-  const fetchImages = async () => {
+  // Define fetchImages with useCallback
+  const fetchImages = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/images?page=${currentPage}&limit=${itemsPerPage}&fileType=${filterType}`, {
@@ -61,7 +56,14 @@ export default function ImagesManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, currentPage, itemsPerPage, filterType]);
+  
+  // Fetch images when component mounts or dependencies change
+  useEffect(() => {
+    if (token) {
+      fetchImages();
+    }
+  }, [token, fetchImages]);
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -270,9 +272,11 @@ export default function ImagesManagement() {
                     }}
                   />
                 ) : (
-                  <img 
+                  <Image 
                     src={image.path} 
-                    alt={image.filename} 
+                    alt={image.filename}
+                    width={320}
+                    height={180}
                     className="w-full h-full object-cover"
                   />
                 )}
