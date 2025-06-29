@@ -73,9 +73,9 @@ export default function Step4() {
             <button
               onClick={decreaseQuantity}
               disabled={quantity <= 1}
-              className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-pink-400 flex items-center justify-center text-pink-400 hover:bg-pink-400/20 transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed neon-glow-pink"
+              className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-pink-400 flex items-center justify-center text-pink-400  transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed neon-glow-pink"
             >
-              <Minus className="w-8 h-8 md:w-10 md:h-10 group-hover:scale-110 transition-transform" />
+              <Minus className="w-8 h-8 md:w-10 md:h-10   transition-transform" />
             </button>
 
             {/* Display Area */}
@@ -87,14 +87,14 @@ export default function Step4() {
             <button
               onClick={increaseQuantity}
               disabled={quantity >= 3}
-              className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-pink-400 flex items-center justify-center text-pink-400 hover:bg-pink-400/20 transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed neon-glow-pink"
+              className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-pink-400 flex items-center justify-center text-pink-400  transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed neon-glow-pink"
             >
-              <Plus className="w-8 h-8 md:w-10 md:h-10 group-hover:scale-110 transition-transform" />
+              <Plus className="w-8 h-8 md:w-10 md:h-10  transition-transform" />
             </button>
           </div>
 
           {/* Confirm Button */}
-          <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-pink-500 rounded-full flex items-center justify-center text-white text-xl md:text-4xl font-semibold hover:bg-pink-500/20 transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
+          <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-pink-500 rounded-full flex items-center justify-center text-white text-xl md:text-4xl font-semibold  transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
             {
               quantity == 1 ? formatCurrency(70000) : quantity == 2 ? formatCurrency(120000) : quantity == 3 ? formatCurrency(150000) : null
             }

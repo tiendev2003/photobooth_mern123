@@ -1,0 +1,65 @@
+import { exec } from "child_process";
+import fs from "fs/promises";
+import { NextRequest, NextResponse } from "next/server";
+import path from "path";
+
+ 
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { base64Image } = body;
+
+    if (!base64Image) {
+      return NextResponse.json(
+        { error: "Missing base64 image" },
+        { status: 400 }
+      );
+    }
+
+    const filePath = path.join(
+      process.cwd(),
+      "public",
+      "uploads",
+      `temp_print_${Date.now()}.png`
+    );
+
+    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
+    const buffer = Buffer.from(base64Data, "base64");
+
+    // Write file asynchronously
+    await fs.writeFile(filePath, buffer);
+
+    const printCommand = `rundll32 C:\\\\Windows\\\\System32\\\\shimgvw.dll,ImageView_PrintTo /pt "${filePath}" "DS-RX1"`;
+    console.log("Executing print command:", printCommand);
+    try {
+        const { stdout, stderr } = await exec(printCommand);
+
+      // Clean up temporary file
+      await fs.unlink(filePath).catch(() => {});
+
+      if (stderr) {
+        console.error("Print stderr:", stderr);
+        return NextResponse.json(
+          { error: "Lỗi in: " + stderr },
+          { status: 500 }
+        );
+      }
+
+      console.log("Print stdout:", stdout);
+      return NextResponse.json(
+        { message: "In thành công khổ 6x4" },
+        { status: 200 }
+      );
+    } catch (error) {
+      // Clean up temporary file in case of error
+      await fs.unlink(filePath).catch(() => {});
+      throw error;
+    }
+  } catch (error) {
+    console.error("Lỗi in:", error);
+    return NextResponse.json(
+      { error: "Lỗi xử lý ảnh: " + (error || "Unknown error") },
+      { status: 500 }
+    );
+  }
+}

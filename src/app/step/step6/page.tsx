@@ -4,7 +4,7 @@ import { useBooth } from "@/lib/context/BoothContext";
 import { ArrowLeft, ArrowRight, Camera } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 const timeoutDuration = 2; // 10 seconds
 export default function Step6() {
   const router = useRouter();
@@ -44,7 +44,7 @@ export default function Step6() {
   }, []);
 
   // Chụp ảnh
-  const capturePhoto = (): void => {
+ const capturePhoto = useCallback((): void => {
     if (!videoRef.current) return;
 
     const canvas: HTMLCanvasElement = document.createElement('canvas');
@@ -58,12 +58,13 @@ export default function Step6() {
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       // Reset transformation matrix to the identity matrix
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      
+
       const imageData: string = canvas.toDataURL('image/jpeg');
       const timestamp: string = new Date().toLocaleString();
       setPhotos([{ image: imageData, timestamp }, ...photos]);
     }
-  };
+  }, [setPhotos, photos]); // Dependencies for useCallback
+
 
   // Xử lý đếm ngược và chụp ảnh tự động
   useEffect(() => {
@@ -169,7 +170,7 @@ export default function Step6() {
               className={`mt-2 px-8 py-3 rounded-full font-semibold text-white flex items-center gap-2 transition-all
                 ${isCapturing
                   ? 'bg-gray-600 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 shadow-lg hover:shadow-pink-500/30'
+                  : 'bg-gradient-to-r from-pink-600 to-purple-600  shadow-lg '
                 }`}
             >
               <Camera size={20} />
@@ -194,7 +195,7 @@ export default function Step6() {
                   {photos.map((photo, index) => (
                     <div
                       key={index}
-                      className="relative border border-purple-700 rounded-lg overflow-hidden group hover:border-pink-500 transition-all duration-300"
+                      className="relative border border-purple-700 rounded-lg overflow-hidden group  transition-all duration-300"
                     >
                       <img
                         src={photo.image}

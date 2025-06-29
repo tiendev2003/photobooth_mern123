@@ -96,25 +96,25 @@ export default function Step5() {
                 <button
                   key={number}
                   onClick={() => handleNumberClick(number)}
-                  className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-pink-400 flex items-center justify-center text-pink-400 text-2xl md:text-3xl font-bold hover:bg-pink-400/20 transition-all duration-300 group neon-glow-pink bg-black/20 backdrop-blur-sm"
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-pink-400 flex items-center justify-center text-pink-400 text-2xl md:text-3xl font-bold   transition-all duration-300 group neon-glow-pink bg-black/20 backdrop-blur-sm"
                 >
-                  <span className="group-hover:scale-110 transition-transform text-2xl">{number}</span>
+                  <span className=" transition-transform text-2xl">{number}</span>
                 </button>
               ))}
               {rowIndex === 0 && (
                 <button
                   onClick={handleDelete}
-                  className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-cyan-400 flex items-center justify-center text-cyan-400 hover:bg-cyan-400/20 transition-all duration-300 group neon-glow-blue bg-black/20 backdrop-blur-sm"
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-cyan-400 flex items-center justify-center text-cyan-400  transition-all duration-300 group neon-glow-blue bg-black/20 backdrop-blur-sm"
                 >
-                  <ArrowLeft className="w-8 h-8 md:w-10 md:h-10 group-hover:scale-110 transition-transform" />
+                  <ArrowLeft className="w-8 h-8 md:w-10 md:h-10  " />
                 </button>
               )}
               {rowIndex === 1 && (
                 <button
                   onClick={handleClear}
-                  className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-cyan-400 flex items-center justify-center text-cyan-400 hover:bg-cyan-400/20 transition-all duration-300 group neon-glow-blue bg-black/20 backdrop-blur-sm"
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-cyan-400 flex items-center justify-center text-cyan-400  transition-all duration-300 group neon-glow-blue bg-black/20 backdrop-blur-sm"
                 >
-                  <Trash2 className="w-8 h-8 md:w-10 md:h-10 group-hover:scale-110 transition-transform" />
+                  <Trash2 className="w-8 h-8 md:w-10 md:h-10  " />
                 </button>
               )}
             </div>

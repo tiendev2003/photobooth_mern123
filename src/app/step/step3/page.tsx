@@ -146,7 +146,7 @@ export default function Step3() {
               frameTypes.map((frame) => (
                 <div
                   key={frame.id}
-                  className={`relative cursor-pointer transition-transform transform hover:scale-105 aspect-[4/3] ${selectedFrame && selectedFrame.id === frame.id ? "  scale-105" : ""
+                  className={`relative cursor-pointer transition-transform transform  aspect-[4/3] ${selectedFrame && selectedFrame.id === frame.id ? "  scale-105" : ""
                     }`}
                   onClick={() => setSelectedFrame(frame)}
                 >
@@ -200,13 +200,13 @@ export default function Step3() {
       <div className="flex justify-between w-full px-12 pb-16 z-10">
         <button
           onClick={handleBack}
-          className="rounded-full p-6 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition glow-button"
+          className="rounded-full p-6 bg-transparent border-2 border-pink-500   transition glow-button"
         >
           <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
             &#8592;
           </div>
         </button>
-        <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-pink-500 rounded-full flex items-center justify-center text-pink-400 text-xl md:text-2xl font-semibold hover:bg-pink-500/20 transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
+        <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-white rounded-full flex items-center justify-center text-pink-400 text-xl md:text-2xl font-semibold hover:bg-pink-500/20 transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
           70.000 VND
         </button>
         <button

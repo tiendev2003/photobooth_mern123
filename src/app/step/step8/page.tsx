@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, HomeIcon, Printer } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+ 
 
 // Enhanced filters for skin beautification
 const skinFilters = [
@@ -21,6 +22,12 @@ const skinFilters = [
 ];
 
 export default function Step8() {
+  interface ExtendedCSSStyleDeclaration extends CSSStyleDeclaration {
+  colorAdjust?: string; // Optional, as it is non-standard
+  webkitPrintColorAdjust?: string; // Optional, vendor-prefixed property
+  printColorAdjust: string; // Non-optional to match CSSStyleDeclaration
+}
+
   const router = useRouter();
   const {
     photos,
@@ -35,8 +42,7 @@ export default function Step8() {
   const [frameTemplates, setFrameTemplates] = useState<FrameTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
-  const [printSuccess, setPrintSuccess] = useState(false);
-
+ 
   const skinFilterRef = useRef<HTMLDivElement>(null);
   const frameTemplateRef = useRef<HTMLDivElement>(null);
   const printPreviewRef = useRef<HTMLDivElement>(null);
@@ -135,113 +141,32 @@ export default function Step8() {
         setIsPrinting(false);
         return;
       }
-
-      // Create download link for the image
-      const downloadLink = document.createElement('a');
-      downloadLink.href = imageDataUrl;
-      downloadLink.download = `photobooth_print_${new Date().getTime()}.jpg`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-
-      // Create an invisible iframe for printing instead of opening a new window
-      let printFrame = document.getElementById("print-frame") as HTMLIFrameElement;
-      
-      // Create the iframe if it doesn't exist
-      if (!printFrame) {
-        printFrame = document.createElement('iframe');
-        printFrame.id = "print-frame";
-        printFrame.style.position = 'fixed';
-        printFrame.style.right = '-9999px';
-        printFrame.style.bottom = '-9999px';
-        printFrame.style.width = isLandscape ? '6in' : '4in';
-        printFrame.style.height = isLandscape ? '4in' : '6in';
-        printFrame.style.border = 'none';
-        document.body.appendChild(printFrame);
-      }
-
-      // Set up the print content with proper dimensions for DNP RX1 HS
-      const printHTML = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>DNP RX1 Photo Print</title>
-            <style>
-              @page {
-                size: ${isLandscape ? '6in 4in' : '4in 6in'};
-                margin: 0;
-              }
-              body {
-                margin: 0;
-                padding: 0;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                background-color: white;
-                height: 100vh;
-              }
-              img {
-                width: ${isLandscape ? '6in' : '4in'};
-                height: ${isLandscape ? '4in' : '6in'};
-                object-fit: contain;
-                max-width: 100%;
-                max-height: 100%;
-              }
-            </style>
-          </head>
-          <body>
-            <img src="${imageDataUrl}" alt="Photobooth Print" />
-            <script>
-              window.onload = function() {
-                const img = document.querySelector('img');
-                
-                function startPrint() {
-                  window.print();
-                  window.parent.postMessage('printComplete', '*');
-                }
-                
-                if (img.complete) {
-                  startPrint();
-                } else {
-                  img.onload = startPrint;
-                  img.onerror = function() {
-                    window.parent.postMessage('printError', '*');
-                  };
-                }
-              };
-            </script>
-          </body>
-        </html>
-      `;
-
-      // Add event listener for messages from iframe
-      const messageHandler = (event: MessageEvent) => {
-        if (event.data === 'printComplete') {
-          // Show success message
+      fetch("/api/print", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          base64Image: imageDataUrl,
+          isLandscape: isLandscape  , // Pass orientation
+        }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Failed to print image");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log("Print job submitted successfully:", data);
+          router.push("/step/step9"); 
+        })
+        .catch((error) => {
+          console.error("Error submitting print job:", error);
+        })
+        .finally(() => {
           setIsPrinting(false);
-          setPrintSuccess(true);
-          setTimeout(() => setPrintSuccess(false), 5000);
-        } else if (event.data === 'printError') {
-          alert('Lỗi tải ảnh!');
-          setIsPrinting(false);
-        }
-        // Clean up event listener
-        window.removeEventListener('message', messageHandler);
-      };
-      
-      window.addEventListener('message', messageHandler);
-
-      // Write content to iframe and trigger printing
-      const iframeDoc = printFrame.contentDocument || (printFrame.contentWindow?.document);
-      if (iframeDoc) {
-        iframeDoc.open();
-        iframeDoc.write(printHTML);
-        iframeDoc.close();
-      } else {
-        console.error("Could not access iframe document");
-        setIsPrinting(false);
-        alert("Không thể tạo khung in. Vui lòng thử lại.");
-      }
+        });
     } catch (error) {
       console.error("Error during printing:", error);
       setIsPrinting(false);
@@ -287,7 +212,7 @@ export default function Step8() {
           images.forEach((img) => {
             img.style.imageRendering = "crisp-edges";
             img.style.imageRendering = "-webkit-optimize-contrast";
-            const imgStyle = img.style as any;
+            const imgStyle = img.style as ExtendedCSSStyleDeclaration;
             imgStyle.colorAdjust = "exact";
             imgStyle.webkitPrintColorAdjust = "exact";
             imgStyle.printColorAdjust = "exact";
@@ -511,17 +436,7 @@ export default function Step8() {
   return (
     <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
       {/* Print Success Message */}
-      {printSuccess && (
-        <div className="fixed top-20 inset-x-0 z-50 flex justify-center">
-          <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-fade-in-down flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <span className="text-lg font-semibold">In ảnh thành công!</span>
-            <span className="ml-2 text-sm bg-green-700 px-2 py-1 rounded">Ảnh đã được tải xuống</span>
-          </div>
-        </div>
-      )}
+      
 
       {/* Background graphics */}
       <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
