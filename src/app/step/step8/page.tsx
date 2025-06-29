@@ -121,13 +121,13 @@ export default function Step8() {
         return;
       }
 
-      // For custom frames, always use landscape orientation (2 strips side by side)
+      // For custom frames, use portrait orientation (vertical strip)
       // For regular frames, check if columns > rows
       const isCustomFrame = selectedFrame?.isCustom === true;
-      const isLandscape = isCustomFrame ? true : 
+      const isLandscape = isCustomFrame ? false :
         (selectedFrame && selectedFrame.columns && selectedFrame.rows ?
-        selectedFrame.columns > selectedFrame.rows : false);
-      
+          selectedFrame.columns > selectedFrame.rows : false);
+
       // Generate high-quality image
       const imageDataUrl = await generateHighQualityImage(isLandscape);
       if (!imageDataUrl) {
@@ -144,15 +144,23 @@ export default function Step8() {
       downloadLink.click();
       document.body.removeChild(downloadLink);
 
-      // Create print window with the image
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        alert('Vui lòng cho phép cửa sổ bật lên (popups) cho trang web này');
-        setIsPrinting(false);
-        return;
+      // Create an invisible iframe for printing instead of opening a new window
+      let printFrame = document.getElementById("print-frame") as HTMLIFrameElement;
+      
+      // Create the iframe if it doesn't exist
+      if (!printFrame) {
+        printFrame = document.createElement('iframe');
+        printFrame.id = "print-frame";
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '-9999px';
+        printFrame.style.bottom = '-9999px';
+        printFrame.style.width = isLandscape ? '6in' : '4in';
+        printFrame.style.height = isLandscape ? '4in' : '6in';
+        printFrame.style.border = 'none';
+        document.body.appendChild(printFrame);
       }
 
-      // Set up the print window with proper dimensions for DNP RX1 HS
+      // Set up the print content with proper dimensions for DNP RX1 HS
       const printHTML = `
         <!DOCTYPE html>
         <html>
@@ -179,39 +187,17 @@ export default function Step8() {
                 max-width: 100%;
                 max-height: 100%;
               }
-              /* Add loader styles */
-              .loader {
-                border: 3px solid #f3f3f3;
-                border-radius: 50%;
-                border-top: 3px solid #3498db;
-                width: 30px;
-                height: 30px;
-                animation: spin 1s linear infinite;
-                position: absolute;
-                top: 20px;
-                right: 20px;
-              }
-              @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-              /* Removed print message styles */
             </style>
           </head>
           <body>
-            <div class="loader" id="print-loader"></div>
             <img src="${imageDataUrl}" alt="Photobooth Print" />
             <script>
               window.onload = function() {
-                // Make sure the image is fully loaded
                 const img = document.querySelector('img');
-                const loader = document.getElementById('print-loader');
                 
                 function startPrint() {
-                  setTimeout(() => {
-                    window.print();
-                    setTimeout(() => window.close(), 500);
-                  }, 500);
+                  window.print();
+                  window.parent.postMessage('printComplete', '*');
                 }
                 
                 if (img.complete) {
@@ -219,8 +205,7 @@ export default function Step8() {
                 } else {
                   img.onload = startPrint;
                   img.onerror = function() {
-                    message.textContent = "Lỗi tải ảnh!";
-                    loader.style.display = "none";
+                    window.parent.postMessage('printError', '*');
                   };
                 }
               };
@@ -229,19 +214,34 @@ export default function Step8() {
         </html>
       `;
 
-      printWindow.document.open();
-      printWindow.document.write(printHTML);
-      printWindow.document.close();
+      // Add event listener for messages from iframe
+      const messageHandler = (event: MessageEvent) => {
+        if (event.data === 'printComplete') {
+          // Show success message
+          setIsPrinting(false);
+          setPrintSuccess(true);
+          setTimeout(() => setPrintSuccess(false), 5000);
+        } else if (event.data === 'printError') {
+          alert('Lỗi tải ảnh!');
+          setIsPrinting(false);
+        }
+        // Clean up event listener
+        window.removeEventListener('message', messageHandler);
+      };
+      
+      window.addEventListener('message', messageHandler);
 
-      // Show success message
-      setTimeout(() => {
+      // Write content to iframe and trigger printing
+      const iframeDoc = printFrame.contentDocument || (printFrame.contentWindow?.document);
+      if (iframeDoc) {
+        iframeDoc.open();
+        iframeDoc.write(printHTML);
+        iframeDoc.close();
+      } else {
+        console.error("Could not access iframe document");
         setIsPrinting(false);
-        setPrintSuccess(true);
-
-        setTimeout(() => {
-          setPrintSuccess(false);
-        }, 5000);
-      }, 2000);
+        alert("Không thể tạo khung in. Vui lòng thử lại.");
+      }
     } catch (error) {
       console.error("Error during printing:", error);
       setIsPrinting(false);
@@ -249,26 +249,26 @@ export default function Step8() {
     }
   };
 
-  // Function to generate a high-quality image using html2canvas-pro - exact match of renderPreview
+  // Function to generate a high-quality image using html2canvas-pro - với logic ghép 2 ảnh cho custom frame
   const generateHighQualityImage = async (isLandscape: boolean): Promise<string | void> => {
     const previewContent = printPreviewRef.current;
     if (!previewContent) return;
 
     try {
       const isCustomFrame = selectedFrame?.isCustom === true;
-      
-      // Calculate high-resolution dimensions for better print quality (300dpi)
-      // For custom frames (2in width), we'll create a 4in width by duplicating side by side
-      const desiredWidth = isLandscape ? 1800 : 1200; // 6 inches or 4 inches at 300dpi
-      const desiredHeight = isLandscape ? 1200 : 1800; // 4 inches or 6 inches at 300dpi
-      
+
+      // Kích thước in: 300dpi
+      const desiredWidth = isLandscape ? 1800 : 1200; // 6in hoặc 4in
+      const desiredHeight = isLandscape ? 1200 : 1800; // 4in hoặc 6in
+
+      // Lấy kích thước thực của khu vực xem trước
       const rect = previewContent.getBoundingClientRect();
-      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 2); // Adjust scale for custom frames
-      
-      // Dynamically import html2canvas-pro
+      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 3); // Tăng scaleFactor cho chất lượng cao hơn
+
+      // Động lực nhập html2canvas-pro
       const html2canvas = (await import("html2canvas-pro")).default;
 
-      // Generate high-quality canvas with optimized settings - capture exactly what's in renderPreview
+      // Chụp khu vực xem trước với chất lượng cao
       const canvas = await html2canvas(previewContent, {
         allowTaint: true,
         useCORS: true,
@@ -280,82 +280,98 @@ export default function Step8() {
         imageTimeout: 30000,
         removeContainer: true,
         foreignObjectRendering: false,
-        // Only ignore elements that are definitely not part of the visual display
-        ignoreElements: (element) => {
-          return (
-            element.tagName === "SCRIPT" ||
-            element.classList?.contains("no-print")
-          );
-        },
+        ignoreElements: (element) => element.tagName === "SCRIPT" || element.classList?.contains("no-print"),
         onclone: (clonedDoc) => {
-          // Optimize cloned document for better rendering while preserving exact appearance
+          // Tối ưu hóa hình ảnh trong bản sao
           const images = clonedDoc.querySelectorAll("img");
           images.forEach((img) => {
             img.style.imageRendering = "crisp-edges";
             img.style.imageRendering = "-webkit-optimize-contrast";
-            // Type assertion for vendor-specific CSS properties
             const imgStyle = img.style as any;
             imgStyle.colorAdjust = "exact";
             imgStyle.webkitPrintColorAdjust = "exact";
             imgStyle.printColorAdjust = "exact";
-            
-            // Ensure images are fully loaded with original styling preserved
+
+            // Đảm bảo ảnh tải đầy đủ
             if (!img.complete || img.naturalWidth === 0) {
-              img.style.visibility = "hidden"; // Hide incomplete images instead of removing them
+              img.style.visibility = "hidden";
+            }
+
+            // Áp dụng bộ lọc CSS từ selectedFilter
+            if (selectedFilter?.className) {
+              img.className += ` ${selectedFilter.className}`;
             }
           });
 
-          // Preserve the exact styling of the preview container
-          const container = clonedDoc.querySelector(
-            "[data-preview]"
-          ) as HTMLElement;
+          // Giữ nguyên style của container xem trước
+          const container = clonedDoc.querySelector("[data-preview]") as HTMLElement;
           if (container && container.style) {
             container.style.transform = "translateZ(0)";
             container.style.backfaceVisibility = "hidden";
+            container.style.backgroundColor = "#FFFFFF";
           }
         },
       });
 
-      // Create final canvas with exact dimensions and high quality
+      // Tạo canvas cuối cùng với kích thước chính xác
       const finalCanvas = document.createElement("canvas");
       finalCanvas.width = desiredWidth;
       finalCanvas.height = desiredHeight;
       const ctx = finalCanvas.getContext("2d", {
-        alpha: true, // Use alpha to preserve transparency exactly as in preview
+        alpha: true,
         willReadFrequently: false,
         desynchronized: false,
       });
 
-      if (!ctx) throw new Error("Unable to get 2D context");
+      if (!ctx) throw new Error("Không thể tạo 2D context");
 
-      // Fill background with white (as in preview)
+      // Điền nền trắng
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, desiredWidth, desiredHeight);
 
-      // Set high-quality rendering
+      // Tối ưu chất lượng vẽ
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
 
       if (isCustomFrame) {
-        // For custom frames, duplicate the image side by side to create a 4in width
-        const singleWidth = canvas.width;
-        const singleHeight = canvas.height;
-        
-        // First copy - left side
+        // Custom frame: Ghép 2 ảnh giống nhau side by side
+        // Mỗi ảnh chiếm 1/2 chiều rộng của canvas cuối cùng
+        const singleImageWidth = desiredWidth / 2;
+        const singleImageHeight = desiredHeight;
+
+        // Tính tỷ lệ để fit ảnh gốc vào từng nửa
+        const aspectRatio = canvas.width / canvas.height;
+        const targetAspectRatio = singleImageWidth / singleImageHeight;
+
+        let drawWidth = singleImageWidth;
+        let drawHeight = singleImageHeight;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (aspectRatio > targetAspectRatio) {
+          drawHeight = singleImageWidth / aspectRatio;
+          offsetY = (singleImageHeight - drawHeight) / 2;
+        } else {
+          drawWidth = singleImageHeight * aspectRatio;
+          offsetX = (singleImageWidth - drawWidth) / 2;
+        }
+
+        // Vẽ ảnh thứ nhất (bên trái)
         ctx.drawImage(
           canvas,
-          0, 0, singleWidth, singleHeight,
-          0, 0, desiredWidth / 2, desiredHeight
+          0, 0, canvas.width, canvas.height,
+          offsetX, offsetY, drawWidth, drawHeight
         );
-        
-        // Second copy - right side
+
+        // Vẽ ảnh thứ hai (bên phải) - giống hệt ảnh thứ nhất
         ctx.drawImage(
           canvas,
-          0, 0, singleWidth, singleHeight,
-          desiredWidth / 2, 0, desiredWidth / 2, desiredHeight
+          0, 0, canvas.width, canvas.height,
+          singleImageWidth + offsetX, offsetY, drawWidth, drawHeight
         );
+
       } else {
-        // Regular frames - draw with proper sizing and positioning
+        // Khung thường: Vẽ ảnh với tỷ lệ phù hợp
         const aspectRatio = canvas.width / canvas.height;
         const targetAspectRatio = desiredWidth / desiredHeight;
 
@@ -365,11 +381,9 @@ export default function Step8() {
         let offsetY = 0;
 
         if (aspectRatio > targetAspectRatio) {
-          // Canvas is wider - fit to width
           drawHeight = desiredWidth / aspectRatio;
           offsetY = (desiredHeight - drawHeight) / 2;
         } else {
-          // Canvas is taller - fit to height
           drawWidth = desiredHeight * aspectRatio;
           offsetX = (desiredWidth - drawWidth) / 2;
         }
@@ -380,15 +394,14 @@ export default function Step8() {
           offsetX, offsetY, drawWidth, drawHeight
         );
       }
-      
-      // Return high-quality JPEG with maximum quality
+
+      // Trả về URL ảnh JPEG chất lượng cao
       return finalCanvas.toDataURL("image/jpeg", 0.98);
     } catch (error) {
-      console.error("Error generating high-quality image:", error);
+      console.error("Lỗi khi tạo ảnh chất lượng cao:", error);
       alert("❌ Có lỗi xảy ra khi tạo ảnh. Vui lòng thử lại.");
     }
   };
-
   const handleFilterSelect = (filter: typeof filterOptions[0]) => {
     setSelectedFilter(filter);
   };
@@ -431,8 +444,21 @@ export default function Step8() {
     return (
       <div
         className={cn("relative w-full", commonClasses)}
-        style={{ height: previewHeight, width: selectedFrame.isCustom ? "2in" : previewWidth }}
+        style={{
+          height: previewHeight,
+          // Custom frames hiển thị dạng preview 2in, nhưng khi in sẽ ghép 2 bản thành 4in
+          width: selectedFrame.isCustom ? "2in" : previewWidth,
+          // Thêm một border để biểu thị cách ghép ảnh khi in
+          border: selectedFrame.isCustom ? "1px dashed #ff69b4" : "none"
+        }}
       >
+        {selectedFrame.isCustom && (
+          <div className="absolute -right-8 top-1/2 transform -translate-y-1/2 bg-pink-500 text-white px-1 py-3 rounded-r text-xs writing-mode-vertical">
+            <span className="transform rotate-180" style={{ writingMode: 'vertical-rl' }}>
+              Sẽ in đôi (2x)
+            </span>
+          </div>
+        )}
         <div
           ref={printPreviewRef}
           data-preview="true"
@@ -452,6 +478,7 @@ export default function Step8() {
                   {renderCell(idx)}
                 </div>
               ))}
+
             </div>
           ) : (
             <div
@@ -535,7 +562,9 @@ export default function Step8() {
             <div className="w-full flex justify-center">
               <div className={`w-full flex ${selectedFrame && selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom ? 'max-w-md' : 'max-w-md'} mx-auto`}>
                 {renderPreview()}
+
               </div>
+
             </div>
           </div>
 
