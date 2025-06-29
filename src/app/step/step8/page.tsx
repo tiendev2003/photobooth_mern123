@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, HomeIcon, Printer } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
- 
+
 
 // Enhanced filters for skin beautification
 const skinFilters = [
@@ -23,10 +23,10 @@ const skinFilters = [
 
 export default function Step8() {
   interface ExtendedCSSStyleDeclaration extends CSSStyleDeclaration {
-  colorAdjust?: string; // Optional, as it is non-standard
-  webkitPrintColorAdjust?: string; // Optional, vendor-prefixed property
-  printColorAdjust: string; // Non-optional to match CSSStyleDeclaration
-}
+    colorAdjust?: string; // Optional, as it is non-standard
+    webkitPrintColorAdjust?: string; // Optional, vendor-prefixed property
+    printColorAdjust: string; // Non-optional to match CSSStyleDeclaration
+  }
 
   const router = useRouter();
   const {
@@ -42,12 +42,11 @@ export default function Step8() {
   const [frameTemplates, setFrameTemplates] = useState<FrameTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
- 
+
   const skinFilterRef = useRef<HTMLDivElement>(null);
   const frameTemplateRef = useRef<HTMLDivElement>(null);
   const printPreviewRef = useRef<HTMLDivElement>(null);
 
-  // Fetch frame templates for the selected frame type
   useEffect(() => {
     const fetchTemplates = async () => {
       if (selectedFrame?.id) {
@@ -141,6 +140,8 @@ export default function Step8() {
         setIsPrinting(false);
         return;
       }
+     
+
       fetch("/api/print", {
         method: "POST",
         headers: {
@@ -148,7 +149,7 @@ export default function Step8() {
         },
         body: JSON.stringify({
           base64Image: imageDataUrl,
-          isLandscape: isLandscape  , // Pass orientation
+          isLandscape: isLandscape, // Pass orientation
         }),
       })
         .then((response) => {
@@ -159,7 +160,7 @@ export default function Step8() {
         })
         .then((data) => {
           console.log("Print job submitted successfully:", data);
-          router.push("/step/step9"); 
+          router.push("/step/step9");
         })
         .catch((error) => {
           console.error("Error submitting print job:", error);
@@ -173,7 +174,19 @@ export default function Step8() {
       alert("Có lỗi xảy ra khi in ảnh: " + (error instanceof Error ? error.message : "Lỗi không xác định"));
     }
   };
-
+  const preloadImages = async (images: HTMLImageElement[]): Promise<void> => {
+    const promises = Array.from(images).map((img) => {
+      if (img.complete && img.naturalWidth !== 0) {
+        return Promise.resolve();
+      }
+      return new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve(); // Xử lý lỗi để không bị treo
+        if (img.src) img.src = img.src; // Kích hoạt tải lại nếu cần
+      });
+    });
+    await Promise.all(promises);
+  };
   // Function to generate a high-quality image using html2canvas-pro - với logic ghép 2 ảnh cho custom frame
   const generateHighQualityImage = async (isLandscape: boolean): Promise<string | void> => {
     const previewContent = printPreviewRef.current;
@@ -181,19 +194,19 @@ export default function Step8() {
 
     try {
       const isCustomFrame = selectedFrame?.isCustom === true;
-
-      // Kích thước in: 300dpi
-      const desiredWidth = isLandscape ? 1800 : 1200; // 6in hoặc 4in
-      const desiredHeight = isLandscape ? 1200 : 1800; // 4in hoặc 6in
-
-      // Lấy kích thước thực của khu vực xem trước
+      const desiredWidth = isLandscape ? 1800 : 1200;
+      const desiredHeight = isLandscape ? 1200 : 1800;
       const rect = previewContent.getBoundingClientRect();
-      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 3); // Tăng scaleFactor cho chất lượng cao hơn
+      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 3);
 
       // Động lực nhập html2canvas-pro
       const html2canvas = (await import("html2canvas-pro")).default;
 
-      // Chụp khu vực xem trước với chất lượng cao
+      // Preload tất cả ảnh
+      const images = previewContent.querySelectorAll("img");
+    await preloadImages(Array.from(images)); // Chuyển NodeList thành mảng
+
+      // Chụp khu vực xem trước
       const canvas = await html2canvas(previewContent, {
         allowTaint: true,
         useCORS: true,
@@ -207,7 +220,6 @@ export default function Step8() {
         foreignObjectRendering: false,
         ignoreElements: (element) => element.tagName === "SCRIPT" || element.classList?.contains("no-print"),
         onclone: (clonedDoc) => {
-          // Tối ưu hóa hình ảnh trong bản sao
           const images = clonedDoc.querySelectorAll("img");
           images.forEach((img) => {
             img.style.imageRendering = "crisp-edges";
@@ -217,18 +229,17 @@ export default function Step8() {
             imgStyle.webkitPrintColorAdjust = "exact";
             imgStyle.printColorAdjust = "exact";
 
-            // Đảm bảo ảnh tải đầy đủ
-            if (!img.complete || img.naturalWidth === 0) {
-              img.style.visibility = "hidden";
-            }
-
-            // Áp dụng bộ lọc CSS từ selectedFilter
+            // Áp dụng bộ lọc CSS trực tiếp
             if (selectedFilter?.className) {
-              img.className += ` ${selectedFilter.className}`;
+              img.style.filter = selectedFilter.className
+                .split(" ")
+                .map((cls) => cls.split("-"))
+                .filter(([prop, val]) => ["brightness", "contrast", "saturate", "sepia", "hue-rotate", "blur"].includes(prop))
+                .map(([prop, val]) => `${prop}(${val})`)
+                .join(" ");
             }
           });
 
-          // Giữ nguyên style của container xem trước
           const container = clonedDoc.querySelector("[data-preview]") as HTMLElement;
           if (container && container.style) {
             container.style.transform = "translateZ(0)";
@@ -238,7 +249,7 @@ export default function Step8() {
         },
       });
 
-      // Tạo canvas cuối cùng với kích thước chính xác
+      // Tạo canvas cuối cùng
       const finalCanvas = document.createElement("canvas");
       finalCanvas.width = desiredWidth;
       finalCanvas.height = desiredHeight;
@@ -250,11 +261,8 @@ export default function Step8() {
 
       if (!ctx) throw new Error("Không thể tạo 2D context");
 
-      // Điền nền trắng
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, desiredWidth, desiredHeight);
-
-      // Tối ưu chất lượng vẽ
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
 
@@ -358,23 +366,35 @@ export default function Step8() {
     if (!selectedFrame) return null;
     const commonClasses = "mx-auto overflow-hidden shadow-md";
 
-    // Kiểm tra nếu columns > rows thì đổi từ 6x4 sang 4x6 inches
+    // Determine if the frame is landscape (columns > rows) unless it's a custom frame
     const isLandscape = selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom;
 
-    // Xác định kích thước dựa trên hướng (portrait/landscape)
+    // Set dimensions based on orientation (portrait/landscape)
     const previewHeight = isLandscape ? "4in" : "6in";
     const previewWidth = isLandscape ? "6in" : "4in";
-    const aspectRatio = isLandscape ? "3/2" : "2/3"; // Đảo ngược tỷ lệ nếu là landscape
+    const aspectRatio = isLandscape ? "3/2" : "2/3"; // Reverse aspect ratio for landscape
+
+    // Frame overlay using selectedTemplate (similar to frameOverlay in the second code)
+    const frameOverlay = selectedTemplate?.path ? (
+      <div className="pointer-events-none absolute inset-0 z-20">
+        <Image
+          src={selectedTemplate.path}
+          alt="Frame Overlay"
+          className="h-full w-full object-contain"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      </div>
+    ) : null;
 
     return (
       <div
         className={cn("relative w-full", commonClasses)}
         style={{
           height: previewHeight,
-          // Custom frames hiển thị dạng preview 2in, nhưng khi in sẽ ghép 2 bản thành 4in
+          // Custom frames display as 2in preview, but print as two copies for 4in
           width: selectedFrame.isCustom ? "2in" : previewWidth,
-          // Thêm một border để biểu thị cách ghép ảnh khi in
-          border: selectedFrame.isCustom ? "1px dashed #ff69b4" : "none"
+          border: selectedFrame.isCustom ? "1px dashed #ff69b4" : "none",
         }}
       >
         {selectedFrame.isCustom && (
@@ -393,7 +413,7 @@ export default function Step8() {
           )}
           style={{
             height: previewHeight,
-            aspectRatio: selectedFrame.isCustom ? "1/3 " : aspectRatio,
+            aspectRatio: selectedFrame.isCustom ? "1/3" : aspectRatio,
           }}
         >
           {selectedFrame.isCustom ? (
@@ -403,7 +423,6 @@ export default function Step8() {
                   {renderCell(idx)}
                 </div>
               ))}
-
             </div>
           ) : (
             <div
@@ -411,7 +430,7 @@ export default function Step8() {
                 "relative z-10 grid gap-[calc(2.5%*3/2)]"
               )}
               style={{
-                gridTemplateColumns: `repeat(${selectedFrame.columns}, 1fr)`
+                gridTemplateColumns: `repeat(${selectedFrame.columns}, 1fr)`,
               }}
             >
               {Array.from({ length: selectedFrame.columns }, (_, colIdx) => (
@@ -428,6 +447,7 @@ export default function Step8() {
               ))}
             </div>
           )}
+          {frameOverlay}
         </div>
       </div>
     );
@@ -436,7 +456,7 @@ export default function Step8() {
   return (
     <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
       {/* Print Success Message */}
-      
+
 
       {/* Background graphics */}
       <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>

@@ -3,7 +3,6 @@ import fs from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 
- 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -32,27 +31,26 @@ export async function POST(req: NextRequest) {
     const printCommand = `rundll32 C:\\\\Windows\\\\System32\\\\shimgvw.dll,ImageView_PrintTo /pt "${filePath}" "DS-RX1"`;
     console.log("Executing print command:", printCommand);
     try {
-        const { stdout, stderr } = await exec(printCommand);
+      exec(printCommand, (error) => {
+        if (error) {
+          console.error("Print error:", error);
+          return NextResponse.json({ error: "Lỗi in: " }, { status: 500 });
+        }
 
-      // Clean up temporary file
-      await fs.unlink(filePath).catch(() => {});
-
-      if (stderr) {
-        console.error("Print stderr:", stderr);
+        // Clean up temporary file
+        fs.unlink(filePath).catch(() => {});
         return NextResponse.json(
-          { error: "Lỗi in: " + stderr },
-          { status: 500 }
+          { message: "In thành công khổ 6x4" },
+          { status: 200 }
         );
-      }
+      });
 
-      console.log("Print stdout:", stdout);
       return NextResponse.json(
         { message: "In thành công khổ 6x4" },
         { status: 200 }
       );
     } catch (error) {
-      // Clean up temporary file in case of error
-      await fs.unlink(filePath).catch(() => {});
+       await fs.unlink(filePath).catch(() => {});
       throw error;
     }
   } catch (error) {

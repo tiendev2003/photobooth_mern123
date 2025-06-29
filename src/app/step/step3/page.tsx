@@ -130,7 +130,7 @@ export default function Step3() {
             className="glow-image"
           />
         </div>
-        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center mb-16 md:mb-20 mt-16 tracking-wide">
+        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center     tracking-wide">
           Chọn khung hình muốn chụp
         </h1>
         <div className="text-3xl font-bold mr-16">
