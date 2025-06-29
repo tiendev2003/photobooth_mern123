@@ -140,7 +140,14 @@ export default function Step8() {
         setIsPrinting(false);
         return;
       }
-     
+      // Create download link for the image
+      const downloadLink = document.createElement('a');
+      downloadLink.href = imageDataUrl;
+      downloadLink.download = `photobooth_print_${new Date().getTime()}.jpg`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      return;
 
       fetch("/api/print", {
         method: "POST",
@@ -187,7 +194,7 @@ export default function Step8() {
     });
     await Promise.all(promises);
   };
-  // Function to generate a high-quality image using html2canvas-pro - với logic ghép 2 ảnh cho custom frame
+
   const generateHighQualityImage = async (isLandscape: boolean): Promise<string | void> => {
     const previewContent = printPreviewRef.current;
     if (!previewContent) return;
@@ -199,14 +206,14 @@ export default function Step8() {
       const rect = previewContent.getBoundingClientRect();
       const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 3);
 
-      // Động lực nhập html2canvas-pro
+      // Dynamically import html2canvas-pro
       const html2canvas = (await import("html2canvas-pro")).default;
 
-      // Preload tất cả ảnh
+      // Preload all images
       const images = previewContent.querySelectorAll("img");
-    await preloadImages(Array.from(images)); // Chuyển NodeList thành mảng
+      await preloadImages(Array.from(images));
 
-      // Chụp khu vực xem trước
+      // Capture the preview area
       const canvas = await html2canvas(previewContent, {
         allowTaint: true,
         useCORS: true,
@@ -222,6 +229,7 @@ export default function Step8() {
         onclone: (clonedDoc) => {
           const images = clonedDoc.querySelectorAll("img");
           images.forEach((img) => {
+            // Ensure high-quality rendering
             img.style.imageRendering = "crisp-edges";
             img.style.imageRendering = "-webkit-optimize-contrast";
             const imgStyle = img.style as ExtendedCSSStyleDeclaration;
@@ -229,14 +237,28 @@ export default function Step8() {
             imgStyle.webkitPrintColorAdjust = "exact";
             imgStyle.printColorAdjust = "exact";
 
-            // Áp dụng bộ lọc CSS trực tiếp
+            // Apply CSS filters directly as a filter string
             if (selectedFilter?.className) {
-              img.style.filter = selectedFilter.className
+              // Convert className to a valid CSS filter string
+              const filterString = selectedFilter.className
                 .split(" ")
-                .map((cls) => cls.split("-"))
-                .filter(([prop, val]) => ["brightness", "contrast", "saturate", "sepia", "hue-rotate", "blur"].includes(prop))
-                .map(([prop, val]) => `${prop}(${val})`)
+                .filter((cls) => cls.includes("-"))
+                .map((cls) => {
+                  const [prop, val] = cls.split("-");
+                  if (["brightness", "contrast", "saturate"].includes(prop)) {
+                    return `${prop}(${val}%)`;
+                  } else if (prop === "hue-rotate") {
+                    return `${prop}(${val})`;
+                  } else if (prop === "blur") {
+                    return `${prop}(${val})`;
+                  } else if (prop === "sepia") {
+                    return `${prop}(1)`; // Sepia is a boolean-like filter in CSS
+                  }
+                  return "";
+                })
+                .filter(Boolean)
                 .join(" ");
+              img.style.filter = filterString;
             }
           });
 
@@ -249,7 +271,7 @@ export default function Step8() {
         },
       });
 
-      // Tạo canvas cuối cùng
+      // Create final canvas
       const finalCanvas = document.createElement("canvas");
       finalCanvas.width = desiredWidth;
       finalCanvas.height = desiredHeight;
@@ -261,18 +283,18 @@ export default function Step8() {
 
       if (!ctx) throw new Error("Không thể tạo 2D context");
 
+      // Fill background with white
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, desiredWidth, desiredHeight);
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
 
       if (isCustomFrame) {
-        // Custom frame: Ghép 2 ảnh giống nhau side by side
-        // Mỗi ảnh chiếm 1/2 chiều rộng của canvas cuối cùng
+        // Custom frame: Render two identical images side by side
         const singleImageWidth = desiredWidth / 2;
         const singleImageHeight = desiredHeight;
 
-        // Tính tỷ lệ để fit ảnh gốc vào từng nửa
+        // Calculate dimensions to fit the image
         const aspectRatio = canvas.width / canvas.height;
         const targetAspectRatio = singleImageWidth / singleImageHeight;
 
@@ -289,22 +311,21 @@ export default function Step8() {
           offsetX = (singleImageWidth - drawWidth) / 2;
         }
 
-        // Vẽ ảnh thứ nhất (bên trái)
+        // Draw first image (left)
         ctx.drawImage(
           canvas,
           0, 0, canvas.width, canvas.height,
           offsetX, offsetY, drawWidth, drawHeight
         );
 
-        // Vẽ ảnh thứ hai (bên phải) - giống hệt ảnh thứ nhất
+        // Draw second image (right)
         ctx.drawImage(
           canvas,
           0, 0, canvas.width, canvas.height,
           singleImageWidth + offsetX, offsetY, drawWidth, drawHeight
         );
-
       } else {
-        // Khung thường: Vẽ ảnh với tỷ lệ phù hợp
+        // Regular frame: Render a single image
         const aspectRatio = canvas.width / canvas.height;
         const targetAspectRatio = desiredWidth / desiredHeight;
 
@@ -328,13 +349,15 @@ export default function Step8() {
         );
       }
 
-      // Trả về URL ảnh JPEG chất lượng cao
+      // Return high-quality JPEG data URL
       return finalCanvas.toDataURL("image/jpeg", 0.98);
     } catch (error) {
       console.error("Lỗi khi tạo ảnh chất lượng cao:", error);
       alert("❌ Có lỗi xảy ra khi tạo ảnh. Vui lòng thử lại.");
     }
   };
+
+  
   const handleFilterSelect = (filter: typeof filterOptions[0]) => {
     setSelectedFilter(filter);
   };

@@ -12,12 +12,41 @@ const ubuntu = Ubuntu({
   variable: "--font-ubuntu", // optional: sử dụng biến CSS
 });
 
- 
-
-export const metadata: Metadata = {
-  title: "Photobooth Admin",
-  description: "Photobooth admin management system",
-};
+ export async function generateMetadata(): Promise<Metadata> {
+   return {
+    title: "S Photobooth - Unique Photo Booth",
+    description: "Capture fun moments and create photo strips with S Photobooth. Try it now!",
+    openGraph: {
+      title: "S Photobooth - Unique Photo Booth",
+      description: "Capture fun moments and create photo strips with S Photobooth. Try it now!",
+      url: "https://s.mayphotobooth.com/",
+      siteName: "S Photobooth",
+      images: [
+        {
+          url: "https://s.mayphotobooth.com/og-image.jpg",
+          width: 980,
+          height: 980,
+          alt: "S Photobooth",
+        },
+      ],
+      type: "website",
+      locale: "vi_VN",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: "S Photobooth - Unique Photo Booth",
+      description: "Capture fun moments and create photo strips with S Photobooth. Try it now!",
+      images: ["https://s.mayphotobooth.com/og-image.jpg"],
+    },
+    other: {
+      "apple-mobile-web-app-title": "S Photobooth",
+      viewport:
+        "width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes",
+      keywords:
+        "photo booth, online camera, photo strips, selfie booth, fun photo app",
+    },
+  };
+}
 
 export default function RootLayout({
   children,
@@ -41,3 +70,4 @@ export default function RootLayout({
     </html>
   );
 }
+           

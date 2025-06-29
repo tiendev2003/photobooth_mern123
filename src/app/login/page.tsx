@@ -21,7 +21,6 @@ export default function Login() {
     try {
       const success = await login(email, password);
       if (success) {
-        // Chuyển hướng đến trang chính (home) thay vì admin
         router.push('/');
       } else {
         setError('Invalid credentials');
@@ -37,7 +36,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-purple-900 px-4 relative">
       <div className="absolute inset-0">
-        <Image 
+        <Image
           src="/anh/bg.png"
           alt="Background"
           layout="fill"
@@ -46,15 +45,17 @@ export default function Login() {
           priority
         />
       </div>
-      
+
       <div className="max-w-md w-full space-y-8 bg-black bg-opacity-50 p-8 rounded-lg backdrop-blur-sm relative z-10">
         <div className="text-center">
           <div className="flex items-center justify-center mb-4">
-            <div className="text-pink-500 text-4xl font-bold">|S</div>
-            <div className="ml-2">
-              <div className="text-white text-sm">Music box</div>
-              <div className="text-white text-sm">Photobooth</div>
-            </div>
+            <Image
+              src="/logo.svg"
+              alt="Music Box Photobooth"
+              width={150}
+              height={50}
+              className="glow-image"
+            />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
             Đăng nhập
@@ -63,7 +64,7 @@ export default function Login() {
             Vui lòng đăng nhập để sử dụng PhotoBooth
           </p>
         </div>
-        
+
         {error && (
           <div className="rounded-md bg-red-900 bg-opacity-60 p-4 my-4 border border-pink-500">
             <div className="flex">
@@ -80,7 +81,7 @@ export default function Login() {
             </div>
           </div>
         )}
-        
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md -space-y-px">
             <div className="mb-4">

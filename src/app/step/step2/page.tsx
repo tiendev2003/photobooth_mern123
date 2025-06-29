@@ -78,9 +78,16 @@ export default function Step2() {
           </div>
 
         </h1>
-        <div className="text-3xl font-bold mr-16">
-          <HomeIcon />
-        </div>
+        <button
+          onClick={
+            () => {
+              router.push("/");
+            }
+          }
+          className="w-18 h-18 rounded-full border-2 border-gray-500 flex items-center justify-center"
+        >
+          <HomeIcon className="w-10 h-10" />
+        </button>
       </header>
 
       {/* Main content */}
