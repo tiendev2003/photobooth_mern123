@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
     const where: Prisma.UserWhereInput = searchQuery 
       ? {
           OR: [
-            { name: { contains: searchQuery, mode: Prisma.QueryMode.insensitive } },
-            { email: { contains: searchQuery, mode: Prisma.QueryMode.insensitive } }
+            { name: { contains: searchQuery } },
+            { email: { contains: searchQuery } }
           ]
         } 
       : {};

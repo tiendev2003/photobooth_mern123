@@ -1,24 +1,29 @@
 import { UpdateFrameTemplateInput } from "@/lib/models";
 import { prisma } from "@/lib/prisma";
-import { writeFile } from 'fs/promises';
+import fs, { writeFile } from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import path from "path";
+import { v4 as uuidv4 } from "uuid";
 
 // Function to upload an image and return its details
 async function uploadImage(file: File) {
   try {
     // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
+    const validTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/svg+xml",
+    ];
     if (!validTypes.includes(file.type)) {
-      console.error('Invalid file type:', file.type);
+      console.error("Invalid file type:", file.type);
       return null;
     }
 
     // Generate a unique filename
-    const uniqueFilename = `${uuidv4()}_${file.name.replace(/\s+/g, '_')}`;
+    const uniqueFilename = `${uuidv4()}_${file.name.replace(/\s+/g, "_")}`;
     const buffer = Buffer.from(await file.arrayBuffer());
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'images');
+    const uploadsDir = path.join(process.cwd(), "public", "uploads", "images");
     const filePath = path.join(uploadsDir, uniqueFilename);
     const relativePath = `/uploads/images/${uniqueFilename}`;
 
@@ -33,21 +38,21 @@ async function uploadImage(file: File) {
       data: {
         filename: uniqueFilename,
         path: relativePath,
-        fileType: 'IMAGE',
-        size: buffer.length
-      }
+        fileType: "IMAGE",
+        size: buffer.length,
+      },
     });
 
     return newImage;
   } catch (error) {
-    console.error('Error uploading image:', error);
+    console.error("Error uploading image:", error);
     return null;
   }
 }
 
 // Helper function to create directory if it doesn't exist
 async function createDirIfNotExists(dirPath: string) {
-  const fs = await import('fs').then(module => module.promises);
+  const fs = await import("fs").then((module) => module.promises);
   try {
     await fs.access(dirPath);
   } catch (error) {
@@ -104,23 +109,24 @@ export async function PUT(
   try {
     const { id } = await params;
     const contentType = request.headers.get("content-type");
-    
+
     let updateData: UpdateFrameTemplateInput = {};
     let previewImage, templateImage;
-    
+
     // Handle multipart/form-data (file uploads) and application/json differently
     if (contentType && contentType.includes("multipart/form-data")) {
       // Process form data with file uploads
       const formData = await request.formData();
-      
+
       // Extract text fields
       updateData = {
-        name: formData.get("name") as string || undefined,
-        frameTypeId: formData.get("frameTypeId") as string || undefined,
-        isActive: formData.get("isActive") ? 
-          (formData.get("isActive") === "true") : undefined
+        name: (formData.get("name") as string) || undefined,
+        frameTypeId: (formData.get("frameTypeId") as string) || undefined,
+        isActive: formData.get("isActive")
+          ? formData.get("isActive") === "true"
+          : undefined,
       };
-      
+
       // Get template image file if provided
       const templateFile = formData.get("templateFile") as File;
       if (templateFile && templateFile.size > 0) {
@@ -131,7 +137,7 @@ export async function PUT(
           updateData.filename = templateImage.filename;
         }
       }
-      
+
       // Get preview image file if provided
       const previewFile = formData.get("previewFile") as File;
       if (previewFile && previewFile.size > 0) {
@@ -141,23 +147,22 @@ export async function PUT(
           updateData.preview = previewImage.path;
         }
       }
-      
     } else {
       // Handle JSON data
       const rawBody = await request.json();
-      
+
       updateData = {
         name: rawBody.name,
         filename: rawBody.filename,
         path: rawBody.path,
         preview: rawBody.preview,
         frameTypeId: rawBody.frameTypeId,
-        isActive: rawBody.isActive
+        isActive: rawBody.isActive,
       };
     }
 
     // Filter out undefined values
-    Object.keys(updateData).forEach(key => {
+    Object.keys(updateData).forEach((key) => {
       if (updateData[key as keyof UpdateFrameTemplateInput] === undefined) {
         delete updateData[key as keyof UpdateFrameTemplateInput];
       }
@@ -179,7 +184,7 @@ export async function PUT(
         );
       }
     }
-    
+
     const frameTemplate = await prisma.frameTemplate.update({
       where: { id },
       data: updateData,
@@ -211,6 +216,27 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+
+    const existingFrameTemplate = await prisma.frameTemplate.findUnique({
+      where: { id },
+    });
+    if (!existingFrameTemplate) {
+      return NextResponse.json(
+        { error: "Frame template not found" },
+        { status: 404 }
+      );
+    }
+
+    try {
+      const filePath = path.join(
+        process.cwd(),
+        "public",
+        existingFrameTemplate?.path
+      );
+      await fs.unlink(filePath);
+    } catch (fileError) {
+      console.error("Error deleting image file:", fileError);
+    }
     await prisma.frameTemplate.delete({
       where: { id },
     });

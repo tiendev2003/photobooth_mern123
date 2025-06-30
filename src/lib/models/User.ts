@@ -139,6 +139,11 @@ export async function authenticate(
   }
 
   const token = await generateToken(user);
+  user.currentToken = token; // Update currentToken field
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { currentToken: token },
+  });
   return {
     user: sanitizeUser(user),
     token,

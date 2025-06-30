@@ -141,14 +141,7 @@ export default function Step8() {
         setIsPrinting(false);
         return;
       }
-      // Create download link for the image
-      const downloadLink = document.createElement('a');
-      downloadLink.href = imageDataUrl;
-      downloadLink.download = `photobooth_print_${new Date().getTime()}.jpg`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      return;
+
 
       fetch("/api/print", {
         method: "POST",
@@ -663,14 +656,7 @@ export default function Step8() {
           </div>
         </button>
 
-        <button
-          onClick={handleNext}
-          className="rounded-full p-6 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition glow-button"
-        >
-          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
-            <ChevronRight />
-          </div>
-        </button>
+
       </div>
     </div>
   );

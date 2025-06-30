@@ -19,13 +19,14 @@ export async function GET(req: NextRequest) {
     const limit = limitParam ? parseInt(limitParam) : 10;
     const skip = (page - 1) * limit;
       // Filter criteria
-    const where: Prisma.ImageWhereInput = searchQuery 
-      ? {
-          OR: [
-            { filename: { contains: searchQuery, mode: Prisma.QueryMode.insensitive } }
-          ]
-        } 
-      : {};
+    const where: Prisma.ImageWhereInput = searchQuery
+  ? {
+      filename: {
+        contains: searchQuery,
+      },
+    }
+  : {};
+
 
     // Get total count for pagination metadata
     const totalImages = await prisma.image.count({ where });

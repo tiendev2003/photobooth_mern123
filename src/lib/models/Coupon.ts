@@ -6,6 +6,9 @@ export interface CouponData {
   discount: number;
   expires_at: Date;
   user_id?: string | null;
+  isActive?: boolean;
+  usageLimit?: number | null;
+  currentUsage?: number;
 }
 
 export async function getAllCoupons(options?: { 
@@ -22,7 +25,7 @@ export async function getAllCoupons(options?: {
   // Search conditions
   const where: Prisma.CouponWhereInput = search ? {
     OR: [
-      { code: { contains: search, mode: Prisma.QueryMode.insensitive } }
+      { code: { contains: search } }
     ]
   } : {};
   
