@@ -15,6 +15,17 @@ export default function Step7() {
   };
 
   const handleNext = () => {
+    // Check if enough photos are selected
+    const maxPhotos = selectedFrame?.isCustom
+      ? 4 // For custom frames, we allow up to 8 photos (2x4)
+      : selectedFrame
+        ? selectedFrame.columns * selectedFrame.rows
+        : 4; // Default to 4 if no frame selected
+    const selectedCount = selectedIndices.filter(i => i !== undefined).length;
+    if (selectedCount < maxPhotos) {
+      alert(`Vui lòng chọn ít nhất ${maxPhotos} ảnh để tiếp tục.`);
+      return;
+    }
     router.push("/step/step8");
   };
 
@@ -33,7 +44,7 @@ export default function Step7() {
 
     // Calculate maximum photos based on selected frame
     const maxPhotos = selectedFrame?.isCustom
-      ? 8 // For custom frames, we allow up to 8 photos (2x4)
+      ? 4 // For custom frames, we allow up to 8 photos (2x4)
       : selectedFrame
         ? selectedFrame.columns * selectedFrame.rows
         : 4; // Default to 4 if no frame selected
@@ -194,7 +205,7 @@ export default function Step7() {
               <h3 className="text-2xl font-bold mb-4">
                 Ảnh đã chụp ({photos.length})
               </h3>
-              <div className="grid grid-cols-4 gap-3 w-full">
+              <div className="grid grid-cols-3 gap-3 w-full">
                 {photos.length === 0 ? (
                   <div className="col-span-4 text-center text-gray-400">
                     Không có ảnh nào
@@ -249,10 +260,10 @@ export default function Step7() {
       </div>
 
       {/* Navigation buttons */}
-      <div className="flex justify-between w-full px-12 pb-16 z-10">
+      <div className="flex justify-between w-full px-16 pb-12 z-10">
         <button
           onClick={handleBack}
-          className="rounded-full p-6 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition glow-button"
+          className="rounded-full p-6 bg-transparent border-2 white  glow-button"
         >
           <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
             &#8592;
@@ -261,7 +272,7 @@ export default function Step7() {
 
         <button
           onClick={handleNext}
-          className="rounded-full p-6 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition glow-button"
+          className="rounded-full p-6 bg-transparent border-2 white  glow-button"
         >
           <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
             &#8594;

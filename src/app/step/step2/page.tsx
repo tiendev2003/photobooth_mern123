@@ -101,7 +101,7 @@ export default function Step2() {
       <div className="flex justify-between w-full px-16 py-12 z-10">
         <button
           onClick={handleBack}
-          className="rounded-full p-6 bg-transparent border-2 border-white  transition glow-button"
+          className="rounded-full p-6 bg-transparent border-2 border-white transition glow-button"
           aria-label="Go back"
         >
           <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl glow-text-small">

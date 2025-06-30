@@ -101,7 +101,9 @@ export async function createCoupon(data: CouponData) {
       code: data.code,
       discount: data.discount,
       expires_at: data.expires_at,
-      user_id: data.user_id
+      user_id: data.user_id,
+      usageLimit: data.usageLimit ?? null,
+      isActive: data.isActive ?? true
     },
     include: {
       user: {

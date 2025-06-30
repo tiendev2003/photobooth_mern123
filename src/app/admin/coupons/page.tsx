@@ -17,6 +17,9 @@ interface Coupon {
   user_id: string | null;
   user: User | null;
   createdAt: string;
+  usageLimit?: number | null;
+  currentUsage?: number;
+  isActive?: boolean;
 }
 
 export default function CouponsManagement() {
@@ -45,7 +48,9 @@ export default function CouponsManagement() {
     code: '',
     discount: 0,
     expires_at: '',
-    user_id: ''
+    user_id: '',
+    usageLimit: '',
+    isActive: true
   });
   
   // Define fetchData function with useCallback
@@ -126,23 +131,23 @@ export default function CouponsManagement() {
   };
   
   const generateCouponCode = () => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let result = '';
-    const length = 8;
-    
+    const length = 10;
     for (let i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * characters.length));
+      result += Math.floor(Math.random() * 10).toString();
     }
-    
     return result;
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    
+    const { name, value, type } = e.target;
     if (name === 'discount') {
       const numValue = parseFloat(value);
       setFormData(prev => ({ ...prev, [name]: isNaN(numValue) ? 0 : numValue }));
+    } else if (name === 'usageLimit') {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    } else if (type === 'checkbox') {
+      setFormData(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -152,14 +157,15 @@ export default function CouponsManagement() {
     const today = new Date();
     const nextMonth = new Date(today);
     nextMonth.setMonth(today.getMonth() + 1);
-    
     setIsEditing(false);
     setFormData({
       id: '',
       code: generateCouponCode(),
-      discount: 10, // Default discount 10%
-      expires_at: nextMonth.toISOString().split('T')[0], // Default expiry 1 month
-      user_id: ''
+      discount: 10,
+      expires_at: nextMonth.toISOString().split('T')[0],
+      user_id: '',
+      usageLimit: '',
+      isActive: true
     });
     setIsFormOpen(true);
   };
@@ -171,25 +177,26 @@ export default function CouponsManagement() {
       code: coupon.code,
       discount: coupon.discount,
       expires_at: new Date(coupon.expires_at).toISOString().split('T')[0],
-      user_id: coupon.user_id || ''
+      user_id: coupon.user_id || '',
+      usageLimit: coupon.usageLimit !== undefined && coupon.usageLimit !== null ? String(coupon.usageLimit) : '',
+      isActive: coupon.isActive !== undefined ? coupon.isActive : true
     });
     setIsFormOpen(true);
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
       // Prepare data for API
       const couponData = {
         ...formData,
-        user_id: formData.user_id || null // Convert empty string to null
+        user_id: formData.user_id || null,
+        usageLimit: formData.usageLimit === '' ? null : Number(formData.usageLimit),
+        isActive: formData.isActive
       };
-      
       // Create or update coupon
       const url = isEditing ? `/api/coupons/${formData.id}` : '/api/coupons';
       const method = isEditing ? 'PUT' : 'POST';
-      
       const response = await fetch(url, {
         method,
         headers: {
@@ -198,14 +205,11 @@ export default function CouponsManagement() {
         },
         body: JSON.stringify(couponData),
       });
-      
       if (!response.ok) {
         throw new Error(`Failed to ${isEditing ? 'update' : 'create'} coupon`);
       }
-      
       setIsFormOpen(false);
       fetchData(); // Refresh coupons list
-      
     } catch (err) {
       console.error('Error submitting form:', err);
       setError(`Failed to ${isEditing ? 'update' : 'create'} coupon`);
@@ -314,8 +318,14 @@ export default function CouponsManagement() {
                     id="code"
                     name="code"
                     value={formData.code}
-                    onChange={handleInputChange}
+                    onChange={e => {
+                      // Chỉ cho phép tối đa 10 ký tự số
+                      const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                      setFormData(prev => ({ ...prev, code: value }));
+                    }}
                     required
+                    maxLength={10}
+                    pattern="[0-9]{1,10}"
                     className="flex-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                   <button
@@ -330,7 +340,7 @@ export default function CouponsManagement() {
               
               <div>
                 <label htmlFor="discount" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Discount (%)
+                  Discount 
                 </label>
                 <input
                   type="number"
@@ -379,6 +389,33 @@ export default function CouponsManagement() {
                 </select>
               </div>
               
+              <div>
+                <label htmlFor="usageLimit" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Usage Limit (optional)
+                </label>
+                <input
+                  type="number"
+                  id="usageLimit"
+                  name="usageLimit"
+                  value={formData.usageLimit}
+                  onChange={handleInputChange}
+                  min="1"
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                />
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  name="isActive"
+                  checked={formData.isActive}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                  Active
+                </label>
+              </div>
               <div className="flex justify-end space-x-3 pt-3">
                 <button
                   type="button"
@@ -408,6 +445,7 @@ export default function CouponsManagement() {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Code</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Discount</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Expires</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Usage Limit</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Assigned To</th>
                 <th scope="col" className="relative px-6 py-3">
                   <span className="sr-only">Actions</span>
@@ -425,7 +463,7 @@ export default function CouponsManagement() {
                         {coupon.code}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {coupon.discount}%
+                        {coupon.discount}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -438,6 +476,11 @@ export default function CouponsManagement() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {coupon.user ? coupon.user.name : 'Unassigned'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {coupon.currentUsage !== undefined && coupon.usageLimit !== undefined
+                          ? `${coupon.currentUsage} / ${coupon.usageLimit}`
+                          : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                         <button

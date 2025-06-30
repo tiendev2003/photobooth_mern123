@@ -40,7 +40,7 @@ export async function PUT(
   try {
     const id = (await params).id;
     const body = await req.json();
-    const { code, discount, expires_at, user_id } = body;
+    const { code, discount, expires_at, user_id, usageLimit, isActive } = body;
 
     // Check if coupon exists
     const existingCoupon = await prisma.coupon.findUnique({
@@ -84,6 +84,8 @@ export async function PUT(
     if (discount !== undefined) updateData.discount = parseFloat(discount.toString());
     if (expires_at) updateData.expires_at = new Date(expires_at);
     if (user_id !== undefined) updateData.user_id = user_id;
+    if (usageLimit !== undefined) updateData.usageLimit = usageLimit;
+    if (isActive !== undefined) updateData.isActive = isActive;
 
     // Update coupon
     const updatedCoupon = await prisma.coupon.update({

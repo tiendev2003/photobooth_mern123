@@ -12,17 +12,13 @@ export default function Home() {
 
   useEffect(() => {
     if (!isLoading) {
-      // If user is not logged in, redirect to login
       if (!user) {
         router.push('/login');
         return;
       }
-
-
     }
   }, [user, isAdmin, isLoading, router]);
 
-  // If still loading or user not authenticated, show nothing
   if (isLoading || !user) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -67,8 +63,8 @@ export default function Home() {
       </main>
 
       {/* Navigation buttons */}
-      <div className="flex justify-between w-full px-12 py-16 z-10">
-        <button className="rounded-full p-6 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition opacity-50 cursor-not-allowed glow-button">
+      <div className="flex justify-between w-full px-16 py-12 z-10">
+        <button className="rounded-full p-6 bg-transparent border-2 border-pink-500   transition opacity-50 cursor-not-allowed glow-button">
           <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
             &#8592;
           </div>
@@ -76,7 +72,8 @@ export default function Home() {
 
         <button
           onClick={handleNext}
-          className="rounded-full p-6 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition glow-button"
+
+          className="rounded-full p-6 bg-transparent border-2 border-white  transition glow-button"
         >
           <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl glow-text-small">
             &#8594;

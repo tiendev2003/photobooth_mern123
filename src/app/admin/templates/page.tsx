@@ -120,7 +120,8 @@ export default function TemplatesManagement() {
     if (token) {
       fetchData(pagination.page, pagination.limit, searchQuery, filterFrameType);
     }
-  }, [token, pagination.page, pagination.limit, searchQuery, filterFrameType, fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, pagination.page, pagination.limit, filterFrameType, fetchData]);
   
   // Handle page change
   const handlePageChange = (newPage: number) => {
@@ -143,8 +144,9 @@ export default function TemplatesManagement() {
   // Handle search submission
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 when searching
-  };
+    fetchData(1, pagination.limit, searchQuery, filterFrameType);
+     setPagination(prev => ({ ...prev, page: 1 }));  
+   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;

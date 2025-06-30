@@ -103,10 +103,10 @@ export default function Step4() {
       </main>
 
       {/* Navigation buttons */}
-      <div className="flex justify-between w-full px-12 py-16 z-10">
+      <div className="flex justify-between w-full px-16 py-12 z-10">
         <button
           onClick={handleBack}
-          className="rounded-full p-6 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition glow-button"
+          className="rounded-full p-6 bg-transparent border-2 border-white   glow-button"
         >
           <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
             &#8592;
@@ -115,7 +115,7 @@ export default function Step4() {
 
         <button
           onClick={handleNext}
-          className="rounded-full p-6 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition glow-button"
+          className="rounded-full p-6 bg-transparent border-2 border-white   glow-button"
         >
           <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
             &#8594;

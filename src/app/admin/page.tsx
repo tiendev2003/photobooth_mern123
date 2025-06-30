@@ -51,11 +51,11 @@ export default function AdminDashboard() {
         const couponsData = await couponsResponse.json();
         
         setStats({
-          userCount: userData.length || 0,
-          frameTypesCount: frameTypesData.length || 0,
-          templatesCount: templatesData.length || 0,
-          imagesCount: imagesData.length || 0,
-          couponsCount: couponsData.length || 0,
+          userCount: userData.pagination?.total ?? userData.users?.length ?? 0,
+          frameTypesCount: frameTypesData.pagination?.total ?? frameTypesData.data?.length ?? 0,
+          templatesCount: templatesData.pagination?.total ?? templatesData.data?.length ?? 0,
+          imagesCount: imagesData.pagination?.total ?? imagesData.images?.length ?? 0,
+          couponsCount: couponsData.pagination?.total ?? couponsData.coupons?.length ?? 0,
         });
       } catch (err) {
         console.error('Error fetching dashboard stats:', err);

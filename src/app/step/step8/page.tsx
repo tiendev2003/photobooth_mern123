@@ -4,7 +4,7 @@ import HomeButton from "@/app/components/HomeButton";
 import { filterOptions, useBooth } from "@/lib/context/BoothContext";
 import { FrameTemplate } from "@/lib/models/FrameTemplate";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageIcon, Printer, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -12,15 +12,51 @@ import { useEffect, useRef, useState } from "react";
 
 // Enhanced filters for skin beautification
 const skinFilters = [
-  { id: "none", name: "Bình thường", className: "", preview: "/anh/1.png" },
-  { id: "soft", name: "Da mềm mịn", className: "brightness-105 contrast-95 saturate-95", preview: "/anh/2.png" },
-  { id: "bright", name: "Da sáng", className: "brightness-110 contrast-90 saturate-105", preview: "/anh/3.png" },
-  { id: "glow", name: "Da rạng rỡ", className: "brightness-110 contrast-110 saturate-110", preview: "/anh/4.png" },
-  { id: "smooth", name: "Da mượt", className: "brightness-105 contrast-90 saturate-95 blur-[0.2px]", preview: "/anh/5.png" },
-  { id: "vintage", name: "Hoài cổ", className: "sepia brightness-90 contrast-110", preview: "/anh/6.png" },
-  { id: "cool", name: "Mát lạnh", className: "hue-rotate-[-10deg] brightness-105 saturate-90", preview: "/anh/7.png" },
-  { id: "warm", name: "Ấm áp", className: "hue-rotate-[10deg] brightness-105 saturate-110", preview: "/anh/8.png" },
-];
+  { id: "none", name: "Bình thường", className: "", preview: "/anh/1.png", icon: "🌟" },
+  {
+    id: "soft",
+    name: "Da mềm mịn",
+    className: "brightness-105 contrast-95 saturate-95",
+    preview: "/anh/2.png",
+    icon: "✨",
+  },
+  {
+    id: "bright",
+    name: "Da sáng",
+    className: "brightness-110 contrast-90 saturate-105",
+    preview: "/anh/3.png",
+    icon: "💫",
+  },
+  {
+    id: "glow",
+    name: "Da rạng rỡ",
+    className: "brightness-110 contrast-110 saturate-110",
+    preview: "/anh/4.png",
+    icon: "🌈",
+  },
+  {
+    id: "smooth",
+    name: "Da mượt",
+    className: "brightness-105 contrast-90 saturate-95 blur-[0.2px]",
+    preview: "/anh/5.png",
+    icon: "🎭",
+  },
+  { id: "vintage", name: "Hoài cổ", className: "sepia brightness-90 contrast-110", preview: "/anh/6.png", icon: "📸" },
+  {
+    id: "cool",
+    name: "Mát lạnh",
+    className: "hue-rotate-[-10deg] brightness-105 saturate-90",
+    preview: "/anh/7.png",
+    icon: "❄️",
+  },
+  {
+    id: "warm",
+    name: "Ấm áp",
+    className: "hue-rotate-[10deg] brightness-105 saturate-110",
+    preview: "/anh/8.png",
+    icon: "🔥",
+  },
+]
 
 export default function Step8() {
   interface ExtendedCSSStyleDeclaration extends CSSStyleDeclaration {
@@ -508,7 +544,7 @@ export default function Step8() {
       <div className="w-full max-w-6xl px-4 md:px-6 mx-auto z-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left column - Frame preview */}
-          <div className="   rounded-lg  flex flex-col items-center justify-center">
+          <div className=" rounded-lg  flex flex-col items-center justify-center">
             <div className="w-full flex justify-center">
               <div className={`w-full flex ${selectedFrame && selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom ? 'max-w-md' : 'max-w-md'} mx-auto`}>
                 {renderPreview()}
@@ -519,23 +555,33 @@ export default function Step8() {
           </div>
 
           {/* Right column - Filter options and Frame Templates */}
-          <div className="flex flex-col gap-6">
-            {/* Skin Beautifying Filters */}
-            <div className="">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-2xl font-bold">Bộ lọc làm đẹp da</h3>
+          <div className="flex flex-col gap-8">
+            {/* Enhanced Skin Beautifying Filters */}
+            <div className="bg-gradient-to-br from-purple-800/40 to-pink-800/40 backdrop-blur-sm rounded-2xl p-2 border border-purple-500/30 shadow-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-xl">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-pink-300 to-purple-300 bg-clip-text text-transparent">
+                      Bộ lọc làm đẹp da
+                    </h3>
+                    <p className="text-sm text-purple-200 opacity-80">Chọn hiệu ứng yêu thích</p>
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => scrollCarousel(skinFilterRef, 'left')}
-                    className="p-1 bg-purple-800 hover:bg-purple-700 rounded-full"
+                    onClick={() => scrollCarousel(skinFilterRef, "left")}
+                    className="p-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-xl transition-all duration-300 shadow-lg hover:shadow-pink-500/25 hover:scale-105"
                   >
-                    <ChevronLeft size={24} />
+                    <ChevronLeft size={20} className="text-white" />
                   </button>
                   <button
-                    onClick={() => scrollCarousel(skinFilterRef, 'right')}
-                    className="p-1 bg-purple-800 hover:bg-purple-700 rounded-full"
+                    onClick={() => scrollCarousel(skinFilterRef, "right")}
+                    className="p-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-xl transition-all duration-300 shadow-lg hover:shadow-pink-500/25 hover:scale-105"
                   >
-                    <ChevronRight size={24} />
+                    <ChevronRight size={20} className="text-white" />
                   </button>
                 </div>
               </div>
@@ -543,56 +589,106 @@ export default function Step8() {
               <div
                 ref={skinFilterRef}
                 className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 scroll-smooth"
-                style={{ scrollBehavior: 'smooth' }}
+                style={{ scrollBehavior: "smooth" }}
               >
                 {skinFilters.map((filter) => (
                   <div
                     key={filter.id}
                     onClick={() => handleFilterSelect(filter)}
-                    className={`flex-shrink-0 w-36 border-2 rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${selectedFilter.id === filter.id
-                      ? 'border-pink-500 ring-2 ring-pink-500'
-                      : 'border-purple-700 hover:border-pink-300'
-                      }`}
+                    className={`flex-shrink-0 w-40 group cursor-pointer transition-all duration-300 ${
+                      selectedFilter.id === filter.id ? "transform scale-105" : "hover:transform hover:scale-102"
+                    }`}
                   >
-                    <div className="aspect-square relative overflow-hidden">
-                      {photos && photos.length > 0 ? (
-                        <img
-                          src={photos[0].image}
-                          alt={filter.name}
-                          className={`w-full h-full object-cover ${filter.className}`}
-                        />
-                      ) : (
-                        <img
-                          src={filter.preview}
-                          alt={filter.name}
-                          className={`w-full h-full object-cover ${filter.className}`}
-                        />
-                      )}
-                    </div>
-                    <div className="bg-purple-900 bg-opacity-70 p-2 text-center">
-                      <span className="text-sm">{filter.name}</span>
+                    <div
+                      className={`relative rounded-2xl overflow-hidden border-3 transition-all duration-300 ${
+                        selectedFilter.id === filter.id
+                          ? "border-pink-400 shadow-2xl shadow-pink-500/50 ring-4 ring-pink-400/30"
+                          : "border-purple-400/50 hover:border-pink-300/70 hover:shadow-xl hover:shadow-purple-500/30"
+                      }`}
+                    >
+                      <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-purple-900/50 to-pink-900/50">
+                        {photos && photos.length > 0 ? (
+                          <img
+                            src={photos[0].image || "/placeholder.svg"}
+                            alt={filter.name}
+                            className={`w-full h-full object-cover transition-all duration-300 ${filter.className} ${
+                              selectedFilter.id === filter.id ? "" : "group-hover:brightness-110"
+                            }`}
+                          />
+                        ) : (
+                          <img
+                            src={filter.preview || "/placeholder.svg"}
+                            alt={filter.name}
+                            className={`w-full h-full object-cover transition-all duration-300 ${filter.className} ${
+                              selectedFilter.id === filter.id ? "" : "group-hover:brightness-110"
+                            }`}
+                          />
+                        )}
+
+                        {/* Filter icon overlay */}
+                        <div className="absolute top-2 right-2 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center">
+                          <span className="text-lg">{filter.icon}</span>
+                        </div>
+
+                        {/* Selected indicator */}
+                        {selectedFilter.id === filter.id && (
+                          <div className="absolute inset-0 bg-gradient-to-t from-pink-500/20 to-transparent">
+                            <div className="absolute bottom-2 left-2 w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
+                              <div className="w-3 h-3 bg-white rounded-full"></div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div
+                        className={`p-3 text-center transition-all duration-300 ${
+                          selectedFilter.id === filter.id
+                            ? "bg-gradient-to-r from-pink-600/80 to-purple-600/80 backdrop-blur-sm"
+                            : "bg-purple-900/60 backdrop-blur-sm group-hover:bg-purple-800/70"
+                        }`}
+                      >
+                        <span
+                          className={`text-sm font-medium transition-all duration-300 ${
+                            selectedFilter.id === filter.id
+                              ? "text-white font-semibold"
+                              : "text-purple-100 group-hover:text-white"
+                          }`}
+                        >
+                          {filter.name}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Frame Templates */}
-            <div className="  ">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-2xl font-bold">Mẫu khung ảnh</h3>
+            {/* Enhanced Frame Templates */}
+            <div className="bg-gradient-to-br from-indigo-800/40 to-purple-800/40 backdrop-blur-sm rounded-2xl p-2 border border-indigo-500/30 shadow-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl">
+                    <ImageIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-300 to-purple-300 bg-clip-text text-transparent">
+                      Mẫu khung ảnh
+                    </h3>
+                    <p className="text-sm text-indigo-200 opacity-80">Tùy chỉnh khung cho ảnh</p>
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => scrollCarousel(frameTemplateRef, 'left')}
-                    className="p-1 bg-purple-800 hover:bg-purple-700 rounded-full"
+                    onClick={() => scrollCarousel(frameTemplateRef, "left")}
+                    className="p-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/25 hover:scale-105"
                   >
-                    <ChevronLeft size={24} />
+                    <ChevronLeft size={20} className="text-white" />
                   </button>
                   <button
-                    onClick={() => scrollCarousel(frameTemplateRef, 'right')}
-                    className="p-1 bg-purple-800 hover:bg-purple-700 rounded-full"
+                    onClick={() => scrollCarousel(frameTemplateRef, "right")}
+                    className="p-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 rounded-xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/25 hover:scale-105"
                   >
-                    <ChevronRight size={24} />
+                    <ChevronRight size={20} className="text-white" />
                   </button>
                 </div>
               </div>
@@ -600,37 +696,76 @@ export default function Step8() {
               <div
                 ref={frameTemplateRef}
                 className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 scroll-smooth"
-                style={{ scrollBehavior: 'smooth' }}
+                style={{ scrollBehavior: "smooth" }}
               >
                 {loading ? (
-                  <div className="flex-shrink-0 w-36 h-36 bg-purple-800/50 rounded-lg flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500"></div>
+                  <div className="flex-shrink-0 w-40 h-40 bg-gradient-to-br from-indigo-800/50 to-purple-800/50 rounded-2xl flex items-center justify-center border border-indigo-500/30">
+                    <div className="relative">
+                      <div className="animate-spin rounded-full h-10 w-10 border-t-3 border-b-3 border-indigo-400"></div>
+                      <div className="absolute inset-0 animate-ping rounded-full h-10 w-10 border border-indigo-400/30"></div>
+                    </div>
                   </div>
                 ) : frameTemplates.length > 0 ? (
                   frameTemplates.map((template) => (
                     <div
                       key={template.id}
                       onClick={() => setSelectedTemplate(template)}
-                      className={`flex-shrink-0 w-36 border-2 rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${selectedTemplate?.id === template.id
-                        ? 'border-pink-500 ring-2 ring-pink-500'
-                        : 'border-purple-700 hover:border-pink-300'
-                        }`}
+                      className={`flex-shrink-0 w-40 group cursor-pointer transition-all duration-300 ${
+                        selectedTemplate?.id === template.id ? "transform scale-105" : "hover:transform hover:scale-102"
+                      }`}
                     >
-                      <div className="aspect-square relative overflow-hidden">
-                        <img
-                          src={template.preview || template.path}
-                          alt={template.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="bg-purple-900 bg-opacity-70 p-2 text-center">
-                        <span className="text-sm">{template.name}</span>
+                      <div
+                        className={`relative rounded-2xl overflow-hidden border-3 transition-all duration-300 ${
+                          selectedTemplate?.id === template.id
+                            ? "border-indigo-400 shadow-2xl shadow-indigo-500/50 ring-4 ring-indigo-400/30"
+                            : "border-indigo-400/50 hover:border-indigo-300/70 hover:shadow-xl hover:shadow-indigo-500/30"
+                        }`}
+                      >
+                        <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-indigo-900/50 to-purple-900/50">
+                          <img
+                            src={template.preview || template.path}
+                            alt={template.name}
+                            className={`w-full h-full object-cover transition-all duration-300 ${
+                              selectedTemplate?.id === template.id ? "" : "group-hover:brightness-110"
+                            }`}
+                          />
+
+                          {/* Selected indicator */}
+                          {selectedTemplate?.id === template.id && (
+                            <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/20 to-transparent">
+                              <div className="absolute bottom-2 left-2 w-6 h-6 bg-indigo-500 rounded-full flex items-center justify-center">
+                                <div className="w-3 h-3 bg-white rounded-full"></div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div
+                          className={`p-3 text-center transition-all duration-300 ${
+                            selectedTemplate?.id === template.id
+                              ? "bg-gradient-to-r from-indigo-600/80 to-purple-600/80 backdrop-blur-sm"
+                              : "bg-indigo-900/60 backdrop-blur-sm group-hover:bg-indigo-800/70"
+                          }`}
+                        >
+                          <span
+                            className={`text-sm font-medium transition-all duration-300 ${
+                              selectedTemplate?.id === template.id
+                                ? "text-white font-semibold"
+                                : "text-indigo-100 group-hover:text-white"
+                            }`}
+                          >
+                            {template.name}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="flex-shrink-0 w-full flex items-center justify-center h-36 bg-purple-800/30 rounded-lg">
-                    <p className="text-gray-300">Không có mẫu khung ảnh cho kiểu khung này</p>
+                  <div className="flex-shrink-0 w-full flex items-center justify-center h-40 bg-gradient-to-br from-indigo-800/30 to-purple-800/30 rounded-2xl border border-indigo-500/30">
+                    <div className="text-center">
+                      <ImageIcon className="w-12 h-12 text-indigo-300 mx-auto mb-2 opacity-50" />
+                      <p className="text-indigo-200">Không có mẫu khung ảnh cho kiểu khung này</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -643,7 +778,7 @@ export default function Step8() {
       <div className="flex justify-end w-full px-12 pb-16 z-10">
         <button
           onClick={handlePrint}
-          className={`rounded-full p-6 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition glow-button mr-4 ${isPrinting ? 'opacity-50 cursor-not-allowed' : ''
+          className={`rounded-full p-6 bg-transparent border-2 border-white   glow-button mr-4 ${isPrinting ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           disabled={isPrinting}
         >

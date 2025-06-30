@@ -17,7 +17,6 @@ const publicPaths = [
   "/api/frame-templates",
   "/",
   "/api/print",
-
   "/login",
   "/step/step1",
   "/step/step2",

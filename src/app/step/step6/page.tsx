@@ -2,7 +2,7 @@
 
 import HomeButton from "@/app/components/HomeButton";
 import { useBooth } from "@/lib/context/BoothContext";
-import { ArrowLeft, ArrowRight, Camera, CameraOff } from "lucide-react";
+import { Camera, CameraOff } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -202,11 +202,11 @@ export default function Step6() {
         <div className="w-full md:w-1/3 h-full flex flex-col gap-4">
           {/* Controls */}
           <div className="bg-black bg-opacity-70 rounded-xl border border-purple-500 shadow-md p-6 flex flex-col items-center gap-4">
-            <h2 className="text-xl font-semibold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600">
+            <h2 className="text-3xl font-semibold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600">
               Bảng điều khiển
             </h2>
             <div className="text-center">
-              <p className="text-gray-300">
+              <p className="text-gray-300 text-2xl">
                 Đã chụp: <span className="font-bold text-white">{shotCount}/{maxShots}</span>
               </p>
             </div>
@@ -223,6 +223,9 @@ export default function Step6() {
               {isCapturing ? `Đang chụp (${countdown}s)` : "Bắt đầu chụp"}
             </button>
           </div>
+          <h1 className="text-9xl font-bold text-center text-white">
+            {isCapturing && `${countdown}s`}
+          </h1>
 
           {/* Photo gallery */}
           <div className="flex-1 bg-black bg-opacity-70 rounded-xl border border-purple-500 shadow-md p-4 overflow-hidden flex flex-col">
@@ -237,7 +240,7 @@ export default function Step6() {
                 </div>
               ) : (
                 <div className="grid grid-cols-4 gap-3">
-                  {photos.map((photo, index) => (
+                  {photos.reverse().map((photo, index) => (
                     <div
                       key={index}
                       className="relative border border-purple-700 rounded-lg overflow-hidden group transition-all duration-300"
@@ -260,36 +263,24 @@ export default function Step6() {
       </main>
 
       {/* Navigation buttons */}
-      <div className="flex flex-col items-center w-full pb-6 z-10">
-        <div className="flex justify-between w-full px-12 pb-10">
-          <button
-            onClick={handleBack}
-            className="rounded-full p-4 bg-transparent border-2 border-pink-500 hover:bg-purple-900 hover:bg-opacity-30 transition-all glow-button transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isCapturing || isCameraLoading || cameraError !== null}
-          >
-            <div className="w-12 h-12 flex items-center justify-center text-pink-500">
-              <ArrowLeft className="w-8 h-8" />
-            </div>
-          </button>
-          <button
-            onClick={handleNext}
-            disabled={photos.length < maxShots || isCapturing || isCameraLoading || cameraError !== null}
-            className={`rounded-full p-4 border-2 border-green-500 transition-all transform
-              ${photos.length < maxShots || isCapturing || isCameraLoading || cameraError
-                ? "opacity-50 cursor-not-allowed border-gray-500"
-                : "hover:bg-green-900 hover:bg-opacity-30 glow-button-green hover:scale-105"
-              }`}
-          >
-            <div
-              className={`w-12 h-12 flex items-center justify-center ${photos.length < maxShots || isCapturing || isCameraLoading || cameraError
-                ? "text-gray-500"
-                : "text-green-500"
-                }`}
-            >
-              <ArrowRight className="w-8 h-8" />
-            </div>
-          </button>
-        </div>
+      <div className="flex justify-between w-full px-16 pb-12 z-10">
+        <button
+          onClick={handleBack}
+          className="rounded-full p-6 bg-transparent border-2 border-white   glow-button"
+        >
+          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
+            &#8592;
+          </div>
+        </button>
+
+        <button
+          onClick={handleNext}
+          className="rounded-full p-6 bg-transparent border-2 border-white   glow-button"
+        >
+          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
+            &#8594;
+          </div>
+        </button>
       </div>
     </div>
   );
