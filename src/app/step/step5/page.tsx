@@ -1,6 +1,6 @@
 "use client";
 
-import { HomeIcon } from "lucide-react";
+import HomeButton from "@/app/components/HomeButton";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -68,12 +68,12 @@ export default function Step5() {
             className="glow-image"
           />
         </div>
-        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center mb-16 md:mb-20 mt-16 tracking-wide">
+        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
           NHẬP MÃ THANH TOÁN
         </h1>
-        <div className="text-3xl font-bold mr-16">
-          <HomeIcon />
-        </div>
+
+        <HomeButton />
+
       </header>
 
       {/* Main content - camera view and capture UI */}

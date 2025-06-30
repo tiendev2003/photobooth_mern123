@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/context/AuthContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import HomeButton from "./components/HomeButton";
 
 export default function Home() {
   const { user, isAdmin, isLoading } = useAuth();
@@ -45,8 +46,7 @@ export default function Home() {
         />
       </div>
 
-      {/* Header */}
-      <header className="flex justify-between items-center w-full p-6 z-10">
+      <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
           <Image
             src="/logo.svg"
@@ -56,7 +56,7 @@ export default function Home() {
             className="glow-image"
           />
         </div>
-        <div className="text-3xl font-bold">TRANG CHỦ</div>
+        <HomeButton />
       </header>
 
       {/* Main content */}

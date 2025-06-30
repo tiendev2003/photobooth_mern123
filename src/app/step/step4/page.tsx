@@ -1,7 +1,8 @@
 "use client";
 
+import HomeButton from "@/app/components/HomeButton";
 import { formatCurrency } from "@/lib/utils";
-import { HomeIcon, Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -46,7 +47,7 @@ export default function Step4() {
         />
       </div>
 
-      <header className="flex justify-between items-center w-full p-6 z-10">
+      <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
           <Image
             src="/logo.svg"
@@ -56,12 +57,11 @@ export default function Step4() {
             className="glow-image"
           />
         </div>
-        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center mb-16 md:mb-20 mt-16 tracking-wide">
+        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
           LỰA CHỌN SỐ LẦN IN
         </h1>
-        <div className="text-3xl font-bold mr-16">
-          <HomeIcon />
-        </div>
+        <HomeButton />
+
       </header>
       {/* Main content */}
       <main className="flex flex-col items-center justify-center flex-grow z-10 w-full max-w-4xl px-8">

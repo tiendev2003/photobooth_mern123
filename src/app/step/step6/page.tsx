@@ -1,5 +1,6 @@
 "use client";
 
+import HomeButton from "@/app/components/HomeButton";
 import { useBooth } from "@/lib/context/BoothContext";
 import { ArrowLeft, ArrowRight, Camera, CameraOff } from "lucide-react";
 import Image from "next/image";
@@ -149,7 +150,6 @@ export default function Step6() {
 
   return (
     <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
-      {/* Background graphics */}
       <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
       <div className="absolute top-0 left-0 right-0 w-full h-full">
         <Image
@@ -163,7 +163,7 @@ export default function Step6() {
       </div>
 
       {/* Header */}
-      <header className="flex justify-between items-center w-full p-6 z-10">
+      <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
           <Image
             src="/logo.svg"
@@ -173,15 +173,16 @@ export default function Step6() {
             className="glow-image"
           />
         </div>
-        <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600">
+        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
           Chế độ chụp hình
-        </div>
+        </h1>
+        <HomeButton />
       </header>
 
       {/* Main content */}
       <main className="flex flex-col md:flex-row items-center justify-center flex-grow z-10 w-full max-w-7xl px-4 gap-6">
         <div className="w-full md:w-2/3 aspect-[4/3] bg-black bg-opacity-70 rounded-2xl border border-purple-500 shadow-lg shadow-purple-500/30 overflow-hidden relative">
-          { 
+          {
             cameraError ? (
               <div className="w-full h-full flex items-center justify-center bg-black bg-opacity-70">
                 <div className="flex flex-col items-center text-red-500">

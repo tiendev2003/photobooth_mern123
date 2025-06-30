@@ -1,8 +1,8 @@
 "use client";
 
+import HomeButton from "@/app/components/HomeButton";
 import { useBooth } from "@/lib/context/BoothContext";
 import { FrameType } from "@/lib/models";
-import { HomeIcon } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,7 +10,7 @@ import { useState } from "react";
 export default function Step3() {
   const router = useRouter();
   const { selectedFrame, setSelectedFrame } = useBooth();
-  const [frameTypes ] = useState<FrameType[]>([
+  const [frameTypes] = useState<FrameType[]>([
     {
       id: "68600e12e2b33497aa214dc2",
       name: "Khung hình 1",
@@ -120,7 +120,7 @@ export default function Step3() {
         />
       </div>
 
-      <header className="flex justify-between items-center w-full p-6 z-10">
+      <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
           <Image
             src="/logo.svg"
@@ -133,9 +133,7 @@ export default function Step3() {
         <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center     tracking-wide">
           Chọn khung hình muốn chụp
         </h1>
-        <div className="text-3xl font-bold mr-16">
-          <HomeIcon />
-        </div>
+        <HomeButton />
       </header>
 
       {/* Main content */}
@@ -146,7 +144,7 @@ export default function Step3() {
               frameTypes.map((frame) => (
                 <div
                   key={frame.id}
-                  className={`relative cursor-pointer transition-transform transform  aspect-[4/3] ${selectedFrame && selectedFrame.id === frame.id ? "  scale-105" : ""
+                  className={`relative cursor-pointer transition-transform transform  aspect-[4/3] ${selectedFrame && selectedFrame.id === frame.id ? "ring-4 ring-pink-500  scale-105" : ""
                     }`}
                   onClick={() => setSelectedFrame(frame)}
                 >
@@ -167,24 +165,7 @@ export default function Step3() {
                     )}
                   </div>
 
-                  {selectedFrame && selectedFrame.id === frame.id && (
-                    <div className="absolute top-1 right-1 bg-pink-500 rounded-full p-0.5 z-10">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </div>
-                  )}
+                   
                 </div>
               ))
             ) : (

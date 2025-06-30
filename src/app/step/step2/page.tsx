@@ -1,6 +1,6 @@
 "use client";
 
-import { HomeIcon } from "lucide-react";
+import HomeButton from "@/app/components/HomeButton";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -61,7 +61,7 @@ export default function Step2() {
       </div>
 
       {/* Header */}
-      <header className="flex justify-between items-center w-full p-6 z-10">
+      <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
           <Image
             src="/logo.svg"
@@ -71,23 +71,14 @@ export default function Step2() {
             className="glow-image"
           />
         </div>
-        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center mb-16 md:mb-20 mt-16 tracking-wide">
+        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center  tracking-wide">
           VUI LÒNG CHỌN NGÔN NGỮ <br />
           <div className="text-2xl md:text-3xl lg:text-4xl font-semibold mt-4">
             언어를 선택해 주세요
           </div>
 
         </h1>
-        <button
-          onClick={
-            () => {
-              router.push("/");
-            }
-          }
-          className="w-18 h-18 rounded-full border-2 border-gray-500 flex items-center justify-center"
-        >
-          <HomeIcon className="w-10 h-10" />
-        </button>
+        <HomeButton />
       </header>
 
       {/* Main content */}
@@ -98,7 +89,7 @@ export default function Step2() {
             <button
               key={lang.code}
               onClick={() => setSelectedLanguage(lang.code)}
-              className={`bg-gradient-to-r from-pink-500 to-purple-600  text-white text-xl md:text-2xl font-semibold py-4 md:py-6 px-8 md:px-12 rounded-full transition-all duration-300 transform  shadow-lg  ${selectedLanguage === lang.code ? 'ring-4 ring-pink-500' : ''}`}
+              className={`bg-gradient-to-r from-pink-500 to-purple-600  text-white text-xl md:text-2xl font-semibold py-4 md:py-6 px-8 md:px-12 rounded-full transition-all duration-300 transform  shadow-lg  ${selectedLanguage === lang.code ? 'ring-4 ring-white' : ''}`}
             >
               {lang.label}
             </button>

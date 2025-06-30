@@ -1,9 +1,10 @@
 "use client";
 
+import HomeButton from "@/app/components/HomeButton";
 import { filterOptions, useBooth } from "@/lib/context/BoothContext";
 import { FrameTemplate } from "@/lib/models/FrameTemplate";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, HomeIcon, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -357,7 +358,7 @@ export default function Step8() {
     }
   };
 
-  
+
   const handleFilterSelect = (filter: typeof filterOptions[0]) => {
     setSelectedFilter(filter);
   };
@@ -494,7 +495,7 @@ export default function Step8() {
         />
       </div>
 
-      <header className="flex justify-between items-center w-full p-6 z-10">
+      <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
           <Image
             src="/logo.svg"
@@ -507,9 +508,7 @@ export default function Step8() {
         <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
           CHỈNH SỬA FILTER
         </h1>
-        <div className="text-3xl font-bold mr-16">
-          <HomeIcon />
-        </div>
+        <HomeButton />
       </header>
 
       {/* Main content */}

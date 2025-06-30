@@ -1,8 +1,8 @@
 "use client";
 
+import HomeButton from "@/app/components/HomeButton";
 import { useBooth } from "@/lib/context/BoothContext";
 import { cn } from "@/lib/utils";
-import { HomeIcon } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -21,7 +21,7 @@ export default function Step7() {
   const handleSelectPhoto = (idx: number) => {
     // Get current indices
     const current = [...selectedIndices];
-      
+
     // If already selected, remove from selection
     const existingIndex = current.findIndex((i: number | undefined) => i === idx);
     if (existingIndex !== -1) {
@@ -170,7 +170,7 @@ export default function Step7() {
         />
       </div>
 
-      <header className="flex justify-between items-center w-full p-6 z-10">
+      <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
           <Image
             src="/logo.svg"
@@ -180,12 +180,10 @@ export default function Step7() {
             className="glow-image"
           />
         </div>
-        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center  tracking-wide">
+        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
           HOÀN THIỆN ẢNH CỦA BẠN
         </h1>
-        <div className="text-3xl font-bold mr-16">
-          <HomeIcon />
-        </div>
+        <HomeButton />
       </header>
 
       {/* Main content */}
