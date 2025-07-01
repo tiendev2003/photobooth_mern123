@@ -30,7 +30,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const verifyToken = async () => {
       const storedUser = localStorage.getItem('user');
       const storedToken = localStorage.getItem('token');
-      
+
       if (storedToken && storedUser) {
         try {
           // Check token validity with the server
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
               'Authorization': `Bearer ${storedToken}`
             }
           });
-          
+
           if (response.ok) {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
@@ -59,10 +59,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           localStorage.removeItem('token');
         }
       }
-      
+
       setIsLoading(false);
     };
-    
+
     verifyToken();
   }, []);
 
@@ -74,8 +74,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setHeartbeatInterval(null);
     }
 
-    // If we have a token, set up heartbeat verification
-    if (token) {
+     if (token) {
       const interval = setInterval(async () => {
         try {
           const response = await fetch('/api/auth/verify', {
@@ -85,27 +84,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
               'Authorization': `Bearer ${token}`
             }
           });
-          
+
           if (!response.ok) {
-            // Token is invalid - someone else logged in with this account
             console.log('Session invalidated: Another login detected');
             logout();
           }
         } catch (error) {
           console.error('Heartbeat verification failed:', error);
         }
-      }, 30000); // Check every 30 seconds
-      
+      }, 3000000);
+
       setHeartbeatInterval(interval);
     }
-    
-    // Cleanup on unmount
+
     return () => {
       if (heartbeatInterval) {
         clearInterval(heartbeatInterval);
       }
     };
-  }, [token]);
+  }, [token,]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -124,15 +121,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const data = await response.json();
       const { user, token } = data;
-      
+
       setUser(user);
       setToken(token);
       setIsAdmin(['ADMIN', 'KETOAN'].includes(user.role));
-      
+
       // Store in localStorage
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', token);
-      
+
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -158,14 +155,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         console.error('Logout error:', error);
       }
     }
-    
+
     // Clean up client state
     setUser(null);
     setToken(null);
     setIsAdmin(false);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
-    
+
     // Clear any heartbeat interval
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval);

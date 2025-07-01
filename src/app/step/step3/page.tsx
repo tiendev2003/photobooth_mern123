@@ -188,7 +188,7 @@ export default function Step3() {
           </div>
         </button>
         <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-white rounded-full flex items-center justify-center text-pink-400 text-xl md:text-2xl font-semibold hover:bg-pink-500/20 transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
-          70.000 VND
+          70 xu
         </button>
         <button
           onClick={handleNext}

@@ -8,7 +8,7 @@ import { QRCodeSVG } from 'qrcode.react';
 
 export default function Step9() {
   const router = useRouter();
-  const { imageQrCode, videoQrCode, gifQrCode } = useBooth();
+  const { imageQrCode, videoQrCode, gifQrCode, videos,selectedIndices } = useBooth();
   const handleBack = () => {
     router.push("/step/step8");
   };
@@ -65,7 +65,25 @@ export default function Step9() {
             <p className="text-center text-black mt-4">GIF của bạn</p>
           </div>
         </div>
+
+
       </main>
+      <div className="flex   items-center justify-center w-full  ">
+        {
+          selectedIndices
+        }
+        {
+          videos.map((video, index) => (
+            <div key={index} className="mb-4">
+              <video
+                src={videos[1]}
+                controls
+                className=" rounded-lg shadow-lg"
+              />
+              <p className="text-center text-white mt-2">Video {index}</p>
+            </div>
+          ))}
+      </div>
 
       {/* Navigation buttons */}
       <div className="flex justify-between w-full px-12 py-16 z-10">
