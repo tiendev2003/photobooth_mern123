@@ -70,6 +70,9 @@ export async function middleware(request: NextRequest) {
         );
         const { payload } = await jwtVerify(token, secretKey);
         const decodedToken = payload as JWTPayload;
+        
+        // Verify with server if token is still valid by calling verify endpoint
+        // This is done by the client via AuthContext to avoid circular dependencies
 
         // Admin-only routes
         if (

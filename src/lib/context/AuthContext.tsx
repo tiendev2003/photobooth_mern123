@@ -23,21 +23,89 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [heartbeatInterval, setHeartbeatInterval] = useState<NodeJS.Timeout | null>(null);
 
-  // Load user and token from localStorage on initial render
+  // Load user and token from localStorage and verify token validity on initial render
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('token');
+    const verifyToken = async () => {
+      const storedUser = localStorage.getItem('user');
+      const storedToken = localStorage.getItem('token');
+      
+      if (storedToken && storedUser) {
+        try {
+          // Check token validity with the server
+          const response = await fetch('/api/auth/verify', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${storedToken}`
+            }
+          });
+          
+          if (response.ok) {
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
+            setToken(storedToken);
+            setIsAdmin(['ADMIN', 'KETOAN'].includes(parsedUser.role));
+          } else {
+            // Token is invalid or was invalidated, log user out
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+          }
+        } catch (error) {
+          console.error('Token verification error:', error);
+          // On error, clear local storage
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+        }
+      }
+      
+      setIsLoading(false);
+    };
     
-    if (storedToken && storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-      setToken(storedToken);
-      setIsAdmin(['ADMIN', 'KETOAN'].includes(parsedUser.role));
+    verifyToken();
+  }, []);
+
+  // Setup token verification heartbeat when token changes
+  useEffect(() => {
+    // Clear any existing interval
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      setHeartbeatInterval(null);
+    }
+
+    // If we have a token, set up heartbeat verification
+    if (token) {
+      const interval = setInterval(async () => {
+        try {
+          const response = await fetch('/api/auth/verify', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (!response.ok) {
+            // Token is invalid - someone else logged in with this account
+            console.log('Session invalidated: Another login detected');
+            logout();
+          }
+        } catch (error) {
+          console.error('Heartbeat verification failed:', error);
+        }
+      }, 30000); // Check every 30 seconds
+      
+      setHeartbeatInterval(interval);
     }
     
-    setIsLoading(false);
-  }, []);
+    // Cleanup on unmount
+    return () => {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
+    };
+  }, [token]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -74,12 +142,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Clear token on server if we have a user ID and token
+    if (user?.id && token) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ userId: user.id })
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+    
+    // Clean up client state
     setUser(null);
     setToken(null);
     setIsAdmin(false);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    
+    // Clear any heartbeat interval
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      setHeartbeatInterval(null);
+    }
   };
 
   return (

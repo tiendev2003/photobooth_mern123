@@ -138,8 +138,11 @@ export async function authenticate(
     return null;
   }
 
+  // Generate a new token for this login session
   const token = await generateToken(user);
-  user.currentToken = token; // Update currentToken field
+  
+  // Update the user's currentToken in the database
+  // This will invalidate any previous tokens from other devices
   await prisma.user.update({
     where: { id: user.id },
     data: { currentToken: token },
