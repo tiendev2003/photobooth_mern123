@@ -265,6 +265,7 @@ export default function Step8() {
           body: JSON.stringify({
             base64Image: imageDataUrl,
             isLandscape: isLandscape, // Pass orientation
+            isCut: selectedFrame?.isCustom === true, // Use isCustom to determine cut option
           }),
         })
           .then((response) => {

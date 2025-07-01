@@ -6,8 +6,8 @@ import path from "path";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { base64Image } = body;
-
+    const { base64Image ,isCut} = body;
+    
     if (!base64Image) {
       return NextResponse.json(
         { error: "Missing base64 image" },
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     // Write file asynchronously
     await fs.writeFile(filePath, buffer);
 
-    const printCommand = `rundll32 C:\\\\Windows\\\\System32\\\\shimgvw.dll,ImageView_PrintTo /pt "${filePath}" "DS-RX1"`;
+    const printCommand = `rundll32 C:\\\\Windows\\\\System32\\\\shimgvw.dll,ImageView_PrintTo /pt "${filePath}" ${isCut ? "DS-RX1" : "DS-RX1-Cut"}`;
     console.log("Executing print command:", printCommand);
     try {
       exec(printCommand, (error) => {
