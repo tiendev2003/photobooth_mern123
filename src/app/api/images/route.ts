@@ -5,6 +5,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
+// Set custom config for the route
+export const config = {
+  api: {
+    // Disable body parsing (Next.js will not parse the body as we'll handle it ourselves)
+    bodyParser: false,
+    // Increase the limit to 10MB
+    responseLimit: '10mb',
+  },
+};
+
 // GET /api/images - Get all images with pagination
 export async function GET(req: NextRequest) {
   try {
@@ -73,11 +83,28 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
     
-    const formData = await req.formData();
+    // Parse the request body as formData with a try-catch to handle potential large file uploads
+    let formData;
+    try {
+      formData = await req.formData();
+    } catch (error) {
+      console.error("Error parsing formData:", error);
+      return NextResponse.json({ 
+        error: 'Uploaded file is too large. Maximum file size is 10MB.' 
+      }, { status: 413 });
+    }
+    
     const file = formData.get('file') as File;
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    }
+
+    // Check file size (limit to 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ 
+        error: 'File size too large. Maximum file size is 10MB.' 
+      }, { status: 413 });
     }
 
     // Validate file type

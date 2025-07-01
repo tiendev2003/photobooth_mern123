@@ -179,6 +179,9 @@ export default function Step8() {
         });
 
         if (!imageResponse.ok) {
+          if (imageResponse.status === 413) {
+            throw new Error("Ảnh quá lớn để tải lên. Hệ thống đang tối ưu hóa để giải quyết vấn đề này.");
+          }
           throw new Error("Lỗi khi tải ảnh lên");
         }
 
@@ -268,7 +271,109 @@ export default function Step8() {
 
       } catch (error) {
         console.error("Error processing media:", error);
-        alert("Có lỗi xảy ra khi xử lý media: " + (error instanceof Error ? error.message : "Lỗi không xác định"));
+        if (error instanceof Error && error.message.includes("Ảnh quá lớn")) {
+          alert("Ảnh quá lớn để tải lên. Hệ thống sẽ tự động giảm kích thước và thử lại.");
+          // Retry with lower quality and smaller dimensions
+          try {
+            // Generate a new smaller image with lower quality and reduced dimensions
+            // Override the generateHighQualityImage function with smaller dimensions temporarily
+             
+            // Create a smaller version for the retry
+            const tempGenerateImage = async () => {
+              const previewContent = printPreviewRef.current;
+              if (!previewContent) return;
+            
+              try {
+                const isCustomFrame = selectedFrame?.isCustom === true;
+                // Use much smaller dimensions for the retry attempt
+                const desiredWidth = isLandscape ? 1800 : 1200;
+                const desiredHeight = isLandscape ? 1200 : 1800;
+                const rect = previewContent.getBoundingClientRect();
+                const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 2);
+            
+                // Dynamically import html2canvas-pro
+                const html2canvas = (await import("html2canvas-pro")).default;
+            
+                // Preload all images
+                const images = previewContent.querySelectorAll("img");
+                await preloadImages(Array.from(images));
+            
+                // The rest of the image generation code is similar but with reduced dimensions and quality
+                const canvas = await html2canvas(previewContent, {
+                  allowTaint: true,
+                  useCORS: true,
+                  backgroundColor: "#FFFFFF",
+                  width: rect.width,
+                  height: rect.height,
+                  scale: scaleFactor,
+                  logging: false,
+                  imageTimeout: 30000,
+                  removeContainer: true,
+                  foreignObjectRendering: false,
+                });
+            
+                const finalCanvas = document.createElement("canvas");
+                finalCanvas.width = desiredWidth;
+                finalCanvas.height = desiredHeight;
+                const ctx = finalCanvas.getContext("2d");
+            
+                if (!ctx) throw new Error("Không thể tạo 2D context");
+            
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillRect(0, 0, desiredWidth, desiredHeight);
+                ctx.drawImage(canvas, 0, 0, desiredWidth, desiredHeight);
+            
+                return finalCanvas.toDataURL("image/jpeg", 0.6); // Lower quality for smaller file
+              } catch (error) {
+                console.error("Error generating lower quality image:", error);
+                return null;
+              }
+            };
+            
+            // Call our temporary function
+            const lowerQualityImage = await tempGenerateImage();
+            
+            if (!lowerQualityImage) {
+              throw new Error("Không thể tạo ảnh chất lượng thấp hơn");
+            }
+            
+            const arr = lowerQualityImage.split(',');
+            const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while (n--) {
+              u8arr[n] = bstr.charCodeAt(n);
+            }
+            const imageFile = new File([u8arr], "photobooth.jpg", { type: mime });
+            
+            const imageFormData = new FormData();
+            imageFormData.append("file", imageFile);
+            
+            const imageResponse = await fetch("/api/images", {
+              method: "POST",
+              body: imageFormData,
+              headers: {
+                "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
+              }
+            });
+            
+            if (!imageResponse.ok) {
+              throw new Error("Vẫn không thể tải ảnh lên sau khi giảm kích thước");
+            }
+            
+            const imageData = await imageResponse.json();
+            console.log("Ảnh đã được tải lên thành công (chất lượng thấp hơn):", imageData);
+            setImageQrCode(imageData.data.url);
+            
+            router.push("/step/step9");
+          } catch (retryError) {
+            console.error("Error with lower quality image:", retryError);
+            alert("Không thể tải ảnh lên sau nhiều lần thử. Vui lòng thử lại sau.");
+          }
+        } else {
+          alert("Có lỗi xảy ra khi xử lý media: " + (error instanceof Error ? error.message : "Lỗi không xác định"));
+        }
       }
 
     } catch (error) {
@@ -837,17 +942,17 @@ export default function Step8() {
   //   }
   // };
 
-  const generateHighQualityImage = async (isLandscape: boolean): Promise<string | void> => {
+  const generateHighQualityImage = async (isLandscape: boolean, quality: number = 0.85): Promise<string | void> => {
     const previewContent = printPreviewRef.current;
     if (!previewContent) return;
 
     try {
       const isCustomFrame = selectedFrame?.isCustom === true;
-      // Tăng độ phân giải xuất ảnh để có chất lượng in tốt hơn (300+ DPI)
-      const desiredWidth = isLandscape ? 3600 : 2400;  // Tăng gấp đôi - hỗ trợ 300 DPI cho in 12" x 8" hoặc 8" x 12"
-      const desiredHeight = isLandscape ? 2400 : 3600; // Tăng gấp đôi
+      // Optimize resolution for print quality while keeping file size manageable
+      const desiredWidth = isLandscape ? 2400 : 1800;  // Reduced from 3600/2400 to keep file size under limits
+      const desiredHeight = isLandscape ? 1800 : 2400; // Reduced from 2400/3600 to keep file size under limits
       const rect = previewContent.getBoundingClientRect();
-      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 5); // Tăng scale factor
+      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 3); // Reduced scale factor
 
       // Dynamically import html2canvas-pro
       const html2canvas = (await import("html2canvas-pro")).default;
@@ -992,12 +1097,10 @@ export default function Step8() {
         );
       }
 
-      // Chọn định dạng xuất phù hợp với nhu cầu chất lượng cao
-      // Nếu bạn cần chất lượng cao nhất không nén, sử dụng PNG
-      // const highQualityImageUrl = finalCanvas.toDataURL("image/png");
-
-      // Hoặc sử dụng JPEG với chất lượng tối đa (1.0) nếu kích thước file là vấn đề
-      const highQualityImageUrl = finalCanvas.toDataURL("image/jpeg", 1.0);
+      // Optimize image format and quality for good balance between quality and file size
+      // Use JPEG with provided quality parameter (default 0.85/85%) - this provides a good balance between quality and file size
+      // This significantly reduces the file size while maintaining good visual quality
+      const highQualityImageUrl = finalCanvas.toDataURL("image/jpeg", quality);
 
       console.log("Ảnh đã được tạo với độ phân giải:", desiredWidth, "x", desiredHeight);
       return highQualityImageUrl;
