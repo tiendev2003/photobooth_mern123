@@ -93,8 +93,6 @@ export default function Step8() {
           const response = await fetch(`/api/frame-templates?frameTypeId=${selectedFrame.id}`);
           if (response.ok) {
             const data = await response.json();
-            console.log("Fetched frame templates:", data);
-            // Check if data contains templates in different possible formats
             if (data.data && Array.isArray(data.data)) {
               setFrameTemplates(data.data);
 
@@ -159,23 +157,18 @@ export default function Step8() {
         return;
       }
 
-      // For custom frames, use portrait orientation (vertical strip)
-      // For regular frames, check if columns > rows
       const isCustomFrame = selectedFrame?.isCustom === true;
       const isLandscape = isCustomFrame ? false :
         (selectedFrame && selectedFrame.columns && selectedFrame.rows ?
           selectedFrame.columns > selectedFrame.rows : false);
 
-      // Generate all media formats in parallel
-      console.log("Đang tạo ảnh, video và GIF...");
-      
+
       try {
-        // Generate high-quality image
         const imageDataUrl = await generateHighQualityImage(isLandscape);
         if (!imageDataUrl) {
           throw new Error("Không thể tạo ảnh");
         }
-        
+
         // Convert and upload image
         const arr = imageDataUrl.split(',');
         const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
@@ -186,23 +179,23 @@ export default function Step8() {
           u8arr[n] = bstr.charCodeAt(n);
         }
         const imageFile = new File([u8arr], "photobooth.jpg", { type: mime });
-        
+
         const imageFormData = new FormData();
         imageFormData.append("file", imageFile);
-        
+
         const imageResponse = await fetch("/api/images", {
           method: "POST",
           body: imageFormData,
         });
-        
+
         if (!imageResponse.ok) {
           throw new Error("Lỗi khi tải ảnh lên");
         }
-        
+
         const imageData = await imageResponse.json();
         console.log("Ảnh đã được tải lên thành công:", imageData);
         setImageQrCode(imageData.data.url);
-        
+
         // Generate and upload video if videos are available
         if (videos && videos.length > 0) {
           // Generate high-quality video
@@ -211,16 +204,16 @@ export default function Step8() {
             // Upload the processed video
             const videoResponse = await fetch(videoUrl);
             const videoBlob = await videoResponse.blob();
-            
+
             const videoFormData = new FormData();
             videoFormData.append("file", new File([videoBlob], "photobooth.webm", { type: "video/webm" }));
-            
+
             // Send to API
             const videoUploadResponse = await fetch("/api/videos", {
               method: "POST",
               body: videoFormData,
             });
-            
+
             if (!videoUploadResponse.ok) {
               console.error("Lỗi khi tải video lên");
             } else {
@@ -228,23 +221,23 @@ export default function Step8() {
               console.log("Video đã được tải lên thành công:", videoData);
               setVideoQrCode(videoData.data.url);
             }
-            
+
             // Generate high-quality GIF
             const gifUrl = await generateHighQualityGif(isLandscape);
             if (gifUrl) {
               // Upload the processed GIF
               const gifResponse = await fetch(gifUrl);
               const gifBlob = await gifResponse.blob();
-              
+
               const gifFormData = new FormData();
               gifFormData.append("file", new File([gifBlob], "photobooth.gif", { type: "image/gif" }));
-              
+
               // Send to API
               const gifUploadResponse = await fetch("/api/gifs", {
                 method: "POST",
                 body: gifFormData,
               });
-              
+
               if (!gifUploadResponse.ok) {
                 console.error("Lỗi khi tải GIF lên");
               } else {
@@ -255,7 +248,7 @@ export default function Step8() {
             }
           }
         }
-        
+
         // Send to printer
         fetch("/api/print", {
           method: "POST",
@@ -279,16 +272,14 @@ export default function Step8() {
           .catch((error) => {
             console.error("Error submitting print job:", error);
           });
-        
-        // Navigate to the next step
-        alert("Đã xử lý và lưu ảnh, video và GIF thành công!");
+
         router.push("/step/step9");
-        
+
       } catch (error) {
         console.error("Error processing media:", error);
         alert("Có lỗi xảy ra khi xử lý media: " + (error instanceof Error ? error.message : "Lỗi không xác định"));
       }
-      
+
     } catch (error) {
       console.error("Error during printing:", error);
       alert("Có lỗi xảy ra khi in ảnh: " + (error instanceof Error ? error.message : "Lỗi không xác định"));
@@ -309,10 +300,8 @@ export default function Step8() {
     });
     await Promise.all(promises);
   };
-
   const generateHighQualityVideo = async (isLandscape: boolean): Promise<string | void> => {
     try {
-      // Get the preview content just like in generateHighQualityImage
       const previewContent = printPreviewRef.current;
       if (!previewContent) {
         alert('Không tìm thấy nội dung để xử lý video');
@@ -324,7 +313,6 @@ export default function Step8() {
         return;
       }
 
-      // Get configuration similar to generateHighQualityImage
       const isCustomFrame = selectedFrame?.isCustom === true;
       const desiredWidth = isLandscape ? 1800 : 1200;
       const desiredHeight = isLandscape ? 1200 : 1800;
@@ -346,14 +334,14 @@ export default function Step8() {
         mimeType: 'video/webm;codecs=vp9',
         videoBitsPerSecond: 8000000, // 8Mbps - high quality
       });
-      
+
       const recordedChunks: Blob[] = [];
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           recordedChunks.push(e.data);
         }
       };
-      
+
       const processedVideoPromise = new Promise<string>((resolve) => {
         mediaRecorder.onstop = () => {
           const finalBlob = new Blob(recordedChunks, { type: 'video/webm' });
@@ -362,34 +350,43 @@ export default function Step8() {
         };
       });
 
-      // Load video 
-      const videoElement = document.createElement('video');
-      videoElement.src = videos[0];
-      videoElement.muted = true;
-      videoElement.playsInline = true;
-      
-      // Wait for video to load metadata
-      await new Promise<void>((resolve) => {
-        videoElement.onloadedmetadata = () => resolve();
-        videoElement.onerror = () => {
-          alert("Lỗi khi tải video.");
-          resolve();
-        };
-      });
-
       // Create a temporary rendering canvas for the preview
       const previewCanvas = document.createElement('canvas');
       previewCanvas.width = rect.width;
       previewCanvas.height = rect.height;
       const previewCtx = previewCanvas.getContext('2d');
-      
+
       if (!previewCtx) {
         throw new Error("Không thể tạo preview canvas context");
       }
 
-      // Find all photo cells in the preview
-      const cells = previewContent.querySelectorAll('div[class*="aspect-"] img, div[class*="aspect-"]');
-      
+      // Load all video elements based on selectedIndices
+      const videoElements: HTMLVideoElement[] = [];
+      const cellIndices = selectedFrame?.isCustom
+        ? Array.from({ length: 4 }, (_, i) => i)
+        : Array.from({ length: selectedFrame!.columns * selectedFrame!.rows }, (_, i) => i);
+       for (const idx of cellIndices) {
+        const photoIndex =  selectedIndices[idx] ?? 0;
+
+        const videoUrl = videos[photoIndex];
+
+        const videoElement = document.createElement('video');
+        videoElement.src = videoUrl;
+        videoElement.muted = true;
+        videoElement.playsInline = true;
+
+        // Wait for video to load metadata
+        await new Promise<void>((resolve) => {
+          videoElement.onloadedmetadata = () => resolve();
+          videoElement.onerror = () => {
+            console.error(`Lỗi khi tải video tại chỉ số ${photoIndex}`);
+            resolve();
+          };
+        });
+
+        videoElements.push(videoElement);
+      }
+
       // Prepare overlay template if needed
       let overlayImg: HTMLImageElement | null = null;
       if (selectedTemplate?.path) {
@@ -405,32 +402,33 @@ export default function Step8() {
         });
       }
 
-      // Start recording and video playback
+      // Start all videos and recording
+      videoElements.forEach((video) => video.play());
       mediaRecorder.start();
-      videoElement.play();
-      
-      // Function to render a single frame
+
+      const cells = previewContent.querySelectorAll('div[class*="aspect-"] img, div[class*="aspect-"]');
+
       const renderVideoFrame = () => {
-        if (videoElement.ended || videoElement.paused) {
+        const anyPlaying = videoElements.some((video) => !video.ended && !video.paused);
+        if (!anyPlaying) {
           mediaRecorder.stop();
           return;
         }
-        
+
         // Clear canvases
         previewCtx.fillStyle = "#FFFFFF";
         previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
-        
         outputCtx.fillStyle = "#FFFFFF";
         outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
-        
-        // Render each cell with video
+
         cells.forEach((cell, idx) => {
-          console.log("Rendering cell:", idx, cell);
-          if (!cell.classList.contains('empty')) { // Skip empty cells
+          if (!cell.classList.contains('empty')) {
             const cellRect = cell.getBoundingClientRect();
             const relativeLeft = cellRect.left - rect.left;
             const relativeTop = cellRect.top - rect.top;
-            
+
+            const videoElement = videoElements[idx] || videoElements[2]; 
+
             // Apply filter
             if (selectedFilter?.className) {
               const filterString = selectedFilter.className
@@ -451,46 +449,49 @@ export default function Step8() {
                 })
                 .filter(Boolean)
                 .join(" ");
-              
+
               previewCtx.filter = filterString;
             } else {
               previewCtx.filter = "none";
             }
-            
+
             // Draw video frame into each cell position
             previewCtx.drawImage(
               videoElement,
-              relativeLeft, relativeTop,
-              cellRect.width, cellRect.height
+              relativeLeft,
+              relativeTop,
+              cellRect.width,
+              cellRect.height
             );
           }
         });
-        
+
         // Draw the overlay if available
         if (overlayImg && overlayImg.complete) {
           previewCtx.globalCompositeOperation = 'source-over';
           previewCtx.filter = "none";
           previewCtx.drawImage(
             overlayImg,
-            0, 0,
-            previewCanvas.width, previewCanvas.height
+            0,
+            0,
+            previewCanvas.width,
+            previewCanvas.height
           );
         }
-        
-        // Now render the preview into the output canvas
+
         if (isCustomFrame) {
           // Custom frame: Render two identical images side by side
           const singleImageWidth = desiredWidth / 2;
           const singleImageHeight = desiredHeight;
-          
+
           const aspectRatio = previewCanvas.width / previewCanvas.height;
           const targetAspectRatio = singleImageWidth / singleImageHeight;
-          
+
           let drawWidth = singleImageWidth;
           let drawHeight = singleImageHeight;
           let offsetX = 0;
           let offsetY = 0;
-          
+
           if (aspectRatio > targetAspectRatio) {
             drawHeight = singleImageWidth / aspectRatio;
             offsetY = (singleImageHeight - drawHeight) / 2;
@@ -498,30 +499,42 @@ export default function Step8() {
             drawWidth = singleImageHeight * aspectRatio;
             offsetX = (singleImageWidth - drawWidth) / 2;
           }
-          
+
           // Draw first copy (left)
           outputCtx.drawImage(
             previewCanvas,
-            0, 0, previewCanvas.width, previewCanvas.height,
-            offsetX, offsetY, drawWidth, drawHeight
+            0,
+            0,
+            previewCanvas.width,
+            previewCanvas.height,
+            offsetX,
+            offsetY,
+            drawWidth,
+            drawHeight
           );
-          
+
           // Draw second copy (right)
           outputCtx.drawImage(
             previewCanvas,
-            0, 0, previewCanvas.width, previewCanvas.height,
-            singleImageWidth + offsetX, offsetY, drawWidth, drawHeight
+            0,
+            0,
+            previewCanvas.width,
+            previewCanvas.height,
+            singleImageWidth + offsetX,
+            offsetY,
+            drawWidth,
+            drawHeight
           );
         } else {
           // Regular frame: Single image
           const aspectRatio = previewCanvas.width / previewCanvas.height;
           const targetAspectRatio = desiredWidth / desiredHeight;
-          
+
           let drawWidth = desiredWidth;
           let drawHeight = desiredHeight;
           let offsetX = 0;
           let offsetY = 0;
-          
+
           if (aspectRatio > targetAspectRatio) {
             drawHeight = desiredWidth / aspectRatio;
             offsetY = (desiredHeight - drawHeight) / 2;
@@ -529,48 +542,56 @@ export default function Step8() {
             drawWidth = desiredHeight * aspectRatio;
             offsetX = (desiredWidth - drawWidth) / 2;
           }
-          
+
           outputCtx.drawImage(
             previewCanvas,
-            0, 0, previewCanvas.width, previewCanvas.height,
-            offsetX, offsetY, drawWidth, drawHeight
+            0,
+            0,
+            previewCanvas.width,
+            previewCanvas.height,
+            offsetX,
+            offsetY,
+            drawWidth,
+            drawHeight
           );
         }
-        
+
         // Request next frame
         requestAnimationFrame(renderVideoFrame);
       };
-      
+
       // Start the rendering loop
       renderVideoFrame();
-      
-      // Wait for the video to finish
-      await new Promise<void>((resolve) => {
-        videoElement.onended = () => {
-          setTimeout(() => {
-            mediaRecorder.stop();
-            resolve();
-          }, 300); // Small delay to ensure last frame is captured
-        };
-      });
-      
+
+      // Wait for all videos to finish
+      await Promise.all(
+        videoElements.map(
+          (video) =>
+            new Promise<void>((resolve) => {
+              video.onended = () => resolve();
+            })
+        )
+      );
+
+      // Add a small delay to ensure the last frame is captured
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      mediaRecorder.stop();
+
       return processedVideoPromise;
     } catch (error) {
       console.error("Lỗi khi tạo video chất lượng cao:", error);
       alert("❌ Có lỗi xảy ra khi tạo video. Vui lòng thử lại.");
     }
   };
-
   const generateHighQualityGif = async (isLandscape: boolean): Promise<string | void> => {
     try {
-      console.log("Bắt đầu tạo GIF...");
       // Get the preview content just like in generateHighQualityImage
       const previewContent = printPreviewRef.current;
       if (!previewContent) {
         alert('Không tìm thấy nội dung để tạo GIF');
         return;
       }
-      
+
       if (!videos || videos.length === 0) {
         alert("Không có video để tạo GIF.");
         return;
@@ -584,7 +605,7 @@ export default function Step8() {
 
       // Dynamically import required libraries
       const { default: GIF } = await import('gif.js');
-      
+
       // Create a new GIF with final dimensions
       const gif = new GIF({
         workers: 2,
@@ -600,8 +621,7 @@ export default function Step8() {
       videoElement.src = videos[0];
       videoElement.muted = true;
       videoElement.playsInline = true;
-      
-      console.log("Loading video for GIF...");
+
       // Wait for video to load
       await new Promise<void>((resolve) => {
         videoElement.onloadedmetadata = () => resolve();
@@ -612,24 +632,22 @@ export default function Step8() {
         };
       });
 
-      console.log("Video loaded, duration:", videoElement.duration);
       // Calculate how many frames to sample (fewer for longer videos)
       const duration = videoElement.duration;
       const frameCount = Math.min(15, Math.max(8, Math.floor(duration * 3))); // Reduce frames for better performance
       const frameInterval = duration / frameCount;
-      
-      console.log(`Creating GIF with ${frameCount} frames`);
-      
+
+
       // Create a temporary canvas to hold the video frame
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = videoElement.videoWidth;
       tempCanvas.height = videoElement.videoHeight;
       const tempCtx = tempCanvas.getContext('2d');
-      
+
       if (!tempCtx) {
         throw new Error("Không thể tạo temporary canvas context");
       }
-      
+
       // Create output canvas for final GIF frames
       const outputCanvas = document.createElement('canvas');
       outputCanvas.width = desiredWidth;
@@ -639,17 +657,17 @@ export default function Step8() {
       if (!outputCtx) {
         throw new Error("Không thể tạo output canvas context");
       }
-      
+
       // Create a preview canvas for rendering the layout
       const previewCanvas = document.createElement('canvas');
       previewCanvas.width = rect.width;
       previewCanvas.height = rect.height;
       const previewCtx = previewCanvas.getContext('2d');
-      
+
       if (!previewCtx) {
         throw new Error("Không thể tạo preview canvas context");
       }
-      
+
       // Prepare overlay template if needed
       let overlayImg: HTMLImageElement | null = null;
       if (selectedTemplate?.path) {
@@ -665,16 +683,13 @@ export default function Step8() {
         });
       }
 
-      // Find all cells in the preview
       const cells = previewContent.querySelectorAll('div[class*="aspect-"] img, div[class*="aspect-"]');
-      
-      // Process each frame
+
       for (let i = 0; i < frameCount; i++) {
-        console.log(`Processing frame ${i+1}/${frameCount}`);
-        
+
         // Set video to specific time
         videoElement.currentTime = i * frameInterval;
-        
+
         // Wait for the video to seek to that position
         await new Promise<void>(resolve => {
           const seekHandler = () => {
@@ -683,24 +698,24 @@ export default function Step8() {
           };
           videoElement.addEventListener('seeked', seekHandler);
         });
-        
+
         // Clear the preview canvas
         previewCtx.fillStyle = "#FFFFFF";
         previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
-        
+
         // Draw the current video frame to the temp canvas
         tempCtx.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
-        
+
         // Render each cell with the current video frame
         cells.forEach((cell, idx) => {
-          console.log("Rendering cell:", idx, cell);
+          console.log("Rendering cell", idx, "with video frame");
           if (!cell.classList.contains('empty')) { // Skip empty cells
             const cellRect = cell.getBoundingClientRect();
             const relativeLeft = cellRect.left - rect.left;
             const relativeTop = cellRect.top - rect.top;
             const cellWidth = cellRect.width;
             const cellHeight = cellRect.height;
-            
+
             // Apply filter
             if (selectedFilter?.className) {
               const filterString = selectedFilter.className
@@ -721,12 +736,12 @@ export default function Step8() {
                 })
                 .filter(Boolean)
                 .join(" ");
-              
+
               previewCtx.filter = filterString;
             } else {
               previewCtx.filter = "none";
             }
-            
+
             // Draw video frame into each cell position
             previewCtx.drawImage(
               tempCanvas,
@@ -735,7 +750,7 @@ export default function Step8() {
             );
           }
         });
-        
+
         // Draw the overlay if available
         if (overlayImg && overlayImg.complete) {
           previewCtx.globalCompositeOperation = 'source-over';
@@ -746,25 +761,25 @@ export default function Step8() {
             previewCanvas.width, previewCanvas.height
           );
         }
-        
+
         // Clear the output canvas
         outputCtx.fillStyle = "#FFFFFF";
         outputCtx.fillRect(0, 0, desiredWidth, desiredHeight);
-        
+
         // Now render the preview into the output canvas for GIF
         if (isCustomFrame) {
           // Custom frame: Render two identical images side by side
           const singleImageWidth = desiredWidth / 2;
           const singleImageHeight = desiredHeight;
-          
+
           const aspectRatio = previewCanvas.width / previewCanvas.height;
           const targetAspectRatio = singleImageWidth / singleImageHeight;
-          
+
           let drawWidth = singleImageWidth;
           let drawHeight = singleImageHeight;
           let offsetX = 0;
           let offsetY = 0;
-          
+
           if (aspectRatio > targetAspectRatio) {
             drawHeight = singleImageWidth / aspectRatio;
             offsetY = (singleImageHeight - drawHeight) / 2;
@@ -772,14 +787,14 @@ export default function Step8() {
             drawWidth = singleImageHeight * aspectRatio;
             offsetX = (singleImageWidth - drawWidth) / 2;
           }
-          
+
           // Draw first copy (left)
           outputCtx.drawImage(
             previewCanvas,
             0, 0, previewCanvas.width, previewCanvas.height,
             offsetX, offsetY, drawWidth, drawHeight
           );
-          
+
           // Draw second copy (right)
           outputCtx.drawImage(
             previewCanvas,
@@ -790,12 +805,12 @@ export default function Step8() {
           // Regular frame: Single image
           const aspectRatio = previewCanvas.width / previewCanvas.height;
           const targetAspectRatio = desiredWidth / desiredHeight;
-          
+
           let drawWidth = desiredWidth;
           let drawHeight = desiredHeight;
           let offsetX = 0;
           let offsetY = 0;
-          
+
           if (aspectRatio > targetAspectRatio) {
             drawHeight = desiredWidth / aspectRatio;
             offsetY = (desiredHeight - drawHeight) / 2;
@@ -803,22 +818,20 @@ export default function Step8() {
             drawWidth = desiredHeight * aspectRatio;
             offsetX = (desiredWidth - drawWidth) / 2;
           }
-          
+
           outputCtx.drawImage(
             previewCanvas,
             0, 0, previewCanvas.width, previewCanvas.height,
             offsetX, offsetY, drawWidth, drawHeight
           );
         }
-        
+
         // Add the frame to the GIF
         const frameDelay = Math.min(200, Math.max(100, 500 / frameCount));
         gif.addFrame(outputCanvas, { copy: true, delay: frameDelay });
-        
-        console.log(`Frame ${i+1} added to GIF`);
+
       }
 
-      console.log("Rendering final GIF...");
       // Render the GIF
       return new Promise<string>((resolve) => {
         gif.on('finished', (blob: Blob) => {
@@ -826,7 +839,7 @@ export default function Step8() {
           const gifUrl = URL.createObjectURL(blob);
           resolve(gifUrl);
         });
-        
+
         gif.render();
       });
     } catch (error) {
@@ -841,10 +854,11 @@ export default function Step8() {
 
     try {
       const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 1800 : 1200;
-      const desiredHeight = isLandscape ? 1200 : 1800;
+      // Tăng độ phân giải xuất ảnh để có chất lượng in tốt hơn (300+ DPI)
+      const desiredWidth = isLandscape ? 3600 : 2400;  // Tăng gấp đôi - hỗ trợ 300 DPI cho in 12" x 8" hoặc 8" x 12"
+      const desiredHeight = isLandscape ? 2400 : 3600; // Tăng gấp đôi
       const rect = previewContent.getBoundingClientRect();
-      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 3);
+      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 5); // Tăng scale factor
 
       // Dynamically import html2canvas-pro
       const html2canvas = (await import("html2canvas-pro")).default;
@@ -989,8 +1003,15 @@ export default function Step8() {
         );
       }
 
-      // Return high-quality JPEG data URL
-      return finalCanvas.toDataURL("image/jpeg", 0.98);
+      // Chọn định dạng xuất phù hợp với nhu cầu chất lượng cao
+      // Nếu bạn cần chất lượng cao nhất không nén, sử dụng PNG
+      // const highQualityImageUrl = finalCanvas.toDataURL("image/png");
+      
+      // Hoặc sử dụng JPEG với chất lượng tối đa (1.0) nếu kích thước file là vấn đề
+      const highQualityImageUrl = finalCanvas.toDataURL("image/jpeg", 1.0);
+      
+      console.log("Ảnh đã được tạo với độ phân giải:", desiredWidth, "x", desiredHeight);
+      return highQualityImageUrl;
     } catch (error) {
       console.error("Lỗi khi tạo ảnh chất lượng cao:", error);
       alert("❌ Có lỗi xảy ra khi tạo ảnh. Vui lòng thử lại.");
@@ -1033,8 +1054,8 @@ export default function Step8() {
     const isLandscape = selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom;
 
     // Set dimensions based on orientation (portrait/landscape)
-    const previewHeight = isLandscape ? "4in" : "6in";
-    const previewWidth = isLandscape ? "6in" : "4in";
+    const previewHeight = isLandscape ? "4in" : "7.2in";
+    const previewWidth = isLandscape ? "7.2in" : "4in";
     const aspectRatio = isLandscape ? "3/2" : "2/3"; // Reverse aspect ratio for landscape
 
     // Frame overlay using selectedTemplate (similar to frameOverlay in the second code)
@@ -1056,11 +1077,11 @@ export default function Step8() {
         style={{
           height: previewHeight,
           // Custom frames display as 2in preview, but print as two copies for 4in
-          width: selectedFrame.isCustom ? "2in" : previewWidth,
+          width: selectedFrame.isCustom ? "2.4in" : previewWidth,
           border: selectedFrame.isCustom ? "1px dashed #ff69b4" : "none",
         }}
       >
-        
+
         <div
           ref={printPreviewRef}
           data-preview="true"
@@ -1142,21 +1163,20 @@ export default function Step8() {
       </header>
 
       {/* Main content */}
-      <div className="w-full max-w-6xl px-4 md:px-6 mx-auto z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="w-full   px-4 md:px-16   z-10">
+        <div className="flex  gap-8">
           {/* Left column - Frame preview */}
-          <div className=" rounded-lg  flex flex-col items-center justify-center">
+          <div className="flex-1/3 rounded-lg flex flex-col items-center justify-center ">
             <div className="w-full flex justify-center">
               <div className={`w-full flex ${selectedFrame && selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom ? 'max-w-md' : 'max-w-md'} mx-auto`}>
                 {renderPreview()}
-
               </div>
 
             </div>
           </div>
 
           {/* Right column - Filter options and Frame Templates */}
-          <div className="flex flex-col gap-8">
+          <div className="flex-2/3 flex-col gap-8 mr-10">
             {/* Enhanced Skin Beautifying Filters */}
             <div className="bg-gradient-to-br from-purple-800/40 to-pink-800/40 backdrop-blur-sm rounded-2xl p-2 border border-purple-500/30 shadow-2xl">
               <div className="flex justify-between items-center mb-6">
@@ -1380,7 +1400,7 @@ export default function Step8() {
             )}
           </div>
         </button>
-        
+
         <button
           onClick={() => router.push("/step/step9")}
           className="rounded-full p-6 bg-transparent border-2 border-white glow-button"

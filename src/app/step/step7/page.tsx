@@ -150,7 +150,7 @@ export default function Step7() {
               {Array.from({ length: selectedFrame.columns }, (_, colIdx) => (
                 <div key={colIdx} className="flex flex-col gap-1">
                   {Array.from({ length: selectedFrame.rows }, (_, rowIdx) => {
-                    const cellIdx = colIdx * selectedFrame.rows + rowIdx;
+                    const cellIdx = rowIdx * selectedFrame.columns + colIdx;
                     return (
                       <div key={rowIdx} className="aspect-square">
                         {renderCell(cellIdx)}

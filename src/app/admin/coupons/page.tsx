@@ -28,7 +28,7 @@ export default function CouponsManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Pagination state
   const [pagination, setPagination] = useState({
     total: 0,
@@ -39,7 +39,7 @@ export default function CouponsManagement() {
     hasPrevPage: false
   });
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -52,51 +52,51 @@ export default function CouponsManagement() {
     usageLimit: '',
     isActive: true
   });
-  
+
   // Define fetchData function with useCallback
   const fetchData = useCallback(async (page = 1, limit = 10, search = '') => {
     try {
       setLoading(true);
-      
+
       // Build query string with pagination and search parameters
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString()
       });
-      
+
       if (search) {
         queryParams.append('search', search);
       }
-      
+
       // Fetch coupons with pagination
       const couponsResponse = await fetch(`/api/coupons?${queryParams.toString()}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      
+
       if (!couponsResponse.ok) {
         throw new Error('Failed to fetch coupons');
       }
-      
+
       const couponsData = await couponsResponse.json();
       setCoupons(couponsData.coupons);
       setPagination(couponsData.pagination);
-      
+
       // Fetch users for dropdown (no pagination needed for the dropdown)
       const usersResponse = await fetch('/api/users', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      
+
       if (!usersResponse.ok) {
         throw new Error('Failed to fetch users');
       }
-      
+
       const usersData = await usersResponse.json();
       setUsers(usersData.users); // Extract users from the paginated response
-      
+
     } catch (err) {
       console.error('Error fetching data:', err);
       setError('Failed to load data');
@@ -104,32 +104,32 @@ export default function CouponsManagement() {
       setLoading(false);
     }
   }, [token]); // Add token as a dependency
-  
+
   // Fetch coupons and users when component mounts or pagination changes
   useEffect(() => {
     if (token) {
       fetchData(pagination.page, pagination.limit, searchQuery);
     }
   }, [token, pagination.page, pagination.limit, searchQuery, fetchData]);
-  
+
   // Handle page change
   const handlePageChange = (newPage: number) => {
     if (newPage > 0 && newPage <= pagination.totalPages) {
       setPagination(prev => ({ ...prev, page: newPage }));
     }
   };
-  
+
   // Handle search input
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
-  
+
   // Handle search submission
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     fetchData(1, pagination.limit, searchQuery); // Reset to page 1 when searching
   };
-  
+
   const generateCouponCode = () => {
     let result = '';
     const length = 10;
@@ -138,7 +138,7 @@ export default function CouponsManagement() {
     }
     return result;
   };
-  
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     if (name === 'discount') {
@@ -152,7 +152,7 @@ export default function CouponsManagement() {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
-  
+
   const handleCreateCoupon = () => {
     const today = new Date();
     const nextMonth = new Date(today);
@@ -169,7 +169,7 @@ export default function CouponsManagement() {
     });
     setIsFormOpen(true);
   };
-  
+
   const handleEditCoupon = (coupon: Coupon) => {
     setIsEditing(true);
     setFormData({
@@ -183,7 +183,7 @@ export default function CouponsManagement() {
     });
     setIsFormOpen(true);
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -215,12 +215,12 @@ export default function CouponsManagement() {
       setError(`Failed to ${isEditing ? 'update' : 'create'} coupon`);
     }
   };
-  
+
   const handleDeleteCoupon = async (id: string) => {
     if (!confirm('Are you sure you want to delete this coupon?')) {
       return;
     }
-    
+
     try {
       const response = await fetch(`/api/coupons/${id}`, {
         method: 'DELETE',
@@ -228,19 +228,19 @@ export default function CouponsManagement() {
           Authorization: `Bearer ${token}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to delete coupon');
       }
-      
+
       fetchData(); // Refresh list
-      
+
     } catch (err) {
       console.error('Error deleting coupon:', err);
       setError('Failed to delete coupon');
     }
   };
-  
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -248,7 +248,7 @@ export default function CouponsManagement() {
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="bg-red-50 border-l-4 border-red-400 p-4">
@@ -271,7 +271,7 @@ export default function CouponsManagement() {
           <span>Create Coupon</span>
         </button>
       </div>
-      
+
       {/* Search bar */}
       <div className="mb-6">
         <form onSubmit={handleSearch} className="flex gap-2">
@@ -282,7 +282,7 @@ export default function CouponsManagement() {
             onChange={handleSearchChange}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
-          <button 
+          <button
             type="submit"
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
@@ -290,7 +290,7 @@ export default function CouponsManagement() {
           </button>
         </form>
       </div>
-      
+
       {/* Coupon Form Modal */}
       {isFormOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
@@ -308,7 +308,7 @@ export default function CouponsManagement() {
                 </svg>
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="code" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Coupon Code</label>
@@ -337,10 +337,10 @@ export default function CouponsManagement() {
                   </button>
                 </div>
               </div>
-              
+
               <div>
                 <label htmlFor="discount" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Discount 
+                  Discount
                 </label>
                 <input
                   type="number"
@@ -349,13 +349,11 @@ export default function CouponsManagement() {
                   value={formData.discount}
                   onChange={handleInputChange}
                   required
-                  min="0"
-                  max="100"
-                  step="0.01"
+                  step="10"
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
-              
+
               <div>
                 <label htmlFor="expires_at" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Expiration Date
@@ -370,7 +368,7 @@ export default function CouponsManagement() {
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
-              
+
               <div>
                 <label htmlFor="user_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Assign to User (optional)
@@ -388,7 +386,7 @@ export default function CouponsManagement() {
                   ))}
                 </select>
               </div>
-              
+
               <div>
                 <label htmlFor="usageLimit" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Usage Limit (optional)
@@ -435,7 +433,7 @@ export default function CouponsManagement() {
           </div>
         </div>
       )}
-      
+
       {/* Coupons Table */}
       <div className="bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
         <div className="overflow-x-auto">
@@ -456,7 +454,7 @@ export default function CouponsManagement() {
               {coupons.length > 0 ? (
                 coupons.map((coupon) => {
                   const isExpired = new Date(coupon.expires_at) < new Date();
-                  
+
                   return (
                     <tr key={coupon.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
@@ -466,11 +464,10 @@ export default function CouponsManagement() {
                         {coupon.discount}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          isExpired
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isExpired
                             ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                             : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        }`}>
+                          }`}>
                           {new Date(coupon.expires_at).toLocaleDateString()}
                         </span>
                       </td>
@@ -515,7 +512,7 @@ export default function CouponsManagement() {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination controls */}
         {pagination.totalPages > 0 && (
           <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
@@ -526,62 +523,57 @@ export default function CouponsManagement() {
               <button
                 onClick={() => handlePageChange(1)}
                 disabled={!pagination.hasPrevPage}
-                className={`px-3 py-1 rounded ${
-                  pagination.hasPrevPage 
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600' 
+                className={`px-3 py-1 rounded ${pagination.hasPrevPage
+                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                }`}
+                  }`}
               >
                 &laquo; First
               </button>
               <button
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={!pagination.hasPrevPage}
-                className={`px-3 py-1 rounded ${
-                  pagination.hasPrevPage 
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600' 
+                className={`px-3 py-1 rounded ${pagination.hasPrevPage
+                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                }`}
+                  }`}
               >
                 &lsaquo; Prev
               </button>
-              
+
               {/* Page number buttons */}
               <div className="flex space-x-1">
                 {[...Array(pagination.totalPages)].map((_, i) => (
                   <button
                     key={i}
                     onClick={() => handlePageChange(i + 1)}
-                    className={`px-3 py-1 rounded ${
-                      pagination.page === i + 1
+                    className={`px-3 py-1 rounded ${pagination.page === i + 1
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                    }`}
+                      }`}
                   >
                     {i + 1}
                   </button>
                 ))}
               </div>
-              
+
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={!pagination.hasNextPage}
-                className={`px-3 py-1 rounded ${
-                  pagination.hasNextPage 
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600' 
+                className={`px-3 py-1 rounded ${pagination.hasNextPage
+                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                }`}
+                  }`}
               >
                 Next &rsaquo;
               </button>
               <button
                 onClick={() => handlePageChange(pagination.totalPages)}
                 disabled={!pagination.hasNextPage}
-                className={`px-3 py-1 rounded ${
-                  pagination.hasNextPage 
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600' 
+                className={`px-3 py-1 rounded ${pagination.hasNextPage
+                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                }`}
+                  }`}
               >
                 Last &raquo;
               </button>

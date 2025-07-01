@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: "Video uploaded successfully",
       data: {
-        url: publicUrl,
+        url:  process.env.API_BASE_URL + publicUrl,
         fileName: uniqueFileName,
       },
     });

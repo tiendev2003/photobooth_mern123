@@ -66,7 +66,7 @@ export default function Step9() {
           </div>
         </div>
       </main>
-
+      
       {/* Navigation buttons */}
       <div className="flex justify-between w-full px-12 py-16 z-10">
         <button
