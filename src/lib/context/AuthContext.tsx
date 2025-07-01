@@ -96,7 +96,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       clearInterval(heartbeatInterval);
       setHeartbeatInterval(null);
     }
-  }, [user, token, heartbeatInterval]);
+  }, [user, token]);
 
   // Setup token verification heartbeat when token changes
   useEffect(() => {
@@ -134,7 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         clearInterval(heartbeatInterval);
       }
     };
-  }, [token, heartbeatInterval, logout]);
+  }, [token, logout]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
