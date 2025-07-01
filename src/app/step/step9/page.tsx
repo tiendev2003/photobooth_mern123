@@ -12,9 +12,9 @@ export default function Step9() {
     router.push("/step/step8");
   };
   console.log("Image QR Code:", localStorage.getItem("imageQrCode"));
-  //  setTimeout(() => {
-  //   router.push("/");
-  // }, 30000);
+   setTimeout(() => {
+    router.push("/");
+  }, 30000);
 
   return (
     <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">

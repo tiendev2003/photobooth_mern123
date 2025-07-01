@@ -2,6 +2,50 @@
 
 Đây là ứng dụng fullstack sử dụng Next.js và Prisma.
 
+## Cấu hình Chức năng In Ảnh
+
+### Trên Windows (Máy Local)
+Ứng dụng sử dụng `rundll32` để in trực tiếp từ Windows thông qua lệnh:
+```
+rundll32 C:\\Windows\\System32\\shimgvw.dll,ImageView_PrintTo /pt "đường_dẫn_file" tên_máy_in
+```
+
+### Trên VPS (Linux)
+Khi triển khai trên VPS, hệ thống sẽ:
+1. Lưu ảnh cần in vào thư mục hàng đợi: `public/uploads/print_queue`
+2. Tạo file thông tin in dưới định dạng JSON
+3. Sử dụng worker script để xử lý hàng đợi
+
+#### Thiết lập Cron Job cho VPS
+1. Sử dụng script `setup-print-cron.sh`:
+   ```
+   chmod +x setup-print-cron.sh
+   ./setup-print-cron.sh
+   ```
+2. Script sẽ cài đặt cron job để xử lý hàng đợi in mỗi phút
+
+#### Thiết lập Thủ công
+1. Mở crontab: `crontab -e`
+2. Thêm dòng sau:
+   ```
+   * * * * * cd /đường/dẫn/đến/ứng/dụng && /usr/bin/node dist/lib/cron/print-queue-worker.js >> logs/print-queue.log 2>&1
+   ```
+
+#### Cấu hình CUPS (Common Unix Printing System) trên VPS
+Để in trên Linux, cài đặt và cấu hình CUPS:
+```
+sudo apt update
+sudo apt install cups
+sudo systemctl enable cups
+sudo systemctl start cups
+```
+
+Thêm máy in:
+```
+sudo lpadmin -p DS-RX1 -E -v socket://địa_chỉ_máy_in:9100 -m raw
+sudo lpadmin -p DS-RX1-Cut -E -v socket://địa_chỉ_máy_in:9100 -m raw
+```
+
 ## API Documentation
 
 ### Authentication API
