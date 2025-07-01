@@ -1,3 +1,4 @@
+import { useBooth } from "@/lib/context/BoothContext";
 import { HomeIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 interface HomeButtonProps {
@@ -8,10 +9,14 @@ interface HomeButtonProps {
 
 const HomeButton = ({ onClick, disabled = false }: HomeButtonProps) => {
     const router = useRouter();
+    const { setSelectedFrame,setPhotos,setSelectedIndices } = useBooth();
     return (
         <button
             onClick={
                 onClick ? onClick : () => {
+                    setSelectedFrame(null);
+                    setPhotos([]);
+                    setSelectedIndices([]);
                     router.push("/");
                 }
             }

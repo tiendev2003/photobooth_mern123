@@ -1159,12 +1159,12 @@ export default function Step8() {
       </header>
 
       {/* Main content */}
-      <div className="w-full   px-4 md:px-16   z-10">
-        <div className="flex  gap-8">
+      <div className="w-full px-16 z-10">
+        <div className="flex gap-8">
           {/* Left column - Frame preview */}
-          <div className="flex-1/3 rounded-lg flex flex-col items-center justify-center ">
+          <div className="rounded-lg flex flex-col items-center justify-center ">
             <div className="w-full flex justify-center">
-              <div className={`w-full flex ${selectedFrame && selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom ? 'max-w-md' : 'max-w-md'} mx-auto`}>
+              <div className={`w-full flex ${selectedFrame && selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom ? 'max-w-xl' : 'max-w-md'} mx-auto`}>
                 {renderPreview()}
               </div>
 
@@ -1172,7 +1172,7 @@ export default function Step8() {
           </div>
 
           {/* Right column - Filter options and Frame Templates */}
-          <div className="flex-2/3 flex-col gap-8 mr-10">
+          <div className="w-3xl  flex-col gap-8 mr-10">
             {/* Enhanced Skin Beautifying Filters */}
             <div className=" bg-zinc-200 rounded-2xl p-2 border border-indigo-500/30  ">
               <div className="flex justify-between items-center mb-6">

@@ -41,23 +41,16 @@ export default function Home() {
         />
       </div>
 
-
-
       {/* Main content */}
       <main className="flex flex-col items-center justify-center flex-grow z-10 px-4">
         <Image
-          src="/logo.svg"
+          src="/lg.png"
           alt="Music Box Photobooth"
           width={1200}
           height={1000}
           className="glow-image"
         />
-        <h1 className="text-9xl font-bold mb-6 text-center "
-          style={
-            {
-              fontFamily: 'QuickSand, sans-serif',
-            }
-          }>Chào mừng quý khách!</h1>
+       
 
       </main>
 
