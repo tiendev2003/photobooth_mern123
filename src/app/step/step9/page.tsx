@@ -2,15 +2,13 @@
 
 import HomeButton from "@/app/components/HomeButton";
 import LogoApp from "@/app/components/LogoApp";
-import { useBooth } from "@/lib/context/BoothContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function Step9() {
   const router = useRouter();
-  const { imageQrCode, } = useBooth();
-  const handleBack = () => {
+   const handleBack = () => {
     router.push("/step/step8");
   };
   console.log("Image QR Code:", localStorage.getItem("imageQrCode"));
