@@ -4,12 +4,10 @@ const withPWA = require('next-pwa')({
   skipWaiting: true,
   disable: false,
 });
-module.exports = withPWA({
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
-  // Increase API body size limit to handle large image uploads
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb', // Set to 10MB or adjust as needed
-    },
-  },
-});
+};
+
+module.exports = withPWA(nextConfig);

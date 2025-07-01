@@ -20,6 +20,7 @@ export default function Step6() {
   const [shotCount, setShotCount] = useState<number>(0);
   const [isCameraLoading, setIsCameraLoading] = useState<boolean>(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isCompleted, setIsCompleted] = useState<boolean>(false); // Trạng thái hoàn thành chụp ảnh
 
   // Camera selection states
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
@@ -32,10 +33,11 @@ export default function Step6() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
+  // Đảm bảo chỉ đặt isCameraLoading = false sau 3s kể từ khi render giao diện
   useEffect(() => {
     const timeout = setTimeout(() => {
       setIsCameraLoading(false);
-    }, 3000);
+    }, 4000);
 
     return () => clearTimeout(timeout);
   }, []);
@@ -101,9 +103,6 @@ export default function Step6() {
   const initializeCamera = useCallback(async (deviceId?: string) => {
     try {
       setCameraError(null);
-      setIsCameraLoading(true);
-
-      // Stop current stream if exists
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -125,11 +124,11 @@ export default function Step6() {
         streamRef.current = stream;
       }
 
-      setIsCameraLoading(false);
+      // Không đặt isCameraLoading = false tại đây
     } catch (error) {
       console.error("Error accessing camera:", error);
       setCameraError("Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.");
-      setIsCameraLoading(false);
+      // Cũng không đặt isCameraLoading = false tại đây
     }
   }, []);
 
@@ -202,27 +201,31 @@ export default function Step6() {
       // Chụp ảnh
       capturePhoto();
 
-      // Chuẩn bị cho lần chụp tiếp theo
-      setShotCount(prev => prev + 1);
-      setCountdown(timeoutDuration);
+      // Tăng số lần đã chụp
+      const newShotCount = shotCount + 1;
+      setShotCount(newShotCount);
 
-      // Bắt đầu quay video cho lần tiếp theo
-      if (shotCount < maxShots - 1) {
+      // Chỉ đặt countdown mới nếu chưa đạt đủ số lượng ảnh
+      if (newShotCount < maxShots) {
+        setCountdown(timeoutDuration);
+
+        // Bắt đầu quay video cho lần tiếp theo
         startRecording();
+      } else {
+        // Đã chụp đủ số lượng ảnh, kết thúc
+        setIsCapturing(false);
+        setCountdown(null);
+        setIsCompleted(true); // Đánh dấu đã hoàn thành quá trình chụp
+        setTimeout(() => router.push("/step/step7"), 1500);
       }
-    }
-    else if (shotCount >= maxShots) {
-      setIsCapturing(false);
-      setCountdown(null);
-      setTimeout(() => router.push("/step/step7"), 1500);
     }
 
     return () => clearTimeout(timer);
-  }, [countdown, isCapturing, shotCount, router, capturePhoto, stopRecording, startRecording]);
+  }, [countdown, isCapturing, shotCount, maxShots, router, capturePhoto, stopRecording, startRecording]);
 
   // Bắt đầu quá trình chụp
   const startCapture = (): void => {
-    if (!isCapturing && !isCameraLoading && !cameraError) {
+    if (!isCapturing && !isCameraLoading && !cameraError && !isCompleted) {
       // Reset dữ liệu cũ
       setPhotos([]);
       setVideos([]);
@@ -361,17 +364,6 @@ export default function Step6() {
             <h2 className="text-3xl font-semibold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600">
               Bảng điều khiển
             </h2>
-
-            {/* Camera info */}
-            {availableCameras.length > 0 && (
-              <div className="text-center text-sm text-gray-300">
-                <p>Camera hiện tại:</p>
-                <p className="font-semibold text-white truncate max-w-full">
-                  {availableCameras.find(c => c.deviceId === selectedCameraId)?.label || 'Camera mặc định'}
-                </p>
-              </div>
-            )}
-
             <div className="text-center">
               <p className="text-gray-300 text-2xl">
                 Đã chụp: <span className="font-bold text-white">{shotCount}/{maxShots}</span>
@@ -380,15 +372,19 @@ export default function Step6() {
 
             <button
               onClick={startCapture}
-              disabled={isCapturing || isCameraLoading || cameraError !== null}
+              disabled={isCapturing || isCameraLoading || cameraError !== null || isCompleted}
               className={`mt-2 px-8 py-3 rounded-full font-semibold text-white flex items-center gap-2 transition-all
-                ${isCapturing || isCameraLoading || cameraError
+                ${isCapturing || isCameraLoading || cameraError || isCompleted
                   ? "bg-gray-600 cursor-not-allowed"
                   : "bg-gradient-to-r from-pink-600 to-purple-600 shadow-lg hover:shadow-xl"
                 }`}
             >
               <Camera size={20} />
-              {isCapturing ? `Đang chụp (${countdown}s)` : "Bắt đầu chụp"}
+              {isCapturing 
+                ? `Đang chụp (${countdown}s)` 
+                : isCompleted 
+                  ? "Đã hoàn thành" 
+                  : "Bắt đầu chụp"}
             </button>
           </div>
 
