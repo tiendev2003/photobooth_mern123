@@ -243,78 +243,32 @@ export default function Step8() {
         //   }
         // }
 
-        // Create a printable version of the image in a hidden iframe
-        const printFrame = document.createElement('iframe');
-        printFrame.style.position = 'fixed';
-        printFrame.style.right = '-9999px';
-        printFrame.style.bottom = '-9999px';
-        printFrame.style.width = '0';
-        printFrame.style.height = '0';
-        printFrame.style.border = 'none';
-        document.body.appendChild(printFrame);
-        
-        printFrame.onload = () => {
-          try {
-            if (printFrame.contentDocument) {
-              // Add necessary styling for printing
-              const style = printFrame.contentDocument.createElement('style');
-              style.textContent = `
-                @page { 
-                  size: auto; 
-                  margin: 0mm; 
-                }
-                html, body { 
-                  margin: 0; 
-                  padding: 0; 
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  height: 100%;
-                }
-                img { 
-                  max-width: 100%; 
-                  height: auto;
-                  object-fit: contain;
-                }
-              `;
-              printFrame.contentDocument.head.appendChild(style);
-              
-              // Create image element with the generated image
-              const img = printFrame.contentDocument.createElement('img');
-              img.src = imageDataUrl;
-              img.onload = () => {
-                // Start printing once the image is loaded
-                setTimeout(() => {
-                  setIsPrinting(true);
-                  try {
-                    printFrame.contentWindow?.print();
-                    console.log("Print job submitted successfully through browser print");
-                  } catch (printError) {
-                    console.error("Error during browser printing:", printError);
-                  }
-                  setIsPrinting(false);
-                  
-                  // Clean up the iframe after printing
-                  setTimeout(() => {
-                    document.body.removeChild(printFrame);
-                    // Navigate to next step
-                    router.push("/step/step9");
-                  }, 1000);
-                }, 500);
-              };
-              
-              printFrame.contentDocument.body.appendChild(img);
+        // Send to printer
+        fetch("/api/print", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            base64Image: imageDataUrl,
+            isLandscape: isLandscape, // Pass orientation
+            isCut: selectedFrame?.isCustom === true, // Use isCustom to determine cut option
+          }),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Failed to print image");
             }
-          } catch (error) {
-            console.error("Error preparing print document:", error);
-            document.body.removeChild(printFrame);
-            // Navigate to next step even if printing fails
-            router.push("/step/step9");
-          }
-        };
-        
-        // Set the source of the iframe to trigger the onload event
-        printFrame.src = 'about:blank';
+            return response.json();
+          })
+          .then((data) => {
+            console.log("Print job submitted successfully:", data);
+          })
+          .catch((error) => {
+            console.error("Error submitting print job:", error);
+          });
+
+        router.push("/step/step9");
 
       } catch (error) {
         console.error("Error processing media:", error);
@@ -1224,7 +1178,7 @@ export default function Step8() {
         <div
           ref={printPreviewRef}
           data-preview="true"
-          id="print-content"
+          id="photobooth-print-preview"
           className={cn(
             "flex flex-col gap-4 p-[10%] print-preview bg-white"
           )}
