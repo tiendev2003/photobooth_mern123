@@ -13,7 +13,7 @@ export default function Step9() {
   const handleBack = () => {
     router.push("/step/step8");
   };
-  console.log("Image QR Code:", imageQrCode);
+  console.log("Image QR Code:", localStorage.getItem("imageQrCode"));
   //  setTimeout(() => {
   //   router.push("/");
   // }, 30000);
@@ -50,7 +50,7 @@ export default function Step9() {
 
         <div className="flex items-center gap-3 justify-center w-full max-w-2xl mb-8">
           <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg">
-            <QRCodeSVG value={imageQrCode} size={256} marginSize={2} />
+            <QRCodeSVG value={localStorage.getItem("imageQrCode") || ""} size={256} marginSize={2} />
             <p className="text-center text-4xl text-black mt-4">Ảnh của bạn</p>
           </div>
 

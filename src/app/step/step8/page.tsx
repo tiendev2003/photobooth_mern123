@@ -188,6 +188,7 @@ export default function Step8() {
         const imageData = await imageResponse.json();
         console.log("Ảnh đã được tải lên thành công:", imageData);
         setImageQrCode(imageData.data.url);
+        localStorage.setItem("imageQrCode", imageData.data.url);
 
         // Generate and upload video if videos are available
         // if (videos && videos.length > 0) {
