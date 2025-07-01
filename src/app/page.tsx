@@ -4,7 +4,6 @@ import { useAuth } from "@/lib/context/AuthContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import HomeButton from "./components/HomeButton";
 
 export default function Home() {
   const { user, isAdmin, isLoading } = useAuth();
@@ -42,23 +41,23 @@ export default function Home() {
         />
       </div>
 
-      <header className="flex justify-between items-start w-full p-6 z-10">
-        <div className="flex items-center">
-          <Image
-            src="/logo.svg"
-            alt="Music Box Photobooth"
-            width={150}
-            height={50}
-            className="glow-image"
-          />
-        </div>
-        <HomeButton />
-      </header>
+
 
       {/* Main content */}
       <main className="flex flex-col items-center justify-center flex-grow z-10 px-4">
-        <h1 className="text-5xl font-bold mb-6 text-center">Chào mừng quý khách</h1>
-        <div className="text-9xl font-bold text-white glow-text">SBOOTH</div>
+        <Image
+          src="/logo.svg"
+          alt="Music Box Photobooth"
+          width={1200}
+          height={1000}
+          className="glow-image"
+        />
+        <h1 className="text-9xl font-bold mb-6 text-center "
+          style={
+            {
+              fontFamily: 'QuickSand, sans-serif',
+            }
+          }>Chào mừng quý khách!</h1>
 
       </main>
 

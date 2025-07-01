@@ -1,6 +1,7 @@
 "use client";
 
 import HomeButton from "@/app/components/HomeButton";
+import LogoApp from "@/app/components/LogoApp";
 import { useBooth } from "@/lib/context/BoothContext";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -171,14 +172,8 @@ export default function Step7() {
       {/* Background graphics */}
       <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
       <div className="absolute top-0 left-0 right-0 w-full h-full">
-        <Image
-          src="/anh/bg.png"
-          alt="Background"
-          layout="fill"
-          objectFit="cover"
-          className="opacity-30"
-          priority
-        />
+        <LogoApp />
+
       </div>
 
       <header className="flex justify-between items-start w-full p-6 z-10">

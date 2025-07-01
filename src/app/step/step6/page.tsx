@@ -1,13 +1,14 @@
 "use client";
 
 import HomeButton from "@/app/components/HomeButton";
+import LogoApp from "@/app/components/LogoApp";
 import { useBooth } from "@/lib/context/BoothContext";
 import { Camera, CameraOff, Monitor } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const timeoutDuration = 5; // 2 seconds for countdown
+const timeoutDuration = 2; // 2 seconds for countdown
 
 export default function Step6() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function Step6() {
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [showCameraSelector, setShowCameraSelector] = useState<boolean>(false);
-  
+
   const maxShots: number = 8;
 
   // Refs cho việc quay video
@@ -86,7 +87,7 @@ export default function Step6() {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
       setAvailableCameras(videoDevices);
-      
+
       // Set default camera if none selected
       if (!selectedCameraId && videoDevices.length > 0) {
         setSelectedCameraId(videoDevices[0].deviceId);
@@ -101,7 +102,7 @@ export default function Step6() {
     try {
       setCameraError(null);
       setIsCameraLoading(true);
-      
+
       // Stop current stream if exists
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -109,7 +110,7 @@ export default function Step6() {
 
       // Tăng độ phân giải lên tối đa có thể để có chất lượng ảnh tốt nhất
       const constraints = {
-        video: { 
+        video: {
           width: { ideal: 3840, min: 1280 }, // 4K resolution ideal, 1280 minimum
           height: { ideal: 2160, min: 720 }, // 4K resolution ideal, 720 minimum
           deviceId: deviceId ? { exact: deviceId } : undefined,
@@ -123,7 +124,7 @@ export default function Step6() {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
       }
-      
+
       setIsCameraLoading(false);
     } catch (error) {
       console.error("Error accessing camera:", error);
@@ -158,7 +159,7 @@ export default function Step6() {
     // Giữ nguyên độ phân giải gốc của video để có chất lượng tốt nhất
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
-    const ctx = canvas.getContext("2d", { 
+    const ctx = canvas.getContext("2d", {
       alpha: false,
       desynchronized: false,
       colorSpace: "display-p3", // Không gian màu rộng hơn nếu trình duyệt hỗ trợ
@@ -169,7 +170,7 @@ export default function Step6() {
       // Đảm bảo rendering chất lượng cao
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
-      
+
       // Lật ngang để phản chiếu hình ảnh
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
@@ -180,7 +181,7 @@ export default function Step6() {
       const imageData = canvas.toDataURL("image/jpeg", 1.0);
       const timestamp = new Date().toLocaleString();
       setPhotos([{ image: imageData, timestamp }, ...photos]);
-      
+
       // Lưu thêm phiên bản PNG nếu cần chất lượng không mất dữ liệu
       // const pngImageData = canvas.toDataURL("image/png");
       // Có thể lưu thêm pngImageData nếu muốn
@@ -273,13 +274,8 @@ export default function Step6() {
       {/* Header */}
       <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
-          <Image
-            src="/logo.svg"
-            alt="Music Box Photobooth"
-            width={150}
-            height={50}
-            className="glow-image"
-          />
+          <LogoApp />
+
         </div>
         <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
           Chế độ chụp hình
@@ -296,14 +292,13 @@ export default function Step6() {
               <button
                 onClick={() => setShowCameraSelector(!showCameraSelector)}
                 disabled={isCapturing}
-                className={`p-3 rounded-full bg-black bg-opacity-70 border border-purple-500 text-white hover:bg-opacity-90 transition-all ${
-                  isCapturing ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className={`p-3 rounded-full bg-black bg-opacity-70 border border-purple-500 text-white hover:bg-opacity-90 transition-all ${isCapturing ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 title="Chọn camera"
               >
                 <Monitor size={20} />
               </button>
-              
+
               {/* Camera selector dropdown */}
               {showCameraSelector && (
                 <div className="absolute top-full right-0 mt-2 bg-black bg-opacity-90 rounded-lg border border-purple-500 shadow-lg min-w-48">
@@ -311,9 +306,8 @@ export default function Step6() {
                     <button
                       key={camera.deviceId}
                       onClick={() => handleCameraChange(camera.deviceId)}
-                      className={`block w-full px-4 py-3 text-left hover:bg-purple-600 hover:bg-opacity-50 transition-colors ${
-                        selectedCameraId === camera.deviceId ? 'bg-purple-600 bg-opacity-70' : ''
-                      } ${index === 0 ? 'rounded-t-lg' : ''} ${index === availableCameras.length - 1 ? 'rounded-b-lg' : ''}`}
+                      className={`block w-full px-4 py-3 text-left hover:bg-purple-600 hover:bg-opacity-50 transition-colors ${selectedCameraId === camera.deviceId ? 'bg-purple-600 bg-opacity-70' : ''
+                        } ${index === 0 ? 'rounded-t-lg' : ''} ${index === availableCameras.length - 1 ? 'rounded-b-lg' : ''}`}
                     >
                       <div className="flex items-center gap-2">
                         <Camera size={16} />
@@ -367,7 +361,7 @@ export default function Step6() {
             <h2 className="text-3xl font-semibold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600">
               Bảng điều khiển
             </h2>
-            
+
             {/* Camera info */}
             {availableCameras.length > 0 && (
               <div className="text-center text-sm text-gray-300">
@@ -377,13 +371,13 @@ export default function Step6() {
                 </p>
               </div>
             )}
-            
+
             <div className="text-center">
               <p className="text-gray-300 text-2xl">
                 Đã chụp: <span className="font-bold text-white">{shotCount}/{maxShots}</span>
               </p>
             </div>
-            
+
             <button
               onClick={startCapture}
               disabled={isCapturing || isCameraLoading || cameraError !== null}
@@ -397,7 +391,7 @@ export default function Step6() {
               {isCapturing ? `Đang chụp (${countdown}s)` : "Bắt đầu chụp"}
             </button>
           </div>
-          
+
           <h1 className="text-9xl font-bold text-center text-white">
             {isCapturing && `${countdown}s`}
           </h1>
