@@ -1,7 +1,7 @@
 "use client";
 
 import { UserWithoutPassword } from '@/lib/models/User';
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
   user: UserWithoutPassword | null;
@@ -66,6 +66,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
     verifyToken();
   }, []);
 
+  // Define logout function with useCallback before it's used in the useEffect
+  const logout = useCallback(async () => {
+    // Clear token on server if we have a user ID and token
+    if (user?.id && token) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ userId: user.id })
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+
+    // Clean up client state
+    setUser(null);
+    setToken(null);
+    setIsAdmin(false);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+
+    // Clear any heartbeat interval
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      setHeartbeatInterval(null);
+    }
+  }, [user, token, heartbeatInterval]);
+
   // Setup token verification heartbeat when token changes
   useEffect(() => {
     // Clear any existing interval
@@ -74,7 +106,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setHeartbeatInterval(null);
     }
 
-     if (token) {
+    if (token) {
       const interval = setInterval(async () => {
         try {
           const response = await fetch('/api/auth/verify', {
@@ -102,7 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         clearInterval(heartbeatInterval);
       }
     };
-  }, [token,]);
+  }, [token, heartbeatInterval, logout]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -136,37 +168,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return false;
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    // Clear token on server if we have a user ID and token
-    if (user?.id && token) {
-      try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ userId: user.id })
-        });
-      } catch (error) {
-        console.error('Logout error:', error);
-      }
-    }
-
-    // Clean up client state
-    setUser(null);
-    setToken(null);
-    setIsAdmin(false);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-
-    // Clear any heartbeat interval
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-      setHeartbeatInterval(null);
     }
   };
 

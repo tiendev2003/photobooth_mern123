@@ -107,11 +107,13 @@ export default function Step6() {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
 
+      // Tăng độ phân giải lên tối đa có thể để có chất lượng ảnh tốt nhất
       const constraints = {
         video: { 
-          width: { ideal: 1280 }, 
-          height: { ideal: 720 },
-          deviceId: deviceId ? { exact: deviceId } : undefined
+          width: { ideal: 3840, min: 1280 }, // 4K resolution ideal, 1280 minimum
+          height: { ideal: 2160, min: 720 }, // 4K resolution ideal, 720 minimum
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          facingMode: "user" // Ưu tiên camera trước
         }
       };
 
@@ -148,24 +150,40 @@ export default function Step6() {
     };
   }, [selectedCameraId, initializeCamera]);
 
-  // Chụp ảnh
+  // Chụp ảnh với chất lượng tối đa
   const capturePhoto = useCallback((): void => {
     if (!videoRef.current) return;
 
     const canvas = document.createElement("canvas");
+    // Giữ nguyên độ phân giải gốc của video để có chất lượng tốt nhất
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { 
+      alpha: false,
+      desynchronized: false,
+      colorSpace: "display-p3", // Không gian màu rộng hơn nếu trình duyệt hỗ trợ
+      willReadFrequently: false
+    });
 
     if (ctx) {
+      // Đảm bảo rendering chất lượng cao
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      
+      // Lật ngang để phản chiếu hình ảnh
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-      const imageData = canvas.toDataURL("image/jpeg");
+      // Sử dụng định dạng JPEG với chất lượng tối đa (1.0)
+      const imageData = canvas.toDataURL("image/jpeg", 1.0);
       const timestamp = new Date().toLocaleString();
       setPhotos([{ image: imageData, timestamp }, ...photos]);
+      
+      // Lưu thêm phiên bản PNG nếu cần chất lượng không mất dữ liệu
+      // const pngImageData = canvas.toDataURL("image/png");
+      // Có thể lưu thêm pngImageData nếu muốn
     }
   }, [setPhotos, photos]);
 

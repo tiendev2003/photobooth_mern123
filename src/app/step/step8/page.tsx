@@ -250,28 +250,28 @@ export default function Step8() {
         }
 
         // Send to printer
-        // fetch("/api/print", {
-        //   method: "POST",
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //   },
-        //   body: JSON.stringify({
-        //     base64Image: imageDataUrl,
-        //     isLandscape: isLandscape, // Pass orientation
-        //   }),
-        // })
-        //   .then((response) => {
-        //     if (!response.ok) {
-        //       throw new Error("Failed to print image");
-        //     }
-        //     return response.json();
-        //   })
-        //   .then((data) => {
-        //     console.log("Print job submitted successfully:", data);
-        //   })
-        //   .catch((error) => {
-        //     console.error("Error submitting print job:", error);
-        //   });
+        fetch("/api/print", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            base64Image: imageDataUrl,
+            isLandscape: isLandscape, // Pass orientation
+          }),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Failed to print image");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            console.log("Print job submitted successfully:", data);
+          })
+          .catch((error) => {
+            console.error("Error submitting print job:", error);
+          });
 
         router.push("/step/step9");
 
@@ -708,6 +708,7 @@ export default function Step8() {
 
         // Render each cell with the current video frame
         cells.forEach((cell, idx) => {
+          console.log("Rendering cell", idx, "with video frame");
           if (!cell.classList.contains('empty')) { // Skip empty cells
             const cellRect = cell.getBoundingClientRect();
             const relativeLeft = cellRect.left - rect.left;
@@ -853,10 +854,11 @@ export default function Step8() {
 
     try {
       const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 1800 : 1200;
-      const desiredHeight = isLandscape ? 1200 : 1800;
+      // Tăng độ phân giải xuất ảnh để có chất lượng in tốt hơn (300+ DPI)
+      const desiredWidth = isLandscape ? 3600 : 2400;  // Tăng gấp đôi - hỗ trợ 300 DPI cho in 12" x 8" hoặc 8" x 12"
+      const desiredHeight = isLandscape ? 2400 : 3600; // Tăng gấp đôi
       const rect = previewContent.getBoundingClientRect();
-      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 3);
+      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 5); // Tăng scale factor
 
       // Dynamically import html2canvas-pro
       const html2canvas = (await import("html2canvas-pro")).default;
@@ -1001,8 +1003,15 @@ export default function Step8() {
         );
       }
 
-      // Return high-quality JPEG data URL
-      return finalCanvas.toDataURL("image/jpeg", 0.98);
+      // Chọn định dạng xuất phù hợp với nhu cầu chất lượng cao
+      // Nếu bạn cần chất lượng cao nhất không nén, sử dụng PNG
+      // const highQualityImageUrl = finalCanvas.toDataURL("image/png");
+      
+      // Hoặc sử dụng JPEG với chất lượng tối đa (1.0) nếu kích thước file là vấn đề
+      const highQualityImageUrl = finalCanvas.toDataURL("image/jpeg", 1.0);
+      
+      console.log("Ảnh đã được tạo với độ phân giải:", desiredWidth, "x", desiredHeight);
+      return highQualityImageUrl;
     } catch (error) {
       console.error("Lỗi khi tạo ảnh chất lượng cao:", error);
       alert("❌ Có lỗi xảy ra khi tạo ảnh. Vui lòng thử lại.");
@@ -1045,8 +1054,8 @@ export default function Step8() {
     const isLandscape = selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom;
 
     // Set dimensions based on orientation (portrait/landscape)
-    const previewHeight = isLandscape ? "4in" : "6in";
-    const previewWidth = isLandscape ? "6in" : "4in";
+    const previewHeight = isLandscape ? "4in" : "7.2in";
+    const previewWidth = isLandscape ? "7.2in" : "4in";
     const aspectRatio = isLandscape ? "3/2" : "2/3"; // Reverse aspect ratio for landscape
 
     // Frame overlay using selectedTemplate (similar to frameOverlay in the second code)
@@ -1068,7 +1077,7 @@ export default function Step8() {
         style={{
           height: previewHeight,
           // Custom frames display as 2in preview, but print as two copies for 4in
-          width: selectedFrame.isCustom ? "2in" : previewWidth,
+          width: selectedFrame.isCustom ? "2.4in" : previewWidth,
           border: selectedFrame.isCustom ? "1px dashed #ff69b4" : "none",
         }}
       >
@@ -1154,21 +1163,20 @@ export default function Step8() {
       </header>
 
       {/* Main content */}
-      <div className="w-full max-w-6xl px-4 md:px-6 mx-auto z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="w-full   px-4 md:px-16   z-10">
+        <div className="flex  gap-8">
           {/* Left column - Frame preview */}
-          <div className=" rounded-lg  flex flex-col items-center justify-center">
+          <div className="flex-1/3 rounded-lg flex flex-col items-center justify-center ">
             <div className="w-full flex justify-center">
               <div className={`w-full flex ${selectedFrame && selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom ? 'max-w-md' : 'max-w-md'} mx-auto`}>
                 {renderPreview()}
-
               </div>
 
             </div>
           </div>
 
           {/* Right column - Filter options and Frame Templates */}
-          <div className="flex flex-col gap-8">
+          <div className="flex-2/3 flex-col gap-8 mr-10">
             {/* Enhanced Skin Beautifying Filters */}
             <div className="bg-gradient-to-br from-purple-800/40 to-pink-800/40 backdrop-blur-sm rounded-2xl p-2 border border-purple-500/30 shadow-2xl">
               <div className="flex justify-between items-center mb-6">
