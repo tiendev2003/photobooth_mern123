@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Ubuntu } from "next/font/google";
 import { BoothProvider } from "../lib/context/BoothContext";
 import CleanupScheduler from "./components/CleanupScheduler";
+import PrintStyles from "./components/PrintStyles";
 import "./globals.css";
 
 
@@ -61,6 +62,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CleanupScheduler />
+          <PrintStyles />
           {/* BoothProvider for photobooth context */}
           <BoothProvider>
             {children}
