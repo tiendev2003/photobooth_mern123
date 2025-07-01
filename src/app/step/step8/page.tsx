@@ -173,6 +173,9 @@ export default function Step8() {
         const imageResponse = await fetch("/api/images", {
           method: "POST",
           body: imageFormData,
+          headers :{
+            "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
+          }
         });
 
         if (!imageResponse.ok) {
