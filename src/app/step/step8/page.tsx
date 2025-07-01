@@ -42,20 +42,7 @@ const skinFilters = [
     icon: "🎭",
   },
   { id: "vintage", name: "Hoài cổ", className: "sepia brightness-90 contrast-110", preview: "/anh/6.png", icon: "📸" },
-  {
-    id: "cool",
-    name: "Mát lạnh",
-    className: "hue-rotate-[-10deg] brightness-105 saturate-90",
-    preview: "/anh/7.png",
-    icon: "❄️",
-  },
-  {
-    id: "warm",
-    name: "Ấm áp",
-    className: "hue-rotate-[10deg] brightness-105 saturate-110",
-    preview: "/anh/8.png",
-    icon: "🔥",
-  },
+  
 ]
 
 export default function Step8() {
@@ -74,8 +61,8 @@ export default function Step8() {
     setSelectedFilter,
     selectedTemplate,
     setSelectedTemplate,
-     setImageQrCode,
-      
+    setImageQrCode,
+
   } = useBooth();
 
   const [frameTemplates, setFrameTemplates] = useState<FrameTemplate[]>([]);
@@ -684,8 +671,6 @@ export default function Step8() {
   //       });
   //     }
 
-  //     const cells = previewContent.querySelectorAll('div[class*="aspect-"] img, div[class*="aspect-"]');
-
   //     for (let i = 0; i < frameCount; i++) {
 
   //       // Set video to specific time
@@ -1159,10 +1144,10 @@ export default function Step8() {
       </header>
 
       {/* Main content */}
-      <div className="w-full px-16 z-10">
+      <div className="w-full px-4 md:px-16 z-10">
         <div className="flex gap-8">
           {/* Left column - Frame preview */}
-          <div className="rounded-lg flex flex-col items-center justify-center ">
+          <div className="flex-1/3 rounded-lg flex flex-col items-center justify-center ">
             <div className="w-full flex justify-center">
               <div className={`w-full flex ${selectedFrame && selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom ? 'max-w-xl' : 'max-w-md'} mx-auto`}>
                 {renderPreview()}
@@ -1172,7 +1157,7 @@ export default function Step8() {
           </div>
 
           {/* Right column - Filter options and Frame Templates */}
-          <div className="w-3xl  flex-col gap-8 mr-10">
+          <div className="   gap-8 mr-10">
             {/* Enhanced Skin Beautifying Filters */}
             <div className=" bg-zinc-200 rounded-2xl p-2 border border-indigo-500/30  ">
               <div className="flex justify-between items-center mb-6">
