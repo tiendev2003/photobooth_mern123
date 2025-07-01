@@ -1,7 +1,7 @@
 "use client";
 
 import { UserWithoutPassword } from '@/lib/models/User';
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 interface AuthContextType {
   user: UserWithoutPassword | null;
@@ -23,14 +23,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [heartbeatInterval, setHeartbeatInterval] = useState<NodeJS.Timeout | null>(null);
+  // Use ref instead of state to avoid render cycles
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load user and token from localStorage and verify token validity on initial render
   useEffect(() => {
     const verifyToken = async () => {
       const storedUser = localStorage.getItem('user');
       const storedToken = localStorage.getItem('token');
-      
+
       if (storedToken && storedUser) {
         try {
           // Check token validity with the server
@@ -41,7 +42,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
               'Authorization': `Bearer ${storedToken}`
             }
           });
-          
+
           if (response.ok) {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
@@ -59,22 +60,53 @@ export function AuthProvider({ children }: AuthProviderProps) {
           localStorage.removeItem('token');
         }
       }
-      
+
       setIsLoading(false);
     };
-    
+
     verifyToken();
   }, []);
+
+  // Define logout function with useCallback before it's used in the useEffect
+  const logout = useCallback(async () => {
+    // Clear token on server if we have a user ID and token
+    if (user?.id && token) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ userId: user.id })
+        });
+      } catch (error) {
+        console.error('Logout error:', error);
+      }
+    }
+
+    // Clean up client state
+    setUser(null);
+    setToken(null);
+    setIsAdmin(false);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+
+    // Clear any heartbeat interval
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  }, [user, token]);
 
   // Setup token verification heartbeat when token changes
   useEffect(() => {
     // Clear any existing interval
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-      setHeartbeatInterval(null);
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
     }
 
-    // If we have a token, set up heartbeat verification
     if (token) {
       const interval = setInterval(async () => {
         try {
@@ -85,27 +117,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
               'Authorization': `Bearer ${token}`
             }
           });
-          
+
           if (!response.ok) {
-            // Token is invalid - someone else logged in with this account
             console.log('Session invalidated: Another login detected');
             logout();
           }
         } catch (error) {
           console.error('Heartbeat verification failed:', error);
         }
-      }, 30000); // Check every 30 seconds
-      
-      setHeartbeatInterval(interval);
+      }, 3000000);
+
+      heartbeatIntervalRef.current = interval;
     }
-    
-    // Cleanup on unmount
+
     return () => {
-      if (heartbeatInterval) {
-        clearInterval(heartbeatInterval);
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
       }
     };
-  }, [token]);
+  }, [token, logout]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -124,52 +154,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const data = await response.json();
       const { user, token } = data;
-      
+
       setUser(user);
       setToken(token);
       setIsAdmin(['ADMIN', 'KETOAN'].includes(user.role));
-      
+
       // Store in localStorage
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('token', token);
-      
+
       return true;
     } catch (error) {
       console.error('Login error:', error);
       return false;
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const logout = async () => {
-    // Clear token on server if we have a user ID and token
-    if (user?.id && token) {
-      try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ userId: user.id })
-        });
-      } catch (error) {
-        console.error('Logout error:', error);
-      }
-    }
-    
-    // Clean up client state
-    setUser(null);
-    setToken(null);
-    setIsAdmin(false);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    
-    // Clear any heartbeat interval
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-      setHeartbeatInterval(null);
     }
   };
 

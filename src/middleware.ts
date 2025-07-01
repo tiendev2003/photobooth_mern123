@@ -16,6 +16,7 @@ const publicPaths = [
   "/api/frame-types",
   "/api/frame-templates",
   "/api/coupons/verify",
+  "/api/cron/cleanup-check",
   "/",
   "/api/print",
   "/api/videos",

@@ -1,6 +1,7 @@
 "use client";
 
 import HomeButton from "@/app/components/HomeButton";
+import LogoApp from "@/app/components/LogoApp";
 import { useBooth } from "@/lib/context/BoothContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -8,13 +9,14 @@ import { QRCodeSVG } from 'qrcode.react';
 
 export default function Step9() {
   const router = useRouter();
-  const { imageQrCode, videoQrCode, gifQrCode } = useBooth();
+  const { imageQrCode, } = useBooth();
   const handleBack = () => {
     router.push("/step/step8");
   };
   console.log("Image QR Code:", imageQrCode);
-
-
+  //  setTimeout(() => {
+  //   router.push("/");
+  // }, 30000);
 
   return (
     <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
@@ -33,13 +35,8 @@ export default function Step9() {
 
       <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
-          <Image
-            src="/logo.svg"
-            alt="Music Box Photobooth"
-            width={150}
-            height={50}
-            className="glow-image"
-          />
+          <LogoApp />
+
         </div>
         <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
           ẢNH CỦA BẠN ĐÃ SẴN SÀNG!
@@ -54,16 +51,9 @@ export default function Step9() {
         <div className="flex items-center gap-3 justify-center w-full max-w-2xl mb-8">
           <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg">
             <QRCodeSVG value={imageQrCode} size={256} marginSize={2} />
-            <p className="text-center text-black mt-4">Ảnh của bạn</p>
+            <p className="text-center text-4xl text-black mt-4">Ảnh của bạn</p>
           </div>
-          <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg">
-            <QRCodeSVG value={videoQrCode} size={256} marginSize={2} />
-            <p className="text-center text-black mt-4">Video của bạn</p>
-          </div>
-          <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg">
-            <QRCodeSVG value={gifQrCode} size={256} marginSize={2} />
-            <p className="text-center text-black mt-4">GIF của bạn</p>
-          </div>
+
         </div>
       </main>
 
@@ -78,7 +68,7 @@ export default function Step9() {
           </div>
         </button>
         <h1 className="text-white text-2xl md:text-3xl lg:text-4xl font-bold text-center tracking-wide">
-          Cảm ơn quý khách đã ghé thăm Sbooth
+          Cảm ơn quý khách đã ghé thăm S Photobooth
         </h1>
         <div></div>
       </div>

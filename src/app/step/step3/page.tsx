@@ -1,6 +1,7 @@
 "use client";
 
 import HomeButton from "@/app/components/HomeButton";
+import LogoApp from "@/app/components/LogoApp";
 import { useBooth } from "@/lib/context/BoothContext";
 import { FrameType } from "@/lib/models";
 import Image from "next/image";
@@ -14,7 +15,7 @@ export default function Step3() {
     {
       id: "9bd76696-ba90-4346-8d88-860229313dad",
       name: "Khung hình 1",
-      image: "/uploads/images/2.svg",
+      image: "/uploads/type/1x2.png",
       isHot: false,
       columns: 2,
       rows: 1,
@@ -27,7 +28,7 @@ export default function Step3() {
     {
       id: "e5d13fdc-0556-43bd-8102-d7b94794c132",
       name: "Khung hình 2",
-      image: "/uploads/images/4.svg",
+      image: "/uploads/type/4x1.png",
       isHot: true,
       columns: 1,
       rows: 4,
@@ -40,7 +41,7 @@ export default function Step3() {
     {
       id: "86239323-4162-451f-b465-80601a61a7cb",
       name: "Khung hình 3",
-      image: "/uploads/images/3.svg",
+      image: "/uploads/type/2x2.png",
       isHot: false,
       columns: 2,
       rows: 2,
@@ -55,7 +56,7 @@ export default function Step3() {
       name: "Khung hình 4",
       columns: 2,
       rows: 3,
-      image: "/uploads/images/1.svg",
+      image: "/uploads/type/3x2.png",
       isHot: false,
       isCustom: false,
       totalImages: 1,
@@ -66,7 +67,7 @@ export default function Step3() {
     {
       id: "7eee5953-3794-4843-85f7-28d80ac09f55",
       name: "Khung hình 5",
-      image: "/uploads/images/5.svg",
+      image: "/uploads/type/2x3.png",
       columns: 3,
       rows: 2,
       isHot: false,
@@ -79,7 +80,7 @@ export default function Step3() {
     {
       id: "7ec1edcb-27a3-4afc-a542-2dbd6f87b780",
       name: "Khung hình 6",
-      image: "/uploads/images/6.png",
+      image: "/uploads/type/1x1.png",
       columns: 1,
       rows: 1,
       isHot: false,
@@ -122,13 +123,8 @@ export default function Step3() {
 
       <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
-          <Image
-            src="/logo.svg"
-            alt="Music Box Photobooth"
-            width={150}
-            height={50}
-            className="glow-image"
-          />
+          <LogoApp />
+
         </div>
         <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center     tracking-wide">
           Chọn khung hình muốn chụp
@@ -188,7 +184,7 @@ export default function Step3() {
           </div>
         </button>
         <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-white rounded-full flex items-center justify-center text-pink-400 text-xl md:text-2xl font-semibold hover:bg-pink-500/20 transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
-          70.000 VND
+          70 xu
         </button>
         <button
           onClick={handleNext}

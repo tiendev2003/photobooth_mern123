@@ -1,8 +1,8 @@
 "use client";
 
 import HomeButton from "@/app/components/HomeButton";
+import LogoApp from "@/app/components/LogoApp";
 import { useBooth } from "@/lib/context/BoothContext";
-import { formatCurrency } from "@/lib/utils";
 import { Minus, Plus } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -11,14 +11,14 @@ import { useState } from "react";
 export default function Step4() {
   const router = useRouter();
   const [quantity, setQuantity] = useState(1)
-  const {setSelectedTotalAmount} = useBooth();
+  const { setSelectedTotalAmount } = useBooth();
 
   const handleBack = () => {
     router.push("/step/step3");
   };
 
   const handleNext = () => {
-    setSelectedTotalAmount(quantity == 1 ? 70000 : quantity == 2 ? 120000 : quantity == 3 ? 150000 : 0);
+    setSelectedTotalAmount(quantity == 1 ? 70 : quantity == 2 ? 120 : quantity == 3 ? 150 : 0);
     router.push("/step/step5");
   };
 
@@ -52,13 +52,8 @@ export default function Step4() {
 
       <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
-          <Image
-            src="/logo.svg"
-            alt="Music Box Photobooth"
-            width={150}
-            height={50}
-            className="glow-image"
-          />
+          <LogoApp />
+
         </div>
         <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
           LỰA CHỌN SỐ LẦN IN
@@ -99,7 +94,7 @@ export default function Step4() {
           {/* Confirm Button */}
           <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-pink-500 rounded-full flex items-center justify-center text-white text-xl md:text-4xl font-semibold  transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
             {
-              quantity == 1 ? formatCurrency(70000) : quantity == 2 ? formatCurrency(120000) : quantity == 3 ? formatCurrency(150000) : null
+              quantity == 1 ? "70 xu" : quantity == 2 ? "120 xu" : quantity == 3 ? "150 xu" : null
             }
           </button>
         </div>

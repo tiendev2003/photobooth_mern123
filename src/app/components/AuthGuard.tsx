@@ -21,11 +21,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
         return;
       }
       
-      // If logged in but not admin/ketoan and trying to access admin pages
-      if (pathname.startsWith('/admin') && !isAdmin) {
-        router.push('/');
-        return;
-      }
+       
     }
   }, [user, isLoading, isAdmin, router, pathname]);
   
@@ -38,11 +34,7 @@ export default function AuthGuard({ children }: AuthGuardProps) {
     );
   }
   
-  // If not authenticated, don't render children
-  if (!user || (pathname.startsWith('/admin') && !isAdmin)) {
-    return null;
-  }
-  
+ 
   // User is authenticated and authorized, render children
   return <>{children}</>;
 }
