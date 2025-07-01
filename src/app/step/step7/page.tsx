@@ -9,10 +9,10 @@ import { useRouter } from "next/navigation";
 export default function Step7() {
   const router = useRouter();
   const { photos, selectedFrame, selectedIndices, setSelectedIndices } = useBooth();
-
   const handleBack = () => {
     router.push("/step/step6");
   };
+
 
   const handleNext = () => {
     // Check if enough photos are selected
@@ -258,6 +258,7 @@ export default function Step7() {
           </div>
         </div>
       </div>
+
 
       {/* Navigation buttons */}
       <div className="flex justify-between w-full px-16 pb-12 z-10">

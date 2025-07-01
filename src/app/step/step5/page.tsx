@@ -1,6 +1,7 @@
 "use client";
 
 import HomeButton from "@/app/components/HomeButton";
+import { useBooth } from "@/lib/context/BoothContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -8,6 +9,7 @@ import { ArrowLeft, Trash2 } from "react-feather";
 
 export default function Step5() {
   const router = useRouter();
+  const { selectedTotalAmount, } = useBooth();
 
 
   const handleBack = () => {
@@ -34,11 +36,34 @@ export default function Step5() {
     ["0", "1", "2", "3", "4"],
     ["5", "6", "7", "8", "9"],
   ]
-  const handleNext = () => {
-    if (paymentCode.length === 10) {
-      router.push("/step/step6");
-    } else {
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const handleNext = async () => {
+    if (paymentCode.length !== 10) {
       alert("Vui lòng nhập mã thanh toán 10 chữ số");
+      return;
+    }
+    setIsVerifying(true);
+    try {
+      const res = await fetch("/api/coupons/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: paymentCode, totalAmount: selectedTotalAmount }),
+      });
+      const data = await res.json();
+      console.log("Verify response:", data);
+      if (data.isValid) {
+
+        router.push("/step/step6");
+
+      } else {
+        alert(data.message || "Mã thanh toán không hợp lệ");
+      }
+    } catch (err) {
+      console.error("Error verifying payment code:", err);
+      alert("Lỗi kiểm tra mã thanh toán. Vui lòng thử lại.");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -134,11 +159,16 @@ export default function Step5() {
         </button>
 
         <button
-          onClick={handleNext}
+          onClick={isVerifying ? undefined : handleNext}
           className="rounded-full p-6 bg-transparent border-2 border-white   glow-button"
+          disabled={isVerifying}
         >
           <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
-            &#8594;
+            {isVerifying ? (
+              <span className="animate-pulse text-base">Đang kiểm tra...</span>
+            ) : (
+              <>&#8594;</>
+            )}
           </div>
         </button>
       </div>

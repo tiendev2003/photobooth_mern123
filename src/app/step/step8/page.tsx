@@ -4,11 +4,10 @@ import HomeButton from "@/app/components/HomeButton";
 import { filterOptions, useBooth } from "@/lib/context/BoothContext";
 import { FrameTemplate } from "@/lib/models/FrameTemplate";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, ImageIcon, Printer, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, ImageIcon, Printer, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-
 
 // Enhanced filters for skin beautification
 const skinFilters = [
@@ -73,7 +72,10 @@ export default function Step8() {
     selectedFilter,
     setSelectedFilter,
     selectedTemplate,
-    setSelectedTemplate
+    setSelectedTemplate,
+    setVideoQrCode,
+    setImageQrCode,
+    setGifQrCode, videos
   } = useBooth();
 
   const [frameTemplates, setFrameTemplates] = useState<FrameTemplate[]>([]);
@@ -145,12 +147,6 @@ export default function Step8() {
       behavior: 'smooth'
     });
   };
-
-
-  const handleNext = () => {
-    router.push("/step/step9");
-  };
-
   const handlePrint = async () => {
     setIsPrinting(true);
 
@@ -170,45 +166,134 @@ export default function Step8() {
         (selectedFrame && selectedFrame.columns && selectedFrame.rows ?
           selectedFrame.columns > selectedFrame.rows : false);
 
-      // Generate high-quality image
-      const imageDataUrl = await generateHighQualityImage(isLandscape);
-      if (!imageDataUrl) {
-        alert('Không thể tạo ảnh để in. Vui lòng thử lại.');
-        setIsPrinting(false);
-        return;
-      }
-
-
-      fetch("/api/print", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          base64Image: imageDataUrl,
-          isLandscape: isLandscape, // Pass orientation
-        }),
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Failed to print image");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          console.log("Print job submitted successfully:", data);
-          router.push("/step/step9");
-        })
-        .catch((error) => {
-          console.error("Error submitting print job:", error);
-        })
-        .finally(() => {
-          setIsPrinting(false);
+      // Generate all media formats in parallel
+      console.log("Đang tạo ảnh, video và GIF...");
+      
+      try {
+        // Generate high-quality image
+        const imageDataUrl = await generateHighQualityImage(isLandscape);
+        if (!imageDataUrl) {
+          throw new Error("Không thể tạo ảnh");
+        }
+        
+        // Convert and upload image
+        const arr = imageDataUrl.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const imageFile = new File([u8arr], "photobooth.jpg", { type: mime });
+        
+        const imageFormData = new FormData();
+        imageFormData.append("file", imageFile);
+        
+        const imageResponse = await fetch("/api/images", {
+          method: "POST",
+          body: imageFormData,
         });
+        
+        if (!imageResponse.ok) {
+          throw new Error("Lỗi khi tải ảnh lên");
+        }
+        
+        const imageData = await imageResponse.json();
+        console.log("Ảnh đã được tải lên thành công:", imageData);
+        setImageQrCode(imageData.data.url);
+        
+        // Generate and upload video if videos are available
+        if (videos && videos.length > 0) {
+          // Generate high-quality video
+          const videoUrl = await generateHighQualityVideo(isLandscape);
+          if (videoUrl) {
+            // Upload the processed video
+            const videoResponse = await fetch(videoUrl);
+            const videoBlob = await videoResponse.blob();
+            
+            const videoFormData = new FormData();
+            videoFormData.append("file", new File([videoBlob], "photobooth.webm", { type: "video/webm" }));
+            
+            // Send to API
+            const videoUploadResponse = await fetch("/api/videos", {
+              method: "POST",
+              body: videoFormData,
+            });
+            
+            if (!videoUploadResponse.ok) {
+              console.error("Lỗi khi tải video lên");
+            } else {
+              const videoData = await videoUploadResponse.json();
+              console.log("Video đã được tải lên thành công:", videoData);
+              setVideoQrCode(videoData.data.url);
+            }
+            
+            // Generate high-quality GIF
+            const gifUrl = await generateHighQualityGif(isLandscape);
+            if (gifUrl) {
+              // Upload the processed GIF
+              const gifResponse = await fetch(gifUrl);
+              const gifBlob = await gifResponse.blob();
+              
+              const gifFormData = new FormData();
+              gifFormData.append("file", new File([gifBlob], "photobooth.gif", { type: "image/gif" }));
+              
+              // Send to API
+              const gifUploadResponse = await fetch("/api/gifs", {
+                method: "POST",
+                body: gifFormData,
+              });
+              
+              if (!gifUploadResponse.ok) {
+                console.error("Lỗi khi tải GIF lên");
+              } else {
+                const gifData = await gifUploadResponse.json();
+                console.log("GIF đã được tải lên thành công:", gifData);
+                setGifQrCode(gifData.data.url);
+              }
+            }
+          }
+        }
+        
+        // Send to printer
+        fetch("/api/print", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            base64Image: imageDataUrl,
+            isLandscape: isLandscape, // Pass orientation
+          }),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Failed to print image");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            console.log("Print job submitted successfully:", data);
+          })
+          .catch((error) => {
+            console.error("Error submitting print job:", error);
+          });
+        
+        // Navigate to the next step
+        alert("Đã xử lý và lưu ảnh, video và GIF thành công!");
+        router.push("/step/step9");
+        
+      } catch (error) {
+        console.error("Error processing media:", error);
+        alert("Có lỗi xảy ra khi xử lý media: " + (error instanceof Error ? error.message : "Lỗi không xác định"));
+      }
+      
     } catch (error) {
       console.error("Error during printing:", error);
-      setIsPrinting(false);
       alert("Có lỗi xảy ra khi in ảnh: " + (error instanceof Error ? error.message : "Lỗi không xác định"));
+    } finally {
+      setIsPrinting(false);
     }
   };
   const preloadImages = async (images: HTMLImageElement[]): Promise<void> => {
@@ -223,6 +308,531 @@ export default function Step8() {
       });
     });
     await Promise.all(promises);
+  };
+
+  const generateHighQualityVideo = async (isLandscape: boolean): Promise<string | void> => {
+    try {
+      // Get the preview content just like in generateHighQualityImage
+      const previewContent = printPreviewRef.current;
+      if (!previewContent) {
+        alert('Không tìm thấy nội dung để xử lý video');
+        return;
+      }
+
+      if (!videos || videos.length === 0) {
+        alert("Không có video để xử lý.");
+        return;
+      }
+
+      // Get configuration similar to generateHighQualityImage
+      const isCustomFrame = selectedFrame?.isCustom === true;
+      const desiredWidth = isLandscape ? 1800 : 1200;
+      const desiredHeight = isLandscape ? 1200 : 1800;
+      const rect = previewContent.getBoundingClientRect();
+
+      // Create output canvas for video
+      const outputCanvas = document.createElement('canvas');
+      outputCanvas.width = desiredWidth;
+      outputCanvas.height = desiredHeight;
+      const outputCtx = outputCanvas.getContext('2d');
+
+      if (!outputCtx) {
+        throw new Error("Không thể tạo video canvas context");
+      }
+
+      // Setup MediaRecorder with the output canvas stream
+      const stream = outputCanvas.captureStream(30); // 30fps
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp9',
+        videoBitsPerSecond: 8000000, // 8Mbps - high quality
+      });
+      
+      const recordedChunks: Blob[] = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          recordedChunks.push(e.data);
+        }
+      };
+      
+      const processedVideoPromise = new Promise<string>((resolve) => {
+        mediaRecorder.onstop = () => {
+          const finalBlob = new Blob(recordedChunks, { type: 'video/webm' });
+          const processedVideoUrl = URL.createObjectURL(finalBlob);
+          resolve(processedVideoUrl);
+        };
+      });
+
+      // Load video 
+      const videoElement = document.createElement('video');
+      videoElement.src = videos[0];
+      videoElement.muted = true;
+      videoElement.playsInline = true;
+      
+      // Wait for video to load metadata
+      await new Promise<void>((resolve) => {
+        videoElement.onloadedmetadata = () => resolve();
+        videoElement.onerror = () => {
+          alert("Lỗi khi tải video.");
+          resolve();
+        };
+      });
+
+      // Create a temporary rendering canvas for the preview
+      const previewCanvas = document.createElement('canvas');
+      previewCanvas.width = rect.width;
+      previewCanvas.height = rect.height;
+      const previewCtx = previewCanvas.getContext('2d');
+      
+      if (!previewCtx) {
+        throw new Error("Không thể tạo preview canvas context");
+      }
+
+      // Find all photo cells in the preview
+      const cells = previewContent.querySelectorAll('div[class*="aspect-"] img, div[class*="aspect-"]');
+      
+      // Prepare overlay template if needed
+      let overlayImg: HTMLImageElement | null = null;
+      if (selectedTemplate?.path) {
+        overlayImg = document.createElement('img');
+        overlayImg.src = selectedTemplate.path;
+        await new Promise<void>((resolve) => {
+          if (overlayImg!.complete) {
+            resolve();
+          } else {
+            overlayImg!.onload = () => resolve();
+            overlayImg!.onerror = () => resolve();
+          }
+        });
+      }
+
+      // Start recording and video playback
+      mediaRecorder.start();
+      videoElement.play();
+      
+      // Function to render a single frame
+      const renderVideoFrame = () => {
+        if (videoElement.ended || videoElement.paused) {
+          mediaRecorder.stop();
+          return;
+        }
+        
+        // Clear canvases
+        previewCtx.fillStyle = "#FFFFFF";
+        previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+        
+        outputCtx.fillStyle = "#FFFFFF";
+        outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+        
+        // Render each cell with video
+        cells.forEach((cell, idx) => {
+          console.log("Rendering cell:", idx, cell);
+          if (!cell.classList.contains('empty')) { // Skip empty cells
+            const cellRect = cell.getBoundingClientRect();
+            const relativeLeft = cellRect.left - rect.left;
+            const relativeTop = cellRect.top - rect.top;
+            
+            // Apply filter
+            if (selectedFilter?.className) {
+              const filterString = selectedFilter.className
+                .split(" ")
+                .filter((cls) => cls.includes("-"))
+                .map((cls) => {
+                  const [prop, val] = cls.split("-");
+                  if (["brightness", "contrast", "saturate"].includes(prop)) {
+                    return `${prop}(${val}%)`;
+                  } else if (prop === "hue-rotate") {
+                    return `${prop}(${val})`;
+                  } else if (prop === "blur") {
+                    return `${prop}(${val})`;
+                  } else if (prop === "sepia") {
+                    return `${prop}(1)`;
+                  }
+                  return "";
+                })
+                .filter(Boolean)
+                .join(" ");
+              
+              previewCtx.filter = filterString;
+            } else {
+              previewCtx.filter = "none";
+            }
+            
+            // Draw video frame into each cell position
+            previewCtx.drawImage(
+              videoElement,
+              relativeLeft, relativeTop,
+              cellRect.width, cellRect.height
+            );
+          }
+        });
+        
+        // Draw the overlay if available
+        if (overlayImg && overlayImg.complete) {
+          previewCtx.globalCompositeOperation = 'source-over';
+          previewCtx.filter = "none";
+          previewCtx.drawImage(
+            overlayImg,
+            0, 0,
+            previewCanvas.width, previewCanvas.height
+          );
+        }
+        
+        // Now render the preview into the output canvas
+        if (isCustomFrame) {
+          // Custom frame: Render two identical images side by side
+          const singleImageWidth = desiredWidth / 2;
+          const singleImageHeight = desiredHeight;
+          
+          const aspectRatio = previewCanvas.width / previewCanvas.height;
+          const targetAspectRatio = singleImageWidth / singleImageHeight;
+          
+          let drawWidth = singleImageWidth;
+          let drawHeight = singleImageHeight;
+          let offsetX = 0;
+          let offsetY = 0;
+          
+          if (aspectRatio > targetAspectRatio) {
+            drawHeight = singleImageWidth / aspectRatio;
+            offsetY = (singleImageHeight - drawHeight) / 2;
+          } else {
+            drawWidth = singleImageHeight * aspectRatio;
+            offsetX = (singleImageWidth - drawWidth) / 2;
+          }
+          
+          // Draw first copy (left)
+          outputCtx.drawImage(
+            previewCanvas,
+            0, 0, previewCanvas.width, previewCanvas.height,
+            offsetX, offsetY, drawWidth, drawHeight
+          );
+          
+          // Draw second copy (right)
+          outputCtx.drawImage(
+            previewCanvas,
+            0, 0, previewCanvas.width, previewCanvas.height,
+            singleImageWidth + offsetX, offsetY, drawWidth, drawHeight
+          );
+        } else {
+          // Regular frame: Single image
+          const aspectRatio = previewCanvas.width / previewCanvas.height;
+          const targetAspectRatio = desiredWidth / desiredHeight;
+          
+          let drawWidth = desiredWidth;
+          let drawHeight = desiredHeight;
+          let offsetX = 0;
+          let offsetY = 0;
+          
+          if (aspectRatio > targetAspectRatio) {
+            drawHeight = desiredWidth / aspectRatio;
+            offsetY = (desiredHeight - drawHeight) / 2;
+          } else {
+            drawWidth = desiredHeight * aspectRatio;
+            offsetX = (desiredWidth - drawWidth) / 2;
+          }
+          
+          outputCtx.drawImage(
+            previewCanvas,
+            0, 0, previewCanvas.width, previewCanvas.height,
+            offsetX, offsetY, drawWidth, drawHeight
+          );
+        }
+        
+        // Request next frame
+        requestAnimationFrame(renderVideoFrame);
+      };
+      
+      // Start the rendering loop
+      renderVideoFrame();
+      
+      // Wait for the video to finish
+      await new Promise<void>((resolve) => {
+        videoElement.onended = () => {
+          setTimeout(() => {
+            mediaRecorder.stop();
+            resolve();
+          }, 300); // Small delay to ensure last frame is captured
+        };
+      });
+      
+      return processedVideoPromise;
+    } catch (error) {
+      console.error("Lỗi khi tạo video chất lượng cao:", error);
+      alert("❌ Có lỗi xảy ra khi tạo video. Vui lòng thử lại.");
+    }
+  };
+
+  const generateHighQualityGif = async (isLandscape: boolean): Promise<string | void> => {
+    try {
+      console.log("Bắt đầu tạo GIF...");
+      // Get the preview content just like in generateHighQualityImage
+      const previewContent = printPreviewRef.current;
+      if (!previewContent) {
+        alert('Không tìm thấy nội dung để tạo GIF');
+        return;
+      }
+      
+      if (!videos || videos.length === 0) {
+        alert("Không có video để tạo GIF.");
+        return;
+      }
+
+      // Get configuration similar to generateHighQualityImage
+      const isCustomFrame = selectedFrame?.isCustom === true;
+      const desiredWidth = isLandscape ? 1200 : 800;  // Smaller for GIF to keep file size manageable
+      const desiredHeight = isLandscape ? 800 : 1200;
+      const rect = previewContent.getBoundingClientRect();
+
+      // Dynamically import required libraries
+      const { default: GIF } = await import('gif.js');
+      
+      // Create a new GIF with final dimensions
+      const gif = new GIF({
+        workers: 2,
+        quality: 10, // Lower is better
+        workerScript: '/gif.worker.js',
+        width: desiredWidth,
+        height: desiredHeight,
+        background: '#ffffff'
+      });
+
+      // Create video element to process
+      const videoElement = document.createElement('video');
+      videoElement.src = videos[0];
+      videoElement.muted = true;
+      videoElement.playsInline = true;
+      
+      console.log("Loading video for GIF...");
+      // Wait for video to load
+      await new Promise<void>((resolve) => {
+        videoElement.onloadedmetadata = () => resolve();
+        videoElement.onerror = (e) => {
+          console.error("Video error:", e);
+          alert("Lỗi khi tải video.");
+          resolve();
+        };
+      });
+
+      console.log("Video loaded, duration:", videoElement.duration);
+      // Calculate how many frames to sample (fewer for longer videos)
+      const duration = videoElement.duration;
+      const frameCount = Math.min(15, Math.max(8, Math.floor(duration * 3))); // Reduce frames for better performance
+      const frameInterval = duration / frameCount;
+      
+      console.log(`Creating GIF with ${frameCount} frames`);
+      
+      // Create a temporary canvas to hold the video frame
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = videoElement.videoWidth;
+      tempCanvas.height = videoElement.videoHeight;
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      if (!tempCtx) {
+        throw new Error("Không thể tạo temporary canvas context");
+      }
+      
+      // Create output canvas for final GIF frames
+      const outputCanvas = document.createElement('canvas');
+      outputCanvas.width = desiredWidth;
+      outputCanvas.height = desiredHeight;
+      const outputCtx = outputCanvas.getContext('2d');
+
+      if (!outputCtx) {
+        throw new Error("Không thể tạo output canvas context");
+      }
+      
+      // Create a preview canvas for rendering the layout
+      const previewCanvas = document.createElement('canvas');
+      previewCanvas.width = rect.width;
+      previewCanvas.height = rect.height;
+      const previewCtx = previewCanvas.getContext('2d');
+      
+      if (!previewCtx) {
+        throw new Error("Không thể tạo preview canvas context");
+      }
+      
+      // Prepare overlay template if needed
+      let overlayImg: HTMLImageElement | null = null;
+      if (selectedTemplate?.path) {
+        overlayImg = document.createElement('img');
+        overlayImg.src = selectedTemplate.path;
+        await new Promise<void>((resolve) => {
+          if (overlayImg!.complete) {
+            resolve();
+          } else {
+            overlayImg!.onload = () => resolve();
+            overlayImg!.onerror = () => resolve();
+          }
+        });
+      }
+
+      // Find all cells in the preview
+      const cells = previewContent.querySelectorAll('div[class*="aspect-"] img, div[class*="aspect-"]');
+      
+      // Process each frame
+      for (let i = 0; i < frameCount; i++) {
+        console.log(`Processing frame ${i+1}/${frameCount}`);
+        
+        // Set video to specific time
+        videoElement.currentTime = i * frameInterval;
+        
+        // Wait for the video to seek to that position
+        await new Promise<void>(resolve => {
+          const seekHandler = () => {
+            videoElement.removeEventListener('seeked', seekHandler);
+            resolve();
+          };
+          videoElement.addEventListener('seeked', seekHandler);
+        });
+        
+        // Clear the preview canvas
+        previewCtx.fillStyle = "#FFFFFF";
+        previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+        
+        // Draw the current video frame to the temp canvas
+        tempCtx.drawImage(videoElement, 0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // Render each cell with the current video frame
+        cells.forEach((cell, idx) => {
+          console.log("Rendering cell:", idx, cell);
+          if (!cell.classList.contains('empty')) { // Skip empty cells
+            const cellRect = cell.getBoundingClientRect();
+            const relativeLeft = cellRect.left - rect.left;
+            const relativeTop = cellRect.top - rect.top;
+            const cellWidth = cellRect.width;
+            const cellHeight = cellRect.height;
+            
+            // Apply filter
+            if (selectedFilter?.className) {
+              const filterString = selectedFilter.className
+                .split(" ")
+                .filter((cls) => cls.includes("-"))
+                .map((cls) => {
+                  const [prop, val] = cls.split("-");
+                  if (["brightness", "contrast", "saturate"].includes(prop)) {
+                    return `${prop}(${val}%)`;
+                  } else if (prop === "hue-rotate") {
+                    return `${prop}(${val})`;
+                  } else if (prop === "blur") {
+                    return `${prop}(${val})`;
+                  } else if (prop === "sepia") {
+                    return `${prop}(1)`;
+                  }
+                  return "";
+                })
+                .filter(Boolean)
+                .join(" ");
+              
+              previewCtx.filter = filterString;
+            } else {
+              previewCtx.filter = "none";
+            }
+            
+            // Draw video frame into each cell position
+            previewCtx.drawImage(
+              tempCanvas,
+              relativeLeft, relativeTop,
+              cellWidth, cellHeight
+            );
+          }
+        });
+        
+        // Draw the overlay if available
+        if (overlayImg && overlayImg.complete) {
+          previewCtx.globalCompositeOperation = 'source-over';
+          previewCtx.filter = "none";
+          previewCtx.drawImage(
+            overlayImg,
+            0, 0,
+            previewCanvas.width, previewCanvas.height
+          );
+        }
+        
+        // Clear the output canvas
+        outputCtx.fillStyle = "#FFFFFF";
+        outputCtx.fillRect(0, 0, desiredWidth, desiredHeight);
+        
+        // Now render the preview into the output canvas for GIF
+        if (isCustomFrame) {
+          // Custom frame: Render two identical images side by side
+          const singleImageWidth = desiredWidth / 2;
+          const singleImageHeight = desiredHeight;
+          
+          const aspectRatio = previewCanvas.width / previewCanvas.height;
+          const targetAspectRatio = singleImageWidth / singleImageHeight;
+          
+          let drawWidth = singleImageWidth;
+          let drawHeight = singleImageHeight;
+          let offsetX = 0;
+          let offsetY = 0;
+          
+          if (aspectRatio > targetAspectRatio) {
+            drawHeight = singleImageWidth / aspectRatio;
+            offsetY = (singleImageHeight - drawHeight) / 2;
+          } else {
+            drawWidth = singleImageHeight * aspectRatio;
+            offsetX = (singleImageWidth - drawWidth) / 2;
+          }
+          
+          // Draw first copy (left)
+          outputCtx.drawImage(
+            previewCanvas,
+            0, 0, previewCanvas.width, previewCanvas.height,
+            offsetX, offsetY, drawWidth, drawHeight
+          );
+          
+          // Draw second copy (right)
+          outputCtx.drawImage(
+            previewCanvas,
+            0, 0, previewCanvas.width, previewCanvas.height,
+            singleImageWidth + offsetX, offsetY, drawWidth, drawHeight
+          );
+        } else {
+          // Regular frame: Single image
+          const aspectRatio = previewCanvas.width / previewCanvas.height;
+          const targetAspectRatio = desiredWidth / desiredHeight;
+          
+          let drawWidth = desiredWidth;
+          let drawHeight = desiredHeight;
+          let offsetX = 0;
+          let offsetY = 0;
+          
+          if (aspectRatio > targetAspectRatio) {
+            drawHeight = desiredWidth / aspectRatio;
+            offsetY = (desiredHeight - drawHeight) / 2;
+          } else {
+            drawWidth = desiredHeight * aspectRatio;
+            offsetX = (desiredWidth - drawWidth) / 2;
+          }
+          
+          outputCtx.drawImage(
+            previewCanvas,
+            0, 0, previewCanvas.width, previewCanvas.height,
+            offsetX, offsetY, drawWidth, drawHeight
+          );
+        }
+        
+        // Add the frame to the GIF
+        const frameDelay = Math.min(200, Math.max(100, 500 / frameCount));
+        gif.addFrame(outputCanvas, { copy: true, delay: frameDelay });
+        
+        console.log(`Frame ${i+1} added to GIF`);
+      }
+
+      console.log("Rendering final GIF...");
+      // Render the GIF
+      return new Promise<string>((resolve) => {
+        gif.on('finished', (blob: Blob) => {
+          console.log("GIF rendered successfully, size:", Math.round(blob.size / 1024), "KB");
+          const gifUrl = URL.createObjectURL(blob);
+          resolve(gifUrl);
+        });
+        
+        gif.render();
+      });
+    } catch (error) {
+      console.error("Lỗi khi tạo GIF chất lượng cao:", error);
+      alert("❌ Có lỗi xảy ra khi tạo GIF. Vui lòng thử lại.");
+    }
   };
 
   const generateHighQualityImage = async (isLandscape: boolean): Promise<string | void> => {
@@ -450,13 +1060,7 @@ export default function Step8() {
           border: selectedFrame.isCustom ? "1px dashed #ff69b4" : "none",
         }}
       >
-        {selectedFrame.isCustom && (
-          <div className="absolute -right-8 top-1/2 transform -translate-y-1/2 bg-pink-500 text-white px-1 py-3 rounded-r text-xs writing-mode-vertical">
-            <span className="transform rotate-180" style={{ writingMode: 'vertical-rl' }}>
-              Sẽ in đôi (2x)
-            </span>
-          </div>
-        )}
+        
         <div
           ref={printPreviewRef}
           data-preview="true"
@@ -507,10 +1111,7 @@ export default function Step8() {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
-      {/* Print Success Message */}
-
-
+    <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white  ">
       {/* Background graphics */}
       <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
       <div className="absolute top-0 left-0 right-0 w-full h-full">
@@ -595,33 +1196,29 @@ export default function Step8() {
                   <div
                     key={filter.id}
                     onClick={() => handleFilterSelect(filter)}
-                    className={`flex-shrink-0 w-40 group cursor-pointer transition-all duration-300 ${
-                      selectedFilter.id === filter.id ? "transform scale-105" : "hover:transform hover:scale-102"
-                    }`}
+                    className={`flex-shrink-0 w-40 group cursor-pointer transition-all duration-300 ${selectedFilter.id === filter.id ? "transform scale-105" : "hover:transform hover:scale-102"
+                      }`}
                   >
                     <div
-                      className={`relative rounded-2xl overflow-hidden border-3 transition-all duration-300 ${
-                        selectedFilter.id === filter.id
-                          ? "border-pink-400 shadow-2xl shadow-pink-500/50 ring-4 ring-pink-400/30"
-                          : "border-purple-400/50 hover:border-pink-300/70 hover:shadow-xl hover:shadow-purple-500/30"
-                      }`}
+                      className={`relative rounded-2xl overflow-hidden border-3 transition-all duration-300 ${selectedFilter.id === filter.id
+                        ? "border-pink-400 shadow-2xl shadow-pink-500/50 ring-4 ring-pink-400/30"
+                        : "border-purple-400/50 hover:border-pink-300/70 hover:shadow-xl hover:shadow-purple-500/30"
+                        }`}
                     >
                       <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-purple-900/50 to-pink-900/50">
                         {photos && photos.length > 0 ? (
                           <img
                             src={photos[0].image || "/placeholder.svg"}
                             alt={filter.name}
-                            className={`w-full h-full object-cover transition-all duration-300 ${filter.className} ${
-                              selectedFilter.id === filter.id ? "" : "group-hover:brightness-110"
-                            }`}
+                            className={`w-full h-full object-cover transition-all duration-300 ${filter.className} ${selectedFilter.id === filter.id ? "" : "group-hover:brightness-110"
+                              }`}
                           />
                         ) : (
                           <img
                             src={filter.preview || "/placeholder.svg"}
                             alt={filter.name}
-                            className={`w-full h-full object-cover transition-all duration-300 ${filter.className} ${
-                              selectedFilter.id === filter.id ? "" : "group-hover:brightness-110"
-                            }`}
+                            className={`w-full h-full object-cover transition-all duration-300 ${filter.className} ${selectedFilter.id === filter.id ? "" : "group-hover:brightness-110"
+                              }`}
                           />
                         )}
 
@@ -641,18 +1238,16 @@ export default function Step8() {
                       </div>
 
                       <div
-                        className={`p-3 text-center transition-all duration-300 ${
-                          selectedFilter.id === filter.id
-                            ? "bg-gradient-to-r from-pink-600/80 to-purple-600/80 backdrop-blur-sm"
-                            : "bg-purple-900/60 backdrop-blur-sm group-hover:bg-purple-800/70"
-                        }`}
+                        className={`p-3 text-center transition-all duration-300 ${selectedFilter.id === filter.id
+                          ? "bg-gradient-to-r from-pink-600/80 to-purple-600/80 backdrop-blur-sm"
+                          : "bg-purple-900/60 backdrop-blur-sm group-hover:bg-purple-800/70"
+                          }`}
                       >
                         <span
-                          className={`text-sm font-medium transition-all duration-300 ${
-                            selectedFilter.id === filter.id
-                              ? "text-white font-semibold"
-                              : "text-purple-100 group-hover:text-white"
-                          }`}
+                          className={`text-sm font-medium transition-all duration-300 ${selectedFilter.id === filter.id
+                            ? "text-white font-semibold"
+                            : "text-purple-100 group-hover:text-white"
+                            }`}
                         >
                           {filter.name}
                         </span>
@@ -710,24 +1305,21 @@ export default function Step8() {
                     <div
                       key={template.id}
                       onClick={() => setSelectedTemplate(template)}
-                      className={`flex-shrink-0 w-40 group cursor-pointer transition-all duration-300 ${
-                        selectedTemplate?.id === template.id ? "transform scale-105" : "hover:transform hover:scale-102"
-                      }`}
+                      className={`flex-shrink-0 w-40 group cursor-pointer transition-all duration-300 ${selectedTemplate?.id === template.id ? "transform scale-105" : "hover:transform hover:scale-102"
+                        }`}
                     >
                       <div
-                        className={`relative rounded-2xl overflow-hidden border-3 transition-all duration-300 ${
-                          selectedTemplate?.id === template.id
-                            ? "border-indigo-400 shadow-2xl shadow-indigo-500/50 ring-4 ring-indigo-400/30"
-                            : "border-indigo-400/50 hover:border-indigo-300/70 hover:shadow-xl hover:shadow-indigo-500/30"
-                        }`}
+                        className={`relative rounded-2xl overflow-hidden border-3 transition-all duration-300 ${selectedTemplate?.id === template.id
+                          ? "border-indigo-400 shadow-2xl shadow-indigo-500/50 ring-4 ring-indigo-400/30"
+                          : "border-indigo-400/50 hover:border-indigo-300/70 hover:shadow-xl hover:shadow-indigo-500/30"
+                          }`}
                       >
                         <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-indigo-900/50 to-purple-900/50">
                           <img
                             src={template.preview || template.path}
                             alt={template.name}
-                            className={`w-full h-full object-cover transition-all duration-300 ${
-                              selectedTemplate?.id === template.id ? "" : "group-hover:brightness-110"
-                            }`}
+                            className={`w-full h-full object-cover transition-all duration-300 ${selectedTemplate?.id === template.id ? "" : "group-hover:brightness-110"
+                              }`}
                           />
 
                           {/* Selected indicator */}
@@ -741,18 +1333,16 @@ export default function Step8() {
                         </div>
 
                         <div
-                          className={`p-3 text-center transition-all duration-300 ${
-                            selectedTemplate?.id === template.id
-                              ? "bg-gradient-to-r from-indigo-600/80 to-purple-600/80 backdrop-blur-sm"
-                              : "bg-indigo-900/60 backdrop-blur-sm group-hover:bg-indigo-800/70"
-                          }`}
+                          className={`p-3 text-center transition-all duration-300 ${selectedTemplate?.id === template.id
+                            ? "bg-gradient-to-r from-indigo-600/80 to-purple-600/80 backdrop-blur-sm"
+                            : "bg-indigo-900/60 backdrop-blur-sm group-hover:bg-indigo-800/70"
+                            }`}
                         >
                           <span
-                            className={`text-sm font-medium transition-all duration-300 ${
-                              selectedTemplate?.id === template.id
-                                ? "text-white font-semibold"
-                                : "text-indigo-100 group-hover:text-white"
-                            }`}
+                            className={`text-sm font-medium transition-all duration-300 ${selectedTemplate?.id === template.id
+                              ? "text-white font-semibold"
+                              : "text-indigo-100 group-hover:text-white"
+                              }`}
                           >
                             {template.name}
                           </span>
@@ -778,7 +1368,7 @@ export default function Step8() {
       <div className="flex justify-end w-full px-12 pb-16 z-10">
         <button
           onClick={handlePrint}
-          className={`rounded-full p-6 bg-transparent border-2 border-white   glow-button mr-4 ${isPrinting ? 'opacity-50 cursor-not-allowed' : ''
+          className={`rounded-full p-6 bg-transparent border-2 border-white glow-button mr-4 ${isPrinting ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           disabled={isPrinting}
         >
@@ -790,9 +1380,18 @@ export default function Step8() {
             )}
           </div>
         </button>
-
-
+        
+        <button
+          onClick={() => router.push("/step/step9")}
+          className="rounded-full p-6 bg-transparent border-2 border-white glow-button"
+        >
+          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
+            <ArrowRight />
+          </div>
+        </button>
       </div>
     </div>
   );
 }
+
+

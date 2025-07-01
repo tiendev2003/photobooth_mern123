@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { code } = await req.json();
+    const { code ,totalAmount } = await req.json();
 
     if (!code) {
       return NextResponse.json(
@@ -46,6 +46,16 @@ export async function POST(req: NextRequest) {
     ) {
       return NextResponse.json(
         { isValid: false, message: "Mã giảm giá đã được sử dụng hết" },
+        { status: 200 }
+      );
+    }
+    // Check if code is applicable for the total amount
+    if (discountCode.discount < totalAmount) {
+      return NextResponse.json(
+        {
+          isValid: false,
+          message: `Mã giảm giá yêu cầu tổng số tiền tối thiểu là ${discountCode.discount} VND`,
+        },
         { status: 200 }
       );
     }

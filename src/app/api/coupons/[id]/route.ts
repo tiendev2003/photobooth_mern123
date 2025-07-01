@@ -79,6 +79,8 @@ export async function PUT(
       discount: number;
       expires_at: Date;
       user_id: string | null;
+      usageLimit: number | null;
+      isActive: boolean;
     }> = {};
     if (code) updateData.code = code;
     if (discount !== undefined) updateData.discount = parseFloat(discount.toString());

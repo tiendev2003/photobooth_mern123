@@ -12,7 +12,7 @@ export default function Step3() {
   const { selectedFrame, setSelectedFrame } = useBooth();
   const [frameTypes] = useState<FrameType[]>([
     {
-      id: "68600e12e2b33497aa214dc2",
+      id: "9bd76696-ba90-4346-8d88-860229313dad",
       name: "Khung hình 1",
       image: "/uploads/images/2.svg",
       isHot: false,
@@ -25,7 +25,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "68600e18e2b33497aa214dc8",
+      id: "e5d13fdc-0556-43bd-8102-d7b94794c132",
       name: "Khung hình 2",
       image: "/uploads/images/4.svg",
       isHot: true,
@@ -38,7 +38,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "68600e14e2b33497aa214dc4",
+      id: "86239323-4162-451f-b465-80601a61a7cb",
       name: "Khung hình 3",
       image: "/uploads/images/3.svg",
       isHot: false,
@@ -51,7 +51,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "68600e16e2b33497aa214dc6",
+      id: "d115f2e4-2a26-45c2-9652-4fd52fc60b22",
       name: "Khung hình 4",
       columns: 2,
       rows: 3,
@@ -64,7 +64,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "6860a20837c4e9356bf70f58",
+      id: "7eee5953-3794-4843-85f7-28d80ac09f55",
       name: "Khung hình 5",
       image: "/uploads/images/5.svg",
       columns: 3,
@@ -77,7 +77,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "68600e10e2b33497aa214dc0",
+      id: "7ec1edcb-27a3-4afc-a542-2dbd6f87b780",
       name: "Khung hình 6",
       image: "/uploads/images/6.png",
       columns: 1,

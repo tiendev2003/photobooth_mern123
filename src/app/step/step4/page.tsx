@@ -1,6 +1,7 @@
 "use client";
 
 import HomeButton from "@/app/components/HomeButton";
+import { useBooth } from "@/lib/context/BoothContext";
 import { formatCurrency } from "@/lib/utils";
 import { Minus, Plus } from "lucide-react";
 import Image from "next/image";
@@ -10,12 +11,14 @@ import { useState } from "react";
 export default function Step4() {
   const router = useRouter();
   const [quantity, setQuantity] = useState(1)
+  const {setSelectedTotalAmount} = useBooth();
 
   const handleBack = () => {
     router.push("/step/step3");
   };
 
   const handleNext = () => {
+    setSelectedTotalAmount(quantity == 1 ? 70000 : quantity == 2 ? 120000 : quantity == 3 ? 150000 : 0);
     router.push("/step/step5");
   };
 

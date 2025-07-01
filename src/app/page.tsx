@@ -63,17 +63,12 @@ export default function Home() {
       </main>
 
       {/* Navigation buttons */}
-      <div className="flex justify-between w-full px-16 py-12 z-10">
-        <button className="rounded-full p-6 bg-transparent border-2 border-pink-500   transition opacity-50 cursor-not-allowed glow-button">
-          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
-            &#8592;
-          </div>
-        </button>
+      <div className="flex justify-end w-full px-16 py-12 z-10">
+
 
         <button
           onClick={handleNext}
-
-          className="rounded-full p-6 bg-transparent border-2 border-white  transition glow-button"
+          className={`rounded-full p-6 bg-transparent border-2 border-white  transition glow-button  }`}
         >
           <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl glow-text-small">
             &#8594;
@@ -94,12 +89,7 @@ export default function Home() {
         .glow-image {
           filter: drop-shadow(0 0 8px rgba(236, 72, 153, 0.8));
         }
-        
-        .glow-button {
-          box-shadow: 0 0 15px rgba(236, 72, 153, 0.7), 0 0 30px rgba(236, 72, 153, 0.3);
-          backdrop-filter: blur(3px);
-          animation: pulse 2s infinite;
-        }
+     
         
         @keyframes pulse {
           0% {

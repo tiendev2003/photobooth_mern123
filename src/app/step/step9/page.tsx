@@ -1,16 +1,18 @@
 "use client";
 
+import HomeButton from "@/app/components/HomeButton";
+import { useBooth } from "@/lib/context/BoothContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function Step9() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-
+  const { imageQrCode, videoQrCode, gifQrCode } = useBooth();
   const handleBack = () => {
     router.push("/step/step8");
   };
+  console.log("Image QR Code:", imageQrCode);
 
 
 
@@ -29,8 +31,7 @@ export default function Step9() {
         />
       </div>
 
-      {/* Header */}
-      <header className="flex justify-between items-center w-full p-6 z-10">
+      <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
           <Image
             src="/logo.svg"
@@ -40,44 +41,28 @@ export default function Step9() {
             className="glow-image"
           />
         </div>
-        <div className="text-3xl font-bold">CHIA SẺ</div>
+        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
+          ẢNH CỦA BẠN ĐÃ SẴN SÀNG!
+        </h1>
+        <HomeButton />
       </header>
 
       {/* Main content */}
       <main className="flex flex-col items-center justify-center flex-grow z-10 w-full max-w-4xl px-8">
-        <h2 className="text-4xl font-bold mb-8 text-center">Nhận video qua email</h2>
+        <h2 className="text-4xl font-bold mb-8 text-center">Quý khách có thể lấy ảnh tại khe bên dưới / phía ngoài cửa chụp</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
-          {/* Video preview area */}
-          <div className="bg-black bg-opacity-50 rounded-lg p-4 aspect-video flex items-center justify-center">
-            <div className="relative w-full h-full">
-              <Image
-                src="/anh/9.png"
-                alt="Video Preview"
-                layout="fill"
-                objectFit="contain"
-              />
-            </div>
+        <div className="flex items-center gap-3 justify-center w-full max-w-2xl mb-8">
+          <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg">
+            <QRCodeSVG value={imageQrCode} size={256} marginSize={2} />
+            <p className="text-center text-black mt-4">Ảnh của bạn</p>
           </div>
-
-          {/* Email form */}
-          <div className="flex flex-col space-y-6 justify-center">
-            <h3 className="text-2xl font-bold">Nhập email của bạn:</h3>
-
-            <div className="flex flex-col space-y-2">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="youremail@example.com"
-                className="p-4 rounded-lg text-black text-xl"
-              />
-            </div>
-
-
-            <p className="text-sm opacity-70">
-              Bạn sẽ nhận được video qua email trong vài phút. Chúng tôi không sử dụng email của bạn cho mục đích khác.
-            </p>
+          <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg">
+            <QRCodeSVG value={videoQrCode} size={256} marginSize={2} />
+            <p className="text-center text-black mt-4">Video của bạn</p>
+          </div>
+          <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg">
+            <QRCodeSVG value={gifQrCode} size={256} marginSize={2} />
+            <p className="text-center text-black mt-4">GIF của bạn</p>
           </div>
         </div>
       </main>
@@ -92,6 +77,10 @@ export default function Step9() {
             &#8592;
           </div>
         </button>
+        <h1 className="text-white text-2xl md:text-3xl lg:text-4xl font-bold text-center tracking-wide">
+          Cảm ơn quý khách đã ghé thăm Sbooth
+        </h1>
+        <div></div>
       </div>
     </div>
   );

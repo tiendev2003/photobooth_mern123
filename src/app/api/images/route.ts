@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
   try {
     // Check Content-Type header
     const contentType = req.headers.get('content-type');
+    console.log('Content-Type:', contentType);
     if (!contentType || !contentType.includes('multipart/form-data')) {
       return NextResponse.json({ 
         error: `Invalid Content-Type: ${contentType}. Must be multipart/form-data for file uploads.` 
@@ -106,13 +107,16 @@ export async function POST(req: NextRequest) {
         filename: uniqueFilename,
         path: relativePath,
         fileType: 'IMAGE',
-        size: buffer.length
-      }
+        size: buffer.length,
+       }
     });
 
     return NextResponse.json({ 
       success: true, 
-      data: newImage 
+      data: {
+        ...newImage,
+        url: process.env.API_BASE_URL + newImage.path
+      } 
     }, { status: 201 });
   } catch (error) {
     console.error('Error uploading image:', error);

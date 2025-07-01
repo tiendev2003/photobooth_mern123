@@ -12,129 +12,165 @@ const timeoutDuration = 2; // 2 seconds for countdown
 export default function Step6() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null); // Store stream for cleanup
-  const { photos, setPhotos } = useBooth();
+  const streamRef = useRef<MediaStream | null>(null);
+  const { photos, setPhotos, setVideos } = useBooth();
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [shotCount, setShotCount] = useState<number>(0);
-  const [isCameraLoading, setIsCameraLoading] = useState<boolean>(true); // Camera loading state
-  const [cameraError, setCameraError] = useState<string | null>(null); // Camera error state
+  const [isCameraLoading, setIsCameraLoading] = useState<boolean>(true);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const maxShots: number = 8;
+
+  // Refs cho việc quay video
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       setIsCameraLoading(false);
     }, 3000);
 
-    return () => clearTimeout(timeout); // Dọn dẹp khi unmount
+    return () => clearTimeout(timeout);
   }, []);
-  // Initialize camera with loading and error handling
+
+  // Hàm bắt đầu quay video
+  const startRecording = useCallback(() => {
+    if (!streamRef.current) return;
+
+    recordedChunksRef.current = [];
+
+    try {
+      const options = { mimeType: "video/webm;codecs=vp9" };
+      const mediaRecorder = new MediaRecorder(streamRef.current, options);
+
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
+        const videoUrl = URL.createObjectURL(blob);
+        setVideos(prev => [...prev, videoUrl]);
+
+      };
+
+      mediaRecorder.start();
+    } catch (e) {
+      console.error("Error starting recording:", e);
+    }
+  }, [setVideos]);
+
+  // Hàm dừng quay video
+  const stopRecording = useCallback(() => {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      mediaRecorderRef.current.stop();
+    }
+  }, []);
+
+  // Khởi tạo camera
   useEffect(() => {
     const initializeCamera = async () => {
       try {
-        setCameraError(null); // Clear any previous errors
-
-        const stream: MediaStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
+        setCameraError(null);
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } },
         });
 
         if (videoRef.current) {
-          console.log("Camera stream initialized successfully");
           videoRef.current.srcObject = stream;
           streamRef.current = stream;
-          videoRef.current.onloadedmetadata = () => {
-          };
         }
       } catch (error) {
         console.error("Error accessing camera:", error);
-        setIsCameraLoading(false); // Stop loading on error
-        let errorMessage = "Cần quyền truy cập camera để sử dụng tính năng chụp ảnh";
-        if (error instanceof Error) {
-          if (error.name === "NotAllowedError") {
-            errorMessage = "Quyền truy cập camera bị từ chối. Vui lòng cho phép truy cập camera.";
-          } else if (error.name === "NotFoundError") {
-            errorMessage = "Không tìm thấy camera. Vui lòng kiểm tra thiết bị.";
-          } else if (error.name === "NotReadableError") {
-            errorMessage = "Camera đang được sử dụng bởi ứng dụng khác.";
-          }
-        }
-        setCameraError(errorMessage);
-      }
+       }
     };
 
     initializeCamera();
 
-    // Handle device changes (e.g., camera connect/disconnect)
-    const handleDeviceChange = () => {
-      console.log("Media devices changed, reinitializing camera...");
-      initializeCamera();
-    };
-
-    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
-
-    // Cleanup when component unmounts
     return () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
-      navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange);
     };
   }, []);
 
-  // Capture photo
+  // Chụp ảnh
   const capturePhoto = useCallback((): void => {
     if (!videoRef.current) return;
 
-    const canvas: HTMLCanvasElement = document.createElement("canvas");
+    const canvas = document.createElement("canvas");
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
-    const ctx: CanvasRenderingContext2D | null = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d");
+
     if (ctx) {
-      // Flip the image horizontally to correct the mirror effect
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-      const imageData: string = canvas.toDataURL("image/jpeg");
-      const timestamp: string = new Date().toLocaleString();
+      const imageData = canvas.toDataURL("image/jpeg");
+      const timestamp = new Date().toLocaleString();
       setPhotos([{ image: imageData, timestamp }, ...photos]);
     }
   }, [setPhotos, photos]);
 
-  // Handle countdown and automatic photo capture
+  // Xử lý quy trình chụp ảnh và quay video
   useEffect(() => {
     let timer: NodeJS.Timeout | undefined;
+
     if (isCapturing && countdown !== null && countdown > 0) {
       timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    } else if (isCapturing && countdown === 0 && shotCount < maxShots) {
+    }
+    else if (isCapturing && countdown === 0 && shotCount < maxShots) {
+      // Dừng quay video trước khi chụp ảnh
+      stopRecording();
+
+      // Chụp ảnh
       capturePhoto();
-      setShotCount((prev) => prev + 1);
+
+      // Chuẩn bị cho lần chụp tiếp theo
+      setShotCount(prev => prev + 1);
       setCountdown(timeoutDuration);
-    } else if (shotCount >= maxShots) {
+
+      // Bắt đầu quay video cho lần tiếp theo
+      if (shotCount < maxShots - 1) {
+        startRecording();
+      }
+    }
+    else if (shotCount >= maxShots) {
       setIsCapturing(false);
       setCountdown(null);
-      setTimeout(() => {
-        router.push("/step/step7");
-      }, 1500); // 1.5 seconds delay
+      setTimeout(() => router.push("/step/step7"), 1500);
     }
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [countdown, isCapturing, shotCount, router, capturePhoto]);
 
-  // Start capture process
+    return () => clearTimeout(timer);
+  }, [countdown, isCapturing, shotCount, router, capturePhoto, stopRecording, startRecording]);
+
+  // Bắt đầu quá trình chụp
   const startCapture = (): void => {
-    if (!isCapturing && shotCount < maxShots && !isCameraLoading && !cameraError) {
+    if (!isCapturing && !isCameraLoading && !cameraError) {
+      // Reset dữ liệu cũ
+      setPhotos([]);
+      setVideos([]);
+      setShotCount(0);
+
+      // Bắt đầu quy trình
       setIsCapturing(true);
       setCountdown(timeoutDuration);
-      setShotCount(0);
-      setPhotos([]); // Reset photos
+
+      // Bắt đầu quay video đầu tiên
+      startRecording();
     }
   };
+
 
   const handleBack = () => {
     if (!isCapturing && !isCameraLoading) {
