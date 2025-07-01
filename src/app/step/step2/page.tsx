@@ -1,6 +1,7 @@
 "use client";
 
 import HomeButton from "@/app/components/HomeButton";
+import LogoApp from "@/app/components/LogoApp";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -63,13 +64,7 @@ export default function Step2() {
       {/* Header */}
       <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
-          <Image
-            src="/logo.svg"
-            alt="Music Box Photobooth"
-            width={150}
-            height={50}
-            className="glow-image"
-          />
+         <LogoApp />
         </div>
         <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center  tracking-wide">
           VUI LÒNG CHỌN NGÔN NGỮ <br />
@@ -89,7 +84,12 @@ export default function Step2() {
             <button
               key={lang.code}
               onClick={() => setSelectedLanguage(lang.code)}
-              className={`bg-gradient-to-r from-pink-500 to-purple-600  text-white text-xl md:text-2xl font-semibold py-4 md:py-6 px-8 md:px-12 rounded-full transition-all duration-300 transform  shadow-lg  ${selectedLanguage === lang.code ? 'ring-4 ring-white' : ''}`}
+              style={
+                {
+                  border: selectedLanguage === lang.code ? '14px solid white' : 'none',
+                }
+              }
+              className={`bg-gradient-to-r from-pink-500 to-purple-600  text-white text-xl md:text-2xl font-semibold py-4 md:py-6 px-8 md:px-12 rounded-full transition-all duration-300 transform  shadow-lg  ${selectedLanguage === lang.code ? '  ring-white' : ''}`}
             >
               {lang.label}
             </button>

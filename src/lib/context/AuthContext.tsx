@@ -1,7 +1,7 @@
 "use client";
 
 import { UserWithoutPassword } from '@/lib/models/User';
-import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 interface AuthContextType {
   user: UserWithoutPassword | null;
@@ -23,7 +23,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [heartbeatInterval, setHeartbeatInterval] = useState<NodeJS.Timeout | null>(null);
+  // Use ref instead of state to avoid render cycles
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load user and token from localStorage and verify token validity on initial render
   useEffect(() => {
@@ -92,18 +93,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem('token');
 
     // Clear any heartbeat interval
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-      setHeartbeatInterval(null);
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
     }
-  }, [user, token, heartbeatInterval]);
+  }, [user, token]);
 
   // Setup token verification heartbeat when token changes
   useEffect(() => {
     // Clear any existing interval
-    if (heartbeatInterval) {
-      clearInterval(heartbeatInterval);
-      setHeartbeatInterval(null);
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
     }
 
     if (token) {
@@ -126,15 +127,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       }, 3000000);
 
-      setHeartbeatInterval(interval);
+      heartbeatIntervalRef.current = interval;
     }
 
     return () => {
-      if (heartbeatInterval) {
-        clearInterval(heartbeatInterval);
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
       }
     };
-  }, [token, heartbeatInterval, logout]);
+  }, [token, logout]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {

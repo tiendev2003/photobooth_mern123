@@ -1,6 +1,7 @@
 "use client";
 
 import HomeButton from "@/app/components/HomeButton";
+import LogoApp from "@/app/components/LogoApp";
 import { useBooth } from "@/lib/context/BoothContext";
 import { Minus, Plus } from "lucide-react";
 import Image from "next/image";
@@ -10,7 +11,7 @@ import { useState } from "react";
 export default function Step4() {
   const router = useRouter();
   const [quantity, setQuantity] = useState(1)
-  const {setSelectedTotalAmount} = useBooth();
+  const { setSelectedTotalAmount } = useBooth();
 
   const handleBack = () => {
     router.push("/step/step3");
@@ -51,13 +52,8 @@ export default function Step4() {
 
       <header className="flex justify-between items-start w-full p-6 z-10">
         <div className="flex items-center">
-          <Image
-            src="/logo.svg"
-            alt="Music Box Photobooth"
-            width={150}
-            height={50}
-            className="glow-image"
-          />
+          <LogoApp />
+
         </div>
         <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
           LỰA CHỌN SỐ LẦN IN
