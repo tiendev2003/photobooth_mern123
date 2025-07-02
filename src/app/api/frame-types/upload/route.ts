@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     // If columns and rows are provided, use them as filename
     if (columns && rows) {
-      uniqueFilename = `${columns}x${rows}.png`;
+      uniqueFilename = `${rows}x${columns}.png`;
       relativePath = `/uploads/type/${uniqueFilename}`;
     } else {
       // Otherwise, use a unique name

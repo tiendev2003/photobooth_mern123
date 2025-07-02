@@ -139,6 +139,69 @@ export default function CouponsManagement() {
     return result;
   };
 
+  // Hàm tạo coupon với mức giảm giá cụ thể (mở form)
+  const createCouponWithDiscount = (discount: number) => {
+    const today = new Date();
+    const nextMonth = new Date(today);
+    nextMonth.setMonth(today.getMonth() + 1);
+
+    setIsEditing(false);
+    setFormData({
+      id: '',
+      code: generateCouponCode(),
+      discount: discount,
+      expires_at: nextMonth.toISOString().split('T')[0],
+      user_id: '',
+      usageLimit: '',
+      isActive: true
+    });
+    setIsFormOpen(true);
+  };
+
+  // Hàm tạo và lưu coupon trực tiếp không cần mở form
+  const createAndSaveCouponDirectly = async (discount: number) => {
+    try {
+      setLoading(true);
+
+      const today = new Date();
+      const nextMonth = new Date(today);
+      nextMonth.setMonth(today.getMonth() + 1);
+
+      const couponData = {
+        code: generateCouponCode(),
+        discount: discount,
+        expires_at: nextMonth.toISOString().split('T')[0],
+        user_id: null,
+        usageLimit: 1, // Mặc định giới hạn sử dụng là 1 lần
+        isActive: true
+      };
+
+      const response = await fetch('/api/coupons', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(couponData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Failed to create coupon: ${errorData.error || response.statusText}`);
+      }
+
+      await response.json();
+
+      // Tải lại danh sách coupon
+      fetchData();
+    } catch (err) {
+      console.error('Error creating coupon:', err);
+      alert(`Tạo mã giảm giá thất bại: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     if (name === 'discount') {
@@ -154,20 +217,8 @@ export default function CouponsManagement() {
   };
 
   const handleCreateCoupon = () => {
-    const today = new Date();
-    const nextMonth = new Date(today);
-    nextMonth.setMonth(today.getMonth() + 1);
-    setIsEditing(false);
-    setFormData({
-      id: '',
-      code: generateCouponCode(),
-      discount: 10,
-      expires_at: nextMonth.toISOString().split('T')[0],
-      user_id: '',
-      usageLimit: '',
-      isActive: true
-    });
-    setIsFormOpen(true);
+    // Sử dụng hàm chung với mức giảm giá mặc định là 10,000đ
+    createCouponWithDiscount(10000);
   };
 
   const handleEditCoupon = (coupon: Coupon) => {
@@ -205,14 +256,22 @@ export default function CouponsManagement() {
         },
         body: JSON.stringify(couponData),
       });
+
       if (!response.ok) {
-        throw new Error(`Failed to ${isEditing ? 'update' : 'create'} coupon`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Failed to ${isEditing ? 'update' : 'create'} coupon: ${errorData.error || response.statusText}`);
       }
+
+      // Close form first
       setIsFormOpen(false);
-      fetchData(); // Refresh coupons list
+
+      // Wait a small delay before refreshing data
+      setTimeout(() => {
+        fetchData(); // Refresh coupons list
+      }, 300);
     } catch (err) {
       console.error('Error submitting form:', err);
-      setError(`Failed to ${isEditing ? 'update' : 'create'} coupon`);
+      setError(`Failed to ${isEditing ? 'update' : 'create'} coupon: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
@@ -261,15 +320,59 @@ export default function CouponsManagement() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Coupons Management</h1>
-        <button
-          onClick={handleCreateCoupon}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Create Coupon</span>
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => createAndSaveCouponDirectly(70)}
+            className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm flex items-center gap-1"
+            title="Tạo mã giảm giá 70.000đ"
+            disabled={loading}
+          >
+            {loading ? (
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : null}
+            <span>Tạo mã 70 xu</span>
+          </button>
+          <button
+            onClick={() => createAndSaveCouponDirectly(120)}
+            className="px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm flex items-center gap-1"
+            title="Tạo mã giảm giá 120.000đ"
+            disabled={loading}
+          >
+            {loading ? (
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : null}
+            <span>Tạo mã 120 xu</span>
+          </button>
+          <button
+            onClick={() => createAndSaveCouponDirectly(150)}
+            className="px-3 py-1.5 bg-pink-600 text-white rounded-md hover:bg-pink-700 text-sm flex items-center gap-1"
+            title="Tạo mã giảm giá 150.000đ"
+            disabled={loading}
+          >
+            {loading ? (
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : null}
+            <span>Tạo mã 150 xu</span>
+          </button>
+          <button
+            onClick={handleCreateCoupon}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Create Coupon</span>
+          </button>
+        </div>
       </div>
 
       {/* Search bar */}
@@ -293,15 +396,28 @@ export default function CouponsManagement() {
 
       {/* Coupon Form Modal */}
       {isFormOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 bg-gray-700 bg-opacity-30"
+          onClick={(e) => {
+            // Only close if clicking the backdrop, not the modal itself
+            if (e.target === e.currentTarget) {
+              setIsFormOpen(false);
+              setError(null);
+            }
+          }}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 {isEditing ? 'Edit Coupon' : 'Create New Coupon'}
               </h3>
               <button
-                onClick={() => setIsFormOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
+                onClick={() => {
+                  setIsFormOpen(false);
+                  setError(null);
+                }}
+                className="text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 p-1"
+                aria-label="Close"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -319,7 +435,6 @@ export default function CouponsManagement() {
                     name="code"
                     value={formData.code}
                     onChange={e => {
-                      // Chỉ cho phép tối đa 10 ký tự số
                       const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
                       setFormData(prev => ({ ...prev, code: value }));
                     }}
@@ -414,19 +529,30 @@ export default function CouponsManagement() {
                   Active
                 </label>
               </div>
-              <div className="flex justify-end space-x-3 pt-3">
+              <div className="flex justify-end space-x-3 pt-3 sticky bottom-0 bg-white dark:bg-gray-800 pb-2">
                 <button
                   type="button"
-                  onClick={() => setIsFormOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  onClick={() => {
+                    setIsFormOpen(false);
+                    setError(null);
+                  }}
+                  disabled={loading}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
                 >
-                  {isEditing ? 'Update' : 'Create'}
+                  {loading && (
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  <span>{isEditing ? 'Update' : 'Create'}</span>
                 </button>
               </div>
             </form>
@@ -443,8 +569,8 @@ export default function CouponsManagement() {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Code</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Discount</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Expires</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Usage Limit</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Assigned To</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Usage Limit</th>
                 <th scope="col" className="relative px-6 py-3">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -461,12 +587,12 @@ export default function CouponsManagement() {
                         {coupon.code}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {coupon.discount}
+                        {coupon.discount?.toLocaleString('vi-VN')} xu
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isExpired
-                            ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                            : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                           }`}>
                           {new Date(coupon.expires_at).toLocaleDateString()}
                         </span>
@@ -524,8 +650,8 @@ export default function CouponsManagement() {
                 onClick={() => handlePageChange(1)}
                 disabled={!pagination.hasPrevPage}
                 className={`px-3 py-1 rounded ${pagination.hasPrevPage
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
                   }`}
               >
                 &laquo; First
@@ -534,8 +660,8 @@ export default function CouponsManagement() {
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={!pagination.hasPrevPage}
                 className={`px-3 py-1 rounded ${pagination.hasPrevPage
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
                   }`}
               >
                 &lsaquo; Prev
@@ -548,8 +674,8 @@ export default function CouponsManagement() {
                     key={i}
                     onClick={() => handlePageChange(i + 1)}
                     className={`px-3 py-1 rounded ${pagination.page === i + 1
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
                       }`}
                   >
                     {i + 1}
@@ -561,8 +687,8 @@ export default function CouponsManagement() {
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={!pagination.hasNextPage}
                 className={`px-3 py-1 rounded ${pagination.hasNextPage
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
                   }`}
               >
                 Next &rsaquo;
@@ -571,8 +697,8 @@ export default function CouponsManagement() {
                 onClick={() => handlePageChange(pagination.totalPages)}
                 disabled={!pagination.hasNextPage}
                 className={`px-3 py-1 rounded ${pagination.hasNextPage
-                    ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
                   }`}
               >
                 Last &raquo;

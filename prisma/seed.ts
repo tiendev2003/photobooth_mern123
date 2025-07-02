@@ -10,24 +10,16 @@ async function main() {
   console.log('Seeding Users...')
   
   // Hash password once
-  const passwordHash = await bcrypt.hash('password123', 10)
+  const passwordHash = await bcrypt.hash('123123123', 10)
   
   const users = [
     {
       name: 'Admin User',
-      email: 'admin@example.com',
+      email: 'admin@gmail.com',
       password: passwordHash,
       role: Role.ADMIN,
       phone: '0901234567',
       address: 'Da Nang, Vietnam'
-    },
-    {
-      name: 'Accountant User',
-      email: 'accountant@example.com',
-      password: passwordHash,
-      role: Role.KETOAN,
-      phone: '0901234568',
-      address: 'Ho Chi Minh City, Vietnam'
     },
     {
       name: 'Nguyen Van A',
@@ -69,39 +61,76 @@ async function main() {
     where: { role: Role.USER }
   })
   
+  // Get admin user for brand assignment
+  const adminUser = await prisma.user.findFirst({
+    where: { role: Role.ADMIN }
+  })
+
+  // Seed Brand for Admin
+  if (adminUser) {
+    console.log('Seeding Brand for Admin...')
+    await prisma.brand.upsert({
+      where: { userId: adminUser.id },
+      update: {},
+      create: {
+        name: 'Admin Photobooth',
+        userId: adminUser.id,
+        logo: '/uploads/images/logo.png',
+        background: '/uploads/images/background.png',
+        primaryColor: '#0066CC',
+        secondaryColor: '#FF9900',
+        socialFacebook: 'https://facebook.com/adminphotobooth',
+        socialInstagram: 'https://instagram.com/adminphotobooth'
+      }
+    })
+    console.log('Created/Updated Brand for Admin')
+  }
+  
   // Seed Coupons
   console.log('Seeding Coupons...')
   
   const coupons = [
     {
-      code: 'WELCOME10',
+      code: '1111111111',
       discount: 10,
       expires_at: new Date(2025, 11, 31), // December 31, 2025
-      user_id: null // Unassigned coupon
+      user_id: null, // Unassigned coupon
+      usageLimit: 100
     },
     {
-      code: 'SUMMER25',
+      code: '2222222222',
       discount: 25,
       expires_at: new Date(2025, 8, 30), // September 30, 2025
-      user_id: allUsers[0]?.id // Assigned to first user if exists
+      user_id: allUsers[0]?.id, // Assigned to first user if exists
+      usageLimit: 50
     },
     {
-      code: 'HOLIDAY50',
+      code: '3333333333',
       discount: 50,
       expires_at: new Date(2025, 11, 25), // December 25, 2025
-      user_id: allUsers[1]?.id // Assigned to second user if exists
+      user_id: allUsers[1]?.id, // Assigned to second user if exists
+      usageLimit: 10
     },
     {
-      code: 'BIRTHDAY15',
+      code: '4444444444',
       discount: 15,
       expires_at: new Date(2025, 9, 15), // October 15, 2025
-      user_id: allUsers[2]?.id // Assigned to third user if exists
+      user_id: allUsers[2]?.id, // Assigned to third user if exists
+      usageLimit: 30
     },
     {
-      code: 'SPECIAL30',
+      code: '5555555555',
       discount: 30,
       expires_at: new Date(2026, 0, 1), // January 1, 2026
-      user_id: null // Unassigned coupon
+      user_id: null, // Unassigned coupon
+      usageLimit: 20
+    },
+    {
+      code: '6666666666',
+      discount: 20,
+      expires_at: new Date(2025, 11, 31), // December 31, 2025
+      user_id: null, // Unassigned coupon
+      usageLimit: 40
     }
   ]
   
@@ -168,6 +197,7 @@ async function main() {
     {
       name: '1 tấm',
       description: 'Frame đơn giản với 1 ảnh',
+      image: '/uploads/type/1x1.png',
       columns: 1,
       rows: 1,
       totalImages: 1,
@@ -175,6 +205,7 @@ async function main() {
     {
       name: '1x2',
       description: 'Frame ngang với 2 ảnh trên 1 hàng',
+      image: '/uploads/type/2x1.png',
       columns: 2,
       rows: 1,
       totalImages: 2,
@@ -182,13 +213,15 @@ async function main() {
     {
       name: '2x2',
       description: 'Frame vuông với 4 ảnh (2x2)',
+      image: '/uploads/type/2x2.png',
       columns: 2,
       rows: 2,
       totalImages: 4,
     },
     {
       name: '2x3',
-      description: 'Frame chữ nhật với 6 ảnh (2 hàng x 3 cột)',
+      description: 'Frame chữ nhật với 6 ảnh (3 hàng x 2 cột)',
+      image: '/uploads/type/2x3.png',
       columns: 3,
       rows: 2,
       totalImages: 6,
@@ -196,35 +229,48 @@ async function main() {
     {
       name: '1x4',
       description: 'Frame dài với 4 ảnh trên 1 hàng',
+      image: '/uploads/type/1x4.png',
       columns: 4,
       rows: 1,
       totalImages: 4,
     },
+    {
+      name: '3x2',
+      description: 'Frame chữ nhật với 6 ảnh (3 hàng x 2 cột)',
+      image: '/uploads/type/3x2.png',
+      columns: 2,
+      rows: 3,
+      totalImages: 6,
+    }
   ]
 
   for (const frameTypeData of frameTypes) {
-    const frameType = await (prisma as any).frameType.upsert({
+    const frameType = await prisma.frameType.upsert({
       where: { name: frameTypeData.name },
       update: {},
       create: frameTypeData,
     })
     console.log(`Created/Updated FrameType: ${frameType.name}`)
 
-    // Tạo template mẫu cho mỗi frame type
-    const templateData = {
-      name: `Template mặc định cho ${frameTypeData.name}`,
-      filename: `template_${frameTypeData.name.replace(/\s+/g, '_').toLowerCase()}.png`,
-      path: `/templates/${frameTypeData.name.replace(/\s+/g, '_').toLowerCase()}/`,
-      preview: `/templates/${frameTypeData.name.replace(/\s+/g, '_').toLowerCase()}/preview.jpg`,
-      frameTypeId: frameType.id,
-    }
+    // Tạo 10 template mẫu cho mỗi frame type
+    for (let i = 1; i <= 10; i++) {
+      // Type cast to avoid TypeScript errors
+      const templateData: any = {
+        name: `Template ${i} cho ${frameTypeData.name}`,
+        filename: `template_${frameTypeData.name.replace(/\s+/g, '_').toLowerCase()}_${i}.png`,
+        background: `/templates/${frameTypeData.name.replace(/\s+/g, '_').toLowerCase()}/bg_${i}.png`,
+        overlay: `/templates/${frameTypeData.name.replace(/\s+/g, '_').toLowerCase()}/overlay_${i}.png`,
+        frameTypeId: frameType.id,
+        isActive: true
+      }
 
-    await (prisma as any).frameTemplate.upsert({
-      where: { filename: templateData.filename },
-      update: {},
-      create: templateData,
-    })
-    console.log(`Created/Updated FrameTemplate: ${templateData.name}`)
+      await prisma.frameTemplate.upsert({
+        where: { filename: templateData.filename },
+        update: {},
+        create: templateData,
+      })
+      console.log(`Created/Updated FrameTemplate: ${templateData.name}`)
+    }
   }
 
   console.log('Seeding hoàn thành!')

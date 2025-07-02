@@ -103,7 +103,7 @@ export async function PUT(
       updateData.totalImages = columns * rows;
 
       // Generate frame type image filename based on columns x rows
-      const typeImageFilename = `${columns}x${rows}.png`;
+      const typeImageFilename = `${rows}x${columns}.png`;
       const typeImagePath = `/uploads/type/${typeImageFilename}`;
 
       try {
