@@ -195,6 +195,7 @@ async function main() {
   // Tạo các loại frame
   const frameTypes = [
     {
+      
       name: '1 tấm',
       description: 'Frame đơn giản với 1 ảnh',
       image: '/uploads/type/1x1.png',

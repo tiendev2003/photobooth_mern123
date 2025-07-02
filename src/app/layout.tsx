@@ -16,6 +16,13 @@ const ubuntu = Ubuntu({
    return {
     title: "S Photobooth - Unique Photo Booth",
     description: "Capture fun moments and create photo strips with S Photobooth. Try it now!",
+    manifest: '/manifest.json',
+    themeColor: '#ffffff',
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: 'S Photobooth',
+    },
     openGraph: {
       title: "S Photobooth - Unique Photo Booth",
       description: "Capture fun moments and create photo strips with S Photobooth. Try it now!",
@@ -40,6 +47,7 @@ const ubuntu = Ubuntu({
     },
     other: {
       "apple-mobile-web-app-title": "S Photobooth",
+      "apple-mobile-web-app-capable": "yes",
       viewport:
         "width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes",
       keywords:
@@ -55,19 +63,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/web-app-manifest-192x192.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon.ico" />
+        <meta name="theme-color" content="#ffffff" />
+      </head>
       <body
         className={`${ubuntu.className} antialiased select-none`}
         suppressHydrationWarning
       >
         <AuthProvider>
           <CleanupScheduler />
-          {/* BoothProvider for photobooth context */}
-          <BoothProvider>
+           <BoothProvider>
             {children}
-          </BoothProvider>
+           </BoothProvider>
         </AuthProvider>
       </body>
     </html>
   );
 }
-           
