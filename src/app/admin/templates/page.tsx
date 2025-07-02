@@ -9,14 +9,23 @@ interface FrameType {
   name: string;
 }
 
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 interface FrameTemplate {
   id: string;
   name: string;
   filename: string;
-  path: string;
-  preview: string | null;
+  background: string;
+  overlay: string;
   frameTypeId: string;
   frameType: FrameType;
+  userId?: string | null;
+  user?: User | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -25,6 +34,7 @@ export default function TemplatesManagement() {
   const { token } = useAuth();
   const [templates, setTemplates] = useState<FrameTemplate[]>([]);
   const [frameTypes, setFrameTypes] = useState<FrameType[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
@@ -50,9 +60,10 @@ export default function TemplatesManagement() {
     id: '',
     name: '',
     filename: '',
-    path: '',
-    preview: '',
+    background: '',
+    overlay: '',
     frameTypeId: '',
+    userId: '',
     isActive: true
   });
   
@@ -106,6 +117,20 @@ export default function TemplatesManagement() {
       
       const frameTypesData = await frameTypesResponse.json();
       setFrameTypes(frameTypesData.data);
+      
+      // Fetch users for dropdown
+      const usersResponse = await fetch('/api/users', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (!usersResponse.ok) {
+        throw new Error('Failed to fetch users');
+      }
+      
+      const usersData = await usersResponse.json();
+      setUsers(usersData.users);
       
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -163,7 +188,7 @@ export default function TemplatesManagement() {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       
-      if (e.target.name === 'templateFile') {
+      if (e.target.name === 'backgroundFile') {
         setFile(selectedFile);
         // Auto-generate filename if creating new template
         if (!isEditing) {
@@ -173,17 +198,17 @@ export default function TemplatesManagement() {
           }));
         }
         
-        // Create preview for template file
+        // Create preview for background file
         const reader = new FileReader();
         reader.onloadend = () => {
           setFilePreview(reader.result as string);
         };
         reader.readAsDataURL(selectedFile);
         
-      } else if (e.target.name === 'previewFile') {
+      } else if (e.target.name === 'overlayFile') {
         setPreviewFile(selectedFile);
         
-        // Create preview for preview file
+        // Create preview for overlay file
         const reader = new FileReader();
         reader.onloadend = () => {
           setPreviewImagePreview(reader.result as string);
@@ -199,9 +224,10 @@ export default function TemplatesManagement() {
       id: '',
       name: '',
       filename: '',
-      path: '',
-      preview: '',
+      background: '',
+      overlay: '',
       frameTypeId: frameTypes.length > 0 ? frameTypes[0].id : '',
+      userId: '', // Default to no user selected
       isActive: true
     });
     setFile(null);
@@ -218,9 +244,10 @@ export default function TemplatesManagement() {
       id: template.id,
       name: template.name,
       filename: template.filename,
-      path: template.path,
-      preview: template.preview || '',
+      background: template.background,
+      overlay: template.overlay,
       frameTypeId: template.frameTypeId,
+      userId: template.userId || '',
       isActive: template.isActive
     });
     setFile(null);
@@ -245,26 +272,34 @@ export default function TemplatesManagement() {
       submitFormData.append('frameTypeId', formData.frameTypeId);
       submitFormData.append('isActive', formData.isActive.toString());
       
+      // Add userId if it's not empty
+      if (formData.userId) {
+        submitFormData.append('userId', formData.userId);
+      } else {
+        // If userId is empty string, set it to null to remove any existing assignment
+        submitFormData.append('userId', 'null');
+      }
+      
       // For editing, we need to keep existing file paths if no new files are provided
-      if (isEditing && !file && formData.path) {
-        submitFormData.append('path', formData.path);
+      if (isEditing && !file && formData.background) {
+        submitFormData.append('background', formData.background);
         submitFormData.append('filename', formData.filename);
       }
       
-      if (isEditing && !previewFile && formData.preview) {
-        submitFormData.append('preview', formData.preview);
+      if (isEditing && !previewFile && formData.overlay) {
+        submitFormData.append('overlay', formData.overlay);
       }
       
-      // Add template file if provided
+      // Add background file if provided
       if (file) {
-        submitFormData.append('templateFile', file);
-        setUploadStatus('Uploading template file...');
+        submitFormData.append('backgroundFile', file);
+        setUploadStatus('Uploading background file...');
       }
       
-      // Add preview file if provided
+      // Add overlay file if provided
       if (previewFile) {
-        submitFormData.append('previewFile', previewFile);
-        setUploadStatus('Uploading preview file...');
+        submitFormData.append('overlayFile', previewFile);
+        setUploadStatus('Uploading overlay file...');
       }
       
       // Create or update template directly with FormData
@@ -459,27 +494,43 @@ export default function TemplatesManagement() {
               </div>
               
               <div>
-                <label htmlFor="templateFile" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Template File {isEditing && '(Leave empty to keep current)'}
+                <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Assign to User (Optional)</label>
+                <select
+                  id="userId"
+                  name="userId"
+                  value={formData.userId}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                >
+                  <option value="">No user assigned</option>
+                  {users.map(user => (
+                    <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="backgroundFile" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Background Image {isEditing && '(Leave empty to keep current)'}
                 </label>
                 <input
                   type="file"
-                  id="templateFile"
-                  name="templateFile"
+                  id="backgroundFile"
+                  name="backgroundFile"
                   onChange={handleFileChange}
                   className="mt-1 block w-full text-sm text-gray-500 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-200"
                   required={!isEditing}
                   accept="image/*"
                 />
-                {isEditing && formData.path && !filePreview && (
+                {isEditing && formData.background && !filePreview && (
                   <div className="mt-2">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Current file: {formData.filename}
+                      Current background: {formData.filename}
                     </p>
                     <div className="mt-2 relative w-32 h-32 border border-gray-300 overflow-hidden rounded-md">
                       <Image 
-                        src={formData.path}
-                        alt="Template preview"
+                        src={formData.background}
+                        alt="Background preview"
                         fill
                         sizes="128px"
                         className="object-contain"
@@ -490,12 +541,12 @@ export default function TemplatesManagement() {
                 {filePreview && (
                   <div className="mt-2">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Preview of selected file:
+                      Preview of selected background:
                     </p>
                     <div className="mt-2 relative w-32 h-32 border border-gray-300 overflow-hidden rounded-md">
                       <Image 
                         src={filePreview}
-                        alt="Template preview"
+                        alt="Background preview"
                         fill
                         sizes="128px"
                         className="object-contain"
@@ -506,26 +557,27 @@ export default function TemplatesManagement() {
               </div>
               
               <div>
-                <label htmlFor="previewFile" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Preview Image (optional) {isEditing && formData.preview && '(Leave empty to keep current)'}
+                <label htmlFor="overlayFile" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Overlay Image {isEditing && formData.overlay && '(Leave empty to keep current)'}
                 </label>
                 <input
                   type="file"
-                  id="previewFile"
-                  name="previewFile"
+                  id="overlayFile"
+                  name="overlayFile"
                   onChange={handleFileChange}
                   className="mt-1 block w-full text-sm text-gray-500 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900 dark:file:text-blue-200"
+                  required={!isEditing}
                   accept="image/*"
                 />
-                {isEditing && formData.preview && !previewImagePreview && (
+                {isEditing && formData.overlay && !previewImagePreview && (
                   <div className="mt-2">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Current preview:
+                      Current overlay:
                     </p>
                     <div className="mt-2 relative w-32 h-32 border border-gray-300 overflow-hidden rounded-md">
                       <Image 
-                        src={formData.preview}
-                        alt="Preview image"
+                        src={formData.overlay}
+                        alt="Overlay image"
                         fill
                         sizes="128px"
                         className="object-contain"
@@ -536,12 +588,12 @@ export default function TemplatesManagement() {
                 {previewImagePreview && (
                   <div className="mt-2">
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Preview of selected file:
+                      Preview of selected overlay:
                     </p>
                     <div className="mt-2 relative w-32 h-32 border border-gray-300 overflow-hidden rounded-md">
                       <Image 
                         src={previewImagePreview}
-                        alt="Preview image"
+                        alt="Overlay image"
                         fill
                         sizes="128px"
                         className="object-contain"
@@ -549,9 +601,9 @@ export default function TemplatesManagement() {
                     </div>
                   </div>
                 )}
-                {isEditing && formData.preview && (
+                {isEditing && formData.overlay && (
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Current preview: {formData.preview.split('/').pop()}
+                    Current overlay: {formData.overlay.split('/').pop()}
                   </p>
                 )}
               </div>
@@ -611,6 +663,7 @@ export default function TemplatesManagement() {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Frame Type</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Preview</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Assigned User</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
                 <th scope="col" className="relative px-6 py-3">
                   <span className="sr-only">Actions</span>
@@ -629,16 +682,35 @@ export default function TemplatesManagement() {
                       {template.frameType?.name || 'Unknown'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {template.preview ? (
-                        <Image 
-                          src={template.preview} 
-                          alt={template.name}
-                          width={40}
-                          height={40}
-                          className="h-10 w-auto object-cover rounded-sm"
-                        />
+                      <div className="flex space-x-2">
+                        <div className="relative h-10 w-10 border border-gray-200 rounded-sm overflow-hidden">
+                          <Image 
+                            src={template.background} 
+                            alt={`${template.name} background`}
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="relative h-10 w-10 border border-gray-200 rounded-sm overflow-hidden">
+                          <Image 
+                            src={template.overlay} 
+                            alt={`${template.name} overlay`}
+                            fill
+                            sizes="40px"
+                            className="object-cover"
+                          />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {template.user ? (
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">{template.user.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{template.user.email}</div>
+                        </div>
                       ) : (
-                        <span className="text-gray-400 dark:text-gray-500 text-sm">No preview</span>
+                        <span className="text-gray-500 dark:text-gray-400 text-sm">No user assigned</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

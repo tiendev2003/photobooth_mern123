@@ -34,7 +34,7 @@ async function uploadImage(file: File) {
     await writeFile(filePath, buffer);
 
     // Save the file information to the database
-    const newImage = await prisma.image.create({
+    await prisma.image.create({
       data: {
         filename: uniqueFilename,
         path: relativePath,
@@ -43,7 +43,10 @@ async function uploadImage(file: File) {
       },
     });
 
-    return newImage;
+    return {
+      filename: uniqueFilename,
+      path: relativePath
+    };
   } catch (error) {
     console.error("Error uploading image:", error);
     return null;
@@ -72,6 +75,7 @@ export async function GET(
       where: { id },
       include: {
         frameType: true,
+        // User relation will be added after migration
       },
     });
 
@@ -111,7 +115,7 @@ export async function PUT(
     const contentType = request.headers.get("content-type");
 
     let updateData: UpdateFrameTemplateInput = {};
-    let previewImage, templateImage;
+    let backgroundImage, overlayImage;
 
     // Handle multipart/form-data (file uploads) and application/json differently
     if (contentType && contentType.includes("multipart/form-data")) {
@@ -126,25 +130,33 @@ export async function PUT(
           ? formData.get("isActive") === "true"
           : undefined,
       };
+      
+      // Comment out userId handling until migration is complete
+      // const userId = formData.get("userId") as string;
+      // if (userId === "null") {
+      //   updateData.userId = null;
+      // } else if (userId) {
+      //   updateData.userId = userId;
+      // }
 
-      // Get template image file if provided
-      const templateFile = formData.get("templateFile") as File;
-      if (templateFile && templateFile.size > 0) {
-        // Upload template file
-        templateImage = await uploadImage(templateFile);
-        if (templateImage) {
-          updateData.path = templateImage.path;
-          updateData.filename = templateImage.filename;
+      // Get background image file if provided
+      const backgroundFile = formData.get("backgroundFile") as File;
+      if (backgroundFile && backgroundFile.size > 0) {
+        // Upload background file
+        backgroundImage = await uploadImage(backgroundFile);
+        if (backgroundImage) {
+          updateData.background = backgroundImage.path;
+          updateData.filename = backgroundImage.filename;
         }
       }
 
-      // Get preview image file if provided
-      const previewFile = formData.get("previewFile") as File;
-      if (previewFile && previewFile.size > 0) {
-        // Upload preview file
-        previewImage = await uploadImage(previewFile);
-        if (previewImage) {
-          updateData.preview = previewImage.path;
+      // Get overlay image file if provided
+      const overlayFile = formData.get("overlayFile") as File;
+      if (overlayFile && overlayFile.size > 0) {
+        // Upload overlay file
+        overlayImage = await uploadImage(overlayFile);
+        if (overlayImage) {
+          updateData.overlay = overlayImage.path;
         }
       }
     } else {
@@ -154,9 +166,11 @@ export async function PUT(
       updateData = {
         name: rawBody.name,
         filename: rawBody.filename,
-        path: rawBody.path,
-        preview: rawBody.preview,
+        background: rawBody.background,
+        overlay: rawBody.overlay,
         frameTypeId: rawBody.frameTypeId,
+        // Comment out userId until migration is complete
+        // userId: rawBody.userId === "null" ? null : rawBody.userId,
         isActive: rawBody.isActive,
       };
     }
@@ -184,12 +198,42 @@ export async function PUT(
         );
       }
     }
+    
+    // Comment out user validation until migration is complete
+    // if (updateData.userId && updateData.userId !== null) {
+    //   const user = await prisma.user.findUnique({
+    //     where: { id: updateData.userId },
+    //   });
 
+    //   if (!user) {
+    //     return NextResponse.json(
+    //       {
+    //         success: false,
+    //         error: "User không tồn tại",
+    //       },
+    //       { status: 404 }
+    //     );
+    //   }
+    // }
+
+    // Cập nhật frame template với các trường background và overlay
+    // Sử dụng as any để tránh lỗi TypeScript nếu cần
+    // Use a properly typed approach to update only the fields that exist in updateData
+    const updateFields: Record<string, unknown> = {};
+    
+    if (updateData.name !== undefined) updateFields.name = updateData.name;
+    if (updateData.filename !== undefined) updateFields.filename = updateData.filename;
+    if (updateData.background !== undefined) updateFields.background = updateData.background;
+    if (updateData.overlay !== undefined) updateFields.overlay = updateData.overlay;
+    if (updateData.frameTypeId !== undefined) updateFields.frameTypeId = updateData.frameTypeId;
+    if (updateData.isActive !== undefined) updateFields.isActive = updateData.isActive;
+    
     const frameTemplate = await prisma.frameTemplate.update({
       where: { id },
-      data: updateData,
+      data: updateFields,
       include: {
         frameType: true,
+        // Remove user relation until migration is complete
       },
     });
 
@@ -228,14 +272,40 @@ export async function DELETE(
     }
 
     try {
-      const filePath = path.join(
-        process.cwd(),
-        "public",
-        existingFrameTemplate?.path
-      );
-      await fs.unlink(filePath);
+      // Use the existing template to delete files
+      // Define the type to avoid TypeScript errors
+      type FrameTemplateWithPaths = {
+        background?: string;
+        path?: string;
+        overlay?: string;
+        preview?: string;
+      };
+      
+      const template = existingFrameTemplate as unknown as FrameTemplateWithPaths;
+      
+      // Delete background file (which might be in path or background field)
+      const backgroundPath = template.background || template.path;
+      if (backgroundPath) {
+        const fullPath = path.join(process.cwd(), "public", backgroundPath);
+        try {
+          await fs.unlink(fullPath);
+        } catch (fileError) {
+          console.error("Error deleting background file:", fileError);
+        }
+      }
+      
+      // Delete overlay file (which might be in preview or overlay field)
+      const overlayPath = template.overlay || template.preview;
+      if (overlayPath) {
+        const fullPath = path.join(process.cwd(), "public", overlayPath);
+        try {
+          await fs.unlink(fullPath);
+        } catch (fileError) {
+          console.error("Error deleting overlay file:", fileError);
+        }
+      }
     } catch (fileError) {
-      console.error("Error deleting image file:", fileError);
+      console.error("Error deleting image files:", fileError);
     }
     await prisma.frameTemplate.delete({
       where: { id },

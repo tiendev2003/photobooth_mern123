@@ -1,5 +1,4 @@
 import { CreateFrameTemplateInput } from '@/lib/models';
-import { getAllFrameTemplates } from '@/lib/models/FrameTemplate';
 import { prisma } from '@/lib/prisma';
 import { writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
@@ -30,7 +29,7 @@ async function uploadImage(file: File) {
     await writeFile(filePath, buffer);
 
     // Save the file information to the database
-    const newImage = await prisma.image.create({
+    await prisma.image.create({
       data: {
         filename: uniqueFilename,
         path: relativePath,
@@ -39,7 +38,10 @@ async function uploadImage(file: File) {
       }
     });
 
-    return newImage;
+    return {
+      filename: uniqueFilename,
+      path: relativePath
+    };
   } catch (error) {
     console.error('Error uploading image:', error);
     return null;
@@ -74,15 +76,53 @@ export async function GET(request: NextRequest) {
       frameTypeId: frameTypeId || undefined
     };
     
-    // Use the model function to get paginated templates
-    const { templates, pagination } = await getAllFrameTemplates(options);
+    // Manually fetch templates with the required relations
+    const skip = (options.page - 1) * options.limit;
+    const where: {
+      frameTypeId?: string;
+      OR?: Array<{ name: { contains: string } }>;
+    } = {};
+    
+    if (options.frameTypeId) {
+      where.frameTypeId = options.frameTypeId;
+    }
+    
+    if (options.search) {
+      where.OR = [
+        { name: { contains: options.search } }
+      ];
+    }
+    
+    // Get total count for pagination
+    const total = await prisma.frameTemplate.count({ where });
+    
+    // Get paginated templates with frame type only (remove user relation until migration is complete)
+    const templates = await prisma.frameTemplate.findMany({
+      where,
+      include: {
+        frameType: true
+      },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: options.limit
+    });
+    
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(total / options.limit);
     
     return NextResponse.json({
       success: true,
       data: templates,
       templates: templates,  // Add this to ensure backward compatibility
       frameTemplates: templates,  // Add this to support the client-side expected format
-      pagination: pagination
+      pagination: {
+        total,
+        page: options.page,
+        limit: options.limit,
+        totalPages,
+        hasNextPage: options.page < totalPages,
+        hasPrevPage: options.page > 1
+      }
     });
   } catch (error) {
     console.error('Error fetching frame templates:', error);
@@ -102,7 +142,7 @@ export async function POST(request: NextRequest) {
     const contentType = request.headers.get("content-type");
     
     let templateData: CreateFrameTemplateInput;
-    let templateImage, previewImage;
+    let backgroundImage, overlayImage;
     
     // Handle multipart/form-data (file uploads) and application/json differently
     if (contentType && contentType.includes("multipart/form-data")) {
@@ -112,26 +152,27 @@ export async function POST(request: NextRequest) {
       templateData = {
         name: formData.get("name") as string,
         filename: '',  // Will be set from the uploaded file
-        path: '',      // Will be set from the uploaded file
+        background: '', // Will be set from the background file
+        overlay: '',   // Will be set from the overlay file
         frameTypeId: formData.get("frameTypeId") as string,
+        userId: formData.get("userId") as string || null,
         isActive: formData.get("isActive") ? 
-          (formData.get("isActive") === "true") : true,
-        preview: ''    // Will be set if preview file is uploaded
+          (formData.get("isActive") === "true") : true
       };
       
-      // Get template image file (required)
-      const templateFile = formData.get("templateFile") as File;
-      if (templateFile && templateFile.size > 0) {
-        // Upload template file
-        templateImage = await uploadImage(templateFile);
-        if (templateImage) {
-          templateData.path = templateImage.path;
-          templateData.filename = templateImage.filename;
+      // Get background image file (required)
+      const backgroundFile = formData.get("backgroundFile") as File;
+      if (backgroundFile && backgroundFile.size > 0) {
+        // Upload background file
+        backgroundImage = await uploadImage(backgroundFile);
+        if (backgroundImage) {
+          templateData.background = backgroundImage.path;
+          templateData.filename = backgroundImage.filename;
         } else {
           return NextResponse.json(
             { 
               success: false, 
-              error: 'Không thể tải lên tệp template' 
+              error: 'Không thể tải lên ảnh nền (background)' 
             },
             { status: 400 }
           );
@@ -140,20 +181,36 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { 
             success: false, 
-            error: 'Thiếu tệp template' 
+            error: 'Thiếu ảnh nền (background)' 
           },
           { status: 400 }
         );
       }
       
-      // Get preview image file if provided
-      const previewFile = formData.get("previewFile") as File;
-      if (previewFile && previewFile.size > 0) {
-        // Upload preview file
-        previewImage = await uploadImage(previewFile);
-        if (previewImage) {
-          templateData.preview = previewImage.path;
+      // Get overlay image file (required)
+      const overlayFile = formData.get("overlayFile") as File;
+      if (overlayFile && overlayFile.size > 0) {
+        // Upload overlay file
+        overlayImage = await uploadImage(overlayFile);
+        if (overlayImage) {
+          templateData.overlay = overlayImage.path;
+        } else {
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: 'Không thể tải lên ảnh lớp phủ (overlay)' 
+            },
+            { status: 400 }
+          );
         }
+      } else {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Thiếu ảnh lớp phủ (overlay)' 
+          },
+          { status: 400 }
+        );
       }
     } else {
       // Handle JSON data
@@ -161,11 +218,11 @@ export async function POST(request: NextRequest) {
     }
     
     // Validate required fields
-    if (!templateData.name || !templateData.filename || !templateData.path || !templateData.frameTypeId) {
+    if (!templateData.name || !templateData.filename || !templateData.background || !templateData.overlay || !templateData.frameTypeId) {
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Thiếu thông tin bắt buộc: name, filename, path, frameTypeId' 
+          error: 'Thiếu thông tin bắt buộc: name, filename, background, overlay, frameTypeId' 
         },
         { status: 400 }
       );
@@ -186,17 +243,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const frameTemplate = await prisma.frameTemplate.create({
-      data: {
+    // Comment out userId validation until migration is complete
+    // if (templateData.userId && templateData.userId !== 'null') {
+    //   const user = await prisma.user.findUnique({
+    //     where: { id: templateData.userId },
+    //   });
+
+    //   if (!user) {
+    //     return NextResponse.json(
+    //       { 
+    //         success: false, 
+    //         error: 'User không tồn tại' 
+    //       },
+    //       { status: 404 }
+    //     );
+    //   }
+    // }
+    
+    // Tạo frame template với trường background và overlay
+    // Create an object with the correct fields
+    const createData = {
         name: templateData.name,
         filename: templateData.filename,
-        path: templateData.path,
-        preview: templateData.preview,
+        background: templateData.background,
+        overlay: templateData.overlay,
         frameTypeId: templateData.frameTypeId,
         isActive: templateData.isActive ?? true,
-      },
+        // Remove userId until migration is complete
+        // userId: templateData.userId === 'null' ? null : templateData.userId || null,
+    };
+    
+    // Use type assertion at the call site level to avoid TypeScript errors
+    // This is a temporary workaround for the schema/type mismatch during migration
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const frameTemplate = await (prisma.frameTemplate.create as any)({
+      data: createData,
       include: {
         frameType: true,
+        // Remove user relation until migration is complete
       },
     });
 

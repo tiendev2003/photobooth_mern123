@@ -1261,10 +1261,10 @@ export default function Step8() {
     const aspectRatio = isLandscape ? "3/2" : "2/3"; // Reverse aspect ratio for landscape
 
     // Frame overlay using selectedTemplate (similar to frameOverlay in the second code)
-    const frameOverlay = selectedTemplate?.path ? (
+    const frameOverlay = selectedTemplate?.overlay ? (
       <div className="pointer-events-none absolute inset-0 z-20">
         <Image
-          src={selectedTemplate.path}
+          src={selectedTemplate.overlay}
           alt="Frame Overlay"
           className="h-full w-full object-contain"
           fill
@@ -1522,7 +1522,7 @@ export default function Step8() {
                       >
                         <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-indigo-900/50 to-purple-900/50">
                           <img
-                            src={template.preview || template.path}
+                            src={template.background || template.overlay}
                             alt={template.name}
                             className="w-full h-full object-cover"
                           />

@@ -15,7 +15,7 @@ export default function Step3() {
     {
       id: "9bd76696-ba90-4346-8d88-860229313dad",
       name: "Khung hình 1",
-      image: "/uploads/type/1x2.png",
+      image: "/uploads/type/2x1.png",
       isHot: false,
       columns: 2,
       rows: 1,
@@ -28,7 +28,7 @@ export default function Step3() {
     {
       id: "e5d13fdc-0556-43bd-8102-d7b94794c132",
       name: "Khung hình 2",
-      image: "/uploads/type/4x1.png",
+      image: "/uploads/type/1x4.png",
       isHot: true,
       columns: 1,
       rows: 4,

@@ -2,14 +2,23 @@
 import { prisma } from '@/lib/prisma';
 import type { FrameType } from './FrameType';
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export interface FrameTemplate {
   id: string;
   name: string;
   filename: string;
-  path: string;
-  preview?: string;
+  background: string;
+  overlay: string;
   frameTypeId: string;
   frameType?: FrameType;
+  userId?: string | null;
+  user?: User | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -18,18 +27,20 @@ export interface FrameTemplate {
 export interface CreateFrameTemplateInput {
   name: string;
   filename: string;
-  path: string;
-  preview?: string;
+  background: string;
+  overlay: string;
   frameTypeId: string;
+  userId?: string | null;
   isActive?: boolean;
 }
 
 export interface UpdateFrameTemplateInput {
   name?: string;
   filename?: string;
-  path?: string;
-  preview?: string;
+  background?: string;
+  overlay?: string;
   frameTypeId?: string;
+  userId?: string | null;
   isActive?: boolean;
 }
 
@@ -46,10 +57,18 @@ export async function getAllFrameTemplates(options?: {
   const search = options?.search || '';
   const frameTypeId = options?.frameTypeId || '';
   
-  // Fetch all frame templates
+  // Fetch all frame templates with user relation
   const allFrameTemplates = await prisma.frameTemplate.findMany({
     include: {
       frameType: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true
+        }
+      }
     },
     orderBy: {
       createdAt: 'desc',
