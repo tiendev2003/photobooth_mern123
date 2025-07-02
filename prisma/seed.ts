@@ -192,10 +192,10 @@ async function main() {
   
   console.log('Seeding FrameTypes và FrameTemplates...')
 
-  // Tạo các loại frame
+  // Tạo các loại frame với ID tùy chỉnh
   const frameTypes = [
     {
-      
+      id: '1',
       name: '1 tấm',
       description: 'Frame đơn giản với 1 ảnh',
       image: '/uploads/type/1x1.png',
@@ -204,6 +204,7 @@ async function main() {
       totalImages: 1,
     },
     {
+      id: '2',
       name: '1x2',
       description: 'Frame ngang với 2 ảnh trên 1 hàng',
       image: '/uploads/type/2x1.png',
@@ -212,6 +213,7 @@ async function main() {
       totalImages: 2,
     },
     {
+      id: '3',
       name: '2x2',
       description: 'Frame vuông với 4 ảnh (2x2)',
       image: '/uploads/type/2x2.png',
@@ -220,6 +222,7 @@ async function main() {
       totalImages: 4,
     },
     {
+      id: '4',
       name: '2x3',
       description: 'Frame chữ nhật với 6 ảnh (3 hàng x 2 cột)',
       image: '/uploads/type/2x3.png',
@@ -228,6 +231,7 @@ async function main() {
       totalImages: 6,
     },
     {
+      id: '5',
       name: '1x4',
       description: 'Frame dài với 4 ảnh trên 1 hàng',
       image: '/uploads/type/1x4.png',
@@ -236,6 +240,7 @@ async function main() {
       totalImages: 4,
     },
     {
+      id: '6',
       name: '3x2',
       description: 'Frame chữ nhật với 6 ảnh (3 hàng x 2 cột)',
       image: '/uploads/type/3x2.png',
@@ -247,20 +252,20 @@ async function main() {
 
   for (const frameTypeData of frameTypes) {
     const frameType = await prisma.frameType.upsert({
-      where: { name: frameTypeData.name },
+      where: { id: frameTypeData.id },
       update: {},
       create: frameTypeData,
     })
-    console.log(`Created/Updated FrameType: ${frameType.name}`)
+    console.log(`Created/Updated FrameType: ${frameType.name} with ID: ${frameType.id}`)
 
     // Tạo 10 template mẫu cho mỗi frame type
     for (let i = 1; i <= 10; i++) {
       // Type cast to avoid TypeScript errors
       const templateData: any = {
         name: `Template ${i} cho ${frameTypeData.name}`,
-        filename: `template_${frameTypeData.name.replace(/\s+/g, '_').toLowerCase()}_${i}.png`,
-        background: `/templates/${frameTypeData.name.replace(/\s+/g, '_').toLowerCase()}/bg_${i}.png`,
-        overlay: `/templates/${frameTypeData.name.replace(/\s+/g, '_').toLowerCase()}/overlay_${i}.png`,
+        filename: `template_${frameTypeData.id}_${i}.png`,
+        background: `/templates/${frameTypeData.id}/bg_${i}.png`,
+        overlay: `/templates/${frameTypeData.id}/overlay_${i}.png`,
         frameTypeId: frameType.id,
         isActive: true
       }

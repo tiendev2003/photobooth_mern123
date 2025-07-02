@@ -13,7 +13,7 @@ export default function Step3() {
   const { selectedFrame, setSelectedFrame } = useBooth();
   const [frameTypes] = useState<FrameType[]>([
     {
-      id: "9bd76696-ba90-4346-8d88-860229313dad",
+      id: "2",
       name: "Khung hình 1",
       image: "/uploads/type/2x1.png",
       isHot: false,
@@ -26,7 +26,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "e5d13fdc-0556-43bd-8102-d7b94794c132",
+      id: "5",
       name: "Khung hình 2",
       image: "/uploads/type/1x4.png",
       isHot: true,
@@ -39,7 +39,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "86239323-4162-451f-b465-80601a61a7cb",
+      id: "3",
       name: "Khung hình 3",
       image: "/uploads/type/2x2.png",
       isHot: false,
@@ -52,7 +52,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "d115f2e4-2a26-45c2-9652-4fd52fc60b22",
+      id: "6",
       name: "Khung hình 4",
       columns: 2,
       rows: 3,
@@ -65,7 +65,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "7eee5953-3794-4843-85f7-28d80ac09f55",
+      id: "4",
       name: "Khung hình 5",
       image: "/uploads/type/2x3.png",
       columns: 3,
@@ -78,7 +78,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "7ec1edcb-27a3-4afc-a542-2dbd6f87b780",
+      id: "1",
       name: "Khung hình 6",
       image: "/uploads/type/1x1.png",
       columns: 1,
