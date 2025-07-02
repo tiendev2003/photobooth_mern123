@@ -244,30 +244,16 @@ export default function Step8() {
         // }
 
         // Send to printer
-        fetch("/api/print", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            base64Image: imageDataUrl,
-            isLandscape: isLandscape, // Pass orientation
-            isCut: selectedFrame?.isCustom === true, // Use isCustom to determine cut option
-          }),
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Failed to print image");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            console.log("Print job submitted successfully:", data);
-          })
-          .catch((error) => {
-            console.error("Error submitting print job:", error);
-          });
-
+        try {
+          // Print the image before redirecting
+          console.log("Đang chuẩn bị in ảnh...");
+          await printImage(imageData.data.url);
+          console.log("Ảnh đã được gửi đến máy in.");
+        } catch (printError) {
+          console.error("Lỗi khi in ảnh:", printError);
+          alert("Có lỗi xảy ra khi in ảnh, nhưng ảnh đã được lưu thành công.");
+        }
+        
         router.push("/step/step9");
 
       } catch (error) {
@@ -367,6 +353,16 @@ export default function Step8() {
             console.log("Ảnh đã được tải lên thành công (chất lượng thấp hơn):", imageData);
             setImageQrCode(imageData.data.url);
             
+            // Try printing the lower quality image
+            try {
+              console.log("Đang chuẩn bị in ảnh (chất lượng thấp hơn)...");
+              await printImage(imageData.data.url);
+              console.log("Ảnh đã được gửi đến máy in.");
+            } catch (printError) {
+              console.error("Lỗi khi in ảnh (chất lượng thấp hơn):", printError);
+              alert("Có lỗi xảy ra khi in ảnh, nhưng ảnh đã được lưu thành công.");
+            }
+            
             router.push("/step/step9");
           } catch (retryError) {
             console.error("Error with lower quality image:", retryError);
@@ -397,6 +393,119 @@ export default function Step8() {
     });
     await Promise.all(promises);
   };
+
+  // Function to handle printing the image using browser print
+  const printImage = async (imageUrl: string): Promise<void> => {
+    return new Promise((resolve) => {
+      // Create a hidden iframe to handle printing within the same page
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.opacity = '0';
+      iframe.style.border = 'none';
+      iframe.style.overflow = 'hidden';
+      document.body.appendChild(iframe);
+      
+       
+      
+      // Wait for iframe to load before manipulating its contents
+      iframe.onload = () => {
+        // Access the document inside iframe
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!iframeDoc) {
+          document.body.removeChild(iframe);
+          alert('Không thể tạo khung in ảnh');
+          resolve();
+          return;
+        }
+        
+        // Write the print content to the iframe
+        iframeDoc.open();
+        iframeDoc.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title></title>
+            <style>
+              @page {
+                margin: 0;
+                size: auto;
+              }
+              html, body {
+                margin: 0;
+                padding: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                background-color: #fff;
+                overflow: hidden;
+              }
+              img {
+                max-width: 100%;
+                max-height: 100vh;
+                object-fit: contain;
+              }
+              @media print {
+                body {
+                  margin: 0;
+                  padding: 0;
+                  background-color: #fff;
+                }
+                img {
+                  width: 100%;
+                  height: auto;
+                  page-break-inside: avoid;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <img src="${imageUrl}" alt="" onload="startPrint()" />
+            <script>
+              function startPrint() {
+                // Small delay to ensure image is fully loaded
+                setTimeout(() => {
+                  document.title = '';
+                  window.print();
+                }, 500);
+              }
+              
+              window.onafterprint = function() {
+                window.parent.postMessage('print-finished', '*');
+              };
+            </script>
+          </body>
+          </html>
+        `);
+        iframeDoc.close();
+      };
+      
+      // Listen for the message from iframe when printing is done
+      const messageHandler = (event: MessageEvent) => {
+        if (event.data === 'print-finished') {
+          window.removeEventListener('message', messageHandler);
+          document.body.removeChild(iframe);
+          resolve();
+        }
+      };
+      window.addEventListener('message', messageHandler);
+      
+      // Set the iframe source to trigger the onload
+      iframe.src = 'about:blank';
+      
+      // Fallback timeout in case the print dialog is cancelled or something goes wrong
+      setTimeout(() => {
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+          window.removeEventListener('message', messageHandler);
+          resolve();
+        }
+      }, 30000); // 30 second timeout
+    });
+  };
+  
   // const generateHighQualityVideo = async (isLandscape: boolean): Promise<string | void> => {
   //   try {
   //     const previewContent = printPreviewRef.current;
