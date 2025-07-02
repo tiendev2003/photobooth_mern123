@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           isValid: false,
-          message: `Mã giảm giá yêu cầu tổng số tiền tối thiểu là ${discountCode.discount} VND`,
+          message: `Mã giảm giá yêu cầu tổng số tiền tối thiểu là ${totalAmount} VND`,
         },
         { status: 200 }
       );
