@@ -6,11 +6,11 @@ import path from 'path';
 // GET /api/images/[id] - Get a specific image, video or GIF by ID
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
-    
+    const id = (await params).id;
+
     // First, try direct ID lookup
     let media = await prisma.image.findUnique({
       where: { id }
@@ -54,8 +54,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = (await params).id;
-
+ const {id} = await params;
     // Check if image exists
     const existingImage = await prisma.image.findUnique({
       where: { id }

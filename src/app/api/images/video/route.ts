@@ -106,7 +106,7 @@ async function createDirIfNotExists(dirPath: string) {
   try {
     await fs.access(dirPath);
   } catch (error) {
-    console.log(`Creating directory: ${dirPath}`);
+    console.log(`Creating directory: ${error}`);
     await fs.mkdir(dirPath, { recursive: true });
   }
 }
