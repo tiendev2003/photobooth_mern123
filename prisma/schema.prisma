@@ -65,6 +65,9 @@ model FrameType {
   rows          Int
   totalImages   Int
   isActive      Boolean         @default(true)
+  isHot         Boolean         @default(false)
+  isCustom      Boolean         @default(false)
+  isCircle      Boolean         @default(false)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   templates     FrameTemplate[]

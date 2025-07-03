@@ -87,7 +87,12 @@ export default function Step7() {
         sizes="(max-width: 768px) 100vw, 50vw"
       />
     ) : (
-      <div className="flex h-full w-full flex-col items-center justify-center text-gray-400">
+      <div className={cn(
+        "flex h-full w-full flex-col items-center justify-center text-gray-400",
+        selectedFrame?.isCircle && "rounded-full"
+      )}
+
+      >
         <span className="text-xs">{"Empty"}</span>
       </div>
     );
@@ -96,6 +101,8 @@ export default function Step7() {
       "relative w-full flex items-center justify-center transition-all duration-200 overflow-hidden border border-transparent";
     const emptyClass = "border-dashed border-gray-200 bg-gray-50/50";
     const hasPhoto = selectedIndices[idx] !== undefined;
+    const isLandscape = (selectedFrame?.columns ?? 0) > (selectedFrame?.rows ?? 0) && !selectedFrame?.isCustom;
+    const isSquare = selectedFrame?.columns === selectedFrame?.rows;
     return (
       <div
         key={idx}
@@ -103,7 +110,7 @@ export default function Step7() {
           baseClass,
           !hasPhoto && emptyClass,
           hasPhoto && "cursor-pointer",
-          selectedFrame?.isCustom ? "aspect-[4/3]" : "aspect-square"
+          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? "ha aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-square"
         )}
         onClick={() => hasPhoto && handleRemovePhoto(idx)}
       >
@@ -125,19 +132,21 @@ export default function Step7() {
     const previewHeight = isLandscape ? "4in" : "6in";
     const previewWidth = isLandscape ? "6in" : "4in";
     const aspectRatio = isLandscape ? "3/2" : "2/3";
-    
-    console.log("Frame dimensions:", selectedFrame.columns, selectedFrame.rows, selectedFrame.isCustom);
+
     return (
       <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "2in" : previewWidth }} >
         <div
           data-preview
           className={cn(
-            "flex flex-col gap-4 px-[10%] print-preview photo-booth-preview bg-white",
-            selectedFrame.isCustom ? "pb-[10%] pt-[10%]" : "pb-[10%] pt-[5%]"
+            "flex flex-col gap-4 print-preview photo-booth-preview bg-white",
+            selectedFrame.isCustom ? "pb-[10%] pt-[10%]" : "pb-[10%] pt-[5%]",
+            isSquare && selectedFrame.columns == 2 ? "pt-[10%]" : "",
+            isSquare &&  selectedFrame.columns == 1 ? "pt-[20%]" : "",
+            isLandscape ? "px-[5%]" : "px-[10%]"
           )}
           style={{
             height: previewHeight,
-            aspectRatio: selectedFrame.isCustom ? "1/3" : isSquare ? "1/1" : aspectRatio,
+            aspectRatio: selectedFrame.isCustom ? "1/3" : (isSquare && selectedFrame.columns == 1) ? "2/3" : aspectRatio,
           }}
         >
           {selectedFrame.isCustom ? (
@@ -237,13 +246,13 @@ export default function Step7() {
               </div>
               <p className="text-sm mt-4 text-gray-300">
                 Chọn tối đa {selectedFrame?.isCustom
-                  ? 8
+                  ? selectedFrame.rows
                   : selectedFrame
                     ? selectedFrame.columns * selectedFrame.rows
                     : 4} ảnh để hiển thị trong bản xem trước (
                 {selectedIndices.filter(i => i !== undefined).length}/
                 {selectedFrame?.isCustom
-                  ? 8
+                  ? selectedFrame.rows
                   : selectedFrame
                     ? selectedFrame.columns * selectedFrame.rows
                     : 4})

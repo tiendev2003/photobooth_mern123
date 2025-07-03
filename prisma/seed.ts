@@ -237,6 +237,7 @@ async function main() {
       image: '/uploads/type/1x4.png',
       columns: 4,
       rows: 1,
+      isHot: true,
       totalImages: 4,
     },
     {
@@ -247,6 +248,26 @@ async function main() {
       columns: 2,
       rows: 3,
       totalImages: 6,
+    },
+    {
+      id: '7',
+      name: 'Khung hình tròn',
+      description: 'Frame hình tròn đặc biệt',
+      image: '/uploads/type/1x1_circle.png',
+      columns: 1,
+      rows: 1,
+      totalImages: 1,
+      isCircle: true,
+    },
+    {
+      id: '8',
+      name: 'Khung hình 1x2',
+      description: 'Frame dọc với 2 ảnh xếp dọc',
+      image: '/uploads/type/1x2.png',
+      columns: 1,
+      rows: 2,
+      totalImages: 2,
+      isCustom: true,
     }
   ]
 
@@ -258,24 +279,67 @@ async function main() {
     })
     console.log(`Created/Updated FrameType: ${frameType.name} with ID: ${frameType.id}`)
 
-    // Tạo 10 template mẫu cho mỗi frame type
-    for (let i = 1; i <= 10; i++) {
-      // Type cast to avoid TypeScript errors
-      const templateData: any = {
-        name: `Template ${i} cho ${frameTypeData.name}`,
-        filename: `template_${frameTypeData.id}_${i}.png`,
-        background: `/templates/${frameTypeData.id}/bg_${i}.png`,
-        overlay: `/templates/${frameTypeData.id}/overlay_${i}.png`,
-        frameTypeId: frameType.id,
-        isActive: true
-      }
+    // Tạo templates mẫu tùy chỉnh cho từng loại frame
+    if (frameTypeData.id === '7') {
+      // Tạo templates đặc biệt cho khung hình tròn
+      for (let i = 1; i <= 10; i++) {
+        const circleTemplateData: any = {
+          name: `Template tròn ${i}`,
+          filename: `template_circle_${i}.png`,
+          background: `/templates/circle/bg_${i}.png`,
+          overlay: `/templates/circle/overlay_${i}.png`,
+          frameTypeId: frameType.id,
+          isActive: true
+        }
 
-      await prisma.frameTemplate.upsert({
-        where: { filename: templateData.filename },
-        update: {},
-        create: templateData,
-      })
-      console.log(`Created/Updated FrameTemplate: ${templateData.name}`)
+        await prisma.frameTemplate.upsert({
+          where: { filename: circleTemplateData.filename },
+          update: {},
+          create: circleTemplateData,
+        })
+        console.log(`Created/Updated Circle FrameTemplate: ${circleTemplateData.name}`)
+      }
+    } 
+    else if (frameTypeData.id === '8') {
+      // Tạo templates đặc biệt cho khung hình 1x2
+      for (let i = 1; i <= 10; i++) {
+        const custom1x2TemplateData: any = {
+          name: `Template 1x2 ${i}`,
+          filename: `template_1x2_${i}.png`,
+          background: `/templates/1x2/bg_${i}.png`,
+          overlay: `/templates/1x2/overlay_${i}.png`,
+          frameTypeId: frameType.id,
+          isActive: true
+        }
+
+        await prisma.frameTemplate.upsert({
+          where: { filename: custom1x2TemplateData.filename },
+          update: {},
+          create: custom1x2TemplateData,
+        })
+        console.log(`Created/Updated 1x2 FrameTemplate: ${custom1x2TemplateData.name}`)
+      }
+    }
+    else {
+      // Tạo 10 template mẫu cho các frame type khác
+      for (let i = 1; i <= 10; i++) {
+        // Type cast to avoid TypeScript errors
+        const templateData: any = {
+          name: `Template ${i} cho ${frameTypeData.name}`,
+          filename: `template_${frameTypeData.id}_${i}.png`,
+          background: `/templates/${frameTypeData.id}/bg_${i}.png`,
+          overlay: `/templates/${frameTypeData.id}/overlay_${i}.png`,
+          frameTypeId: frameType.id,
+          isActive: true
+        }
+
+        await prisma.frameTemplate.upsert({
+          where: { filename: templateData.filename },
+          update: {},
+          create: templateData,
+        })
+        console.log(`Created/Updated FrameTemplate: ${templateData.name}`)
+      }
     }
   }
 

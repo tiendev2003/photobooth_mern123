@@ -78,7 +78,7 @@ export default function Step8() {
     setVideoQrCode,
     setGifQrCode,
   } = useBooth();
-  
+
   // Use this to keep skinFilters and context filter in sync
   const activeSkinFilter = useMemo(() => {
     return skinFilters.find(filter => filter.id === selectedFilter.id) || skinFilters[0];
@@ -275,7 +275,7 @@ export default function Step8() {
         if (supportsMediaGeneration) {
           // Start media generation in the background
           console.log("Starting media generation in background");
-          
+
           // Generate video and GIF simultaneously
           Promise.all([
             generateVideo().catch(e => {
@@ -287,10 +287,10 @@ export default function Step8() {
               return null;
             })
           ])
-          .then(([videoUrl, gifUrl]) => {
-            console.log("Background media generation completed", { videoUrl, gifUrl });
-            // Even if these fail, we'll still have the image QR code to show in step9
-          });
+            .then(([videoUrl, gifUrl]) => {
+              console.log("Background media generation completed", { videoUrl, gifUrl });
+              // Even if these fail, we'll still have the image QR code to show in step9
+            });
         } else {
           console.log("Browser doesn't support media generation APIs, skipping video/GIF creation");
         }
@@ -358,11 +358,11 @@ export default function Step8() {
           images.forEach((img) => {
             // Remove filter classes while keeping other classes
             if (img.className && selectedFilter?.className) {
-              const classes = img.className.split(' ').filter(cls => 
+              const classes = img.className.split(' ').filter(cls =>
                 !selectedFilter.className.split(' ').includes(cls));
               img.className = classes.join(' ');
             }
-            
+
             img.style.imageRendering = "crisp-edges";
             img.style.imageRendering = "-webkit-optimize-contrast";
             const imgStyle = img.style as ExtendedCSSStyleDeclaration;
@@ -370,7 +370,7 @@ export default function Step8() {
             imgStyle.webkitPrintColorAdjust = "exact";
             imgStyle.printColorAdjust = "exact";
           });
-          
+
           const container = clonedDoc.querySelector("[data-preview]") as HTMLElement;
           if (container && container.style) {
             container.style.transform = "translateZ(0)";
@@ -390,39 +390,39 @@ export default function Step8() {
 
       // Draw the base image to the temporary canvas
       tempCtx.drawImage(canvas, 0, 0);
-      
+
       // Get the image data as a blob
       const imageBlob = await new Promise<Blob>((resolve) => {
         tempCanvas.toBlob((blob) => {
           resolve(blob!);
         }, "image/jpeg", 0.95);
       });
-      
+
       let processedImageUrl: string;
-      
+
       // If a filter is selected, send to server for processing
       if (selectedFilter?.id && selectedFilter.id !== "none") {
         console.log(`Áp dụng filter "${selectedFilter.id}" với server-side processing`);
-        
+
         // Find the filter in skinFilters array for more accurate processing
         const skinFilter = skinFilters.find(filter => filter.id === selectedFilter.id);
         const filterToApply = skinFilter ? skinFilter.id : selectedFilter.id;
-        
+
         // Create form data with the image and filter type
         const formData = new FormData();
         formData.append("image", imageBlob);
         formData.append("filterType", filterToApply);
-        
+
         // Send to the server for filter processing
         const response = await fetch("/api/filters", {
           method: "POST",
           body: formData,
         });
-        
+
         if (!response.ok) {
           throw new Error(`Server không thể xử lý filter: ${response.statusText}`);
         }
-        
+
         // Get the processed image as a blob
         const processedImageBlob = await response.blob();
         processedImageUrl = URL.createObjectURL(processedImageBlob);
@@ -432,7 +432,7 @@ export default function Step8() {
         processedImageUrl = URL.createObjectURL(imageBlob);
         console.log("Không cần áp dụng filter");
       }
-      
+
       // Load the processed image
       const processedImage = document.createElement('img');
       processedImage.src = processedImageUrl;
@@ -443,7 +443,7 @@ export default function Step8() {
           resolve();
         };
       });
-      
+
       // Create the final canvas with the desired dimensions
       const finalCanvas = document.createElement("canvas");
       finalCanvas.width = desiredWidth;
@@ -510,7 +510,7 @@ export default function Step8() {
 
       // Release the object URL to prevent memory leaks
       URL.revokeObjectURL(processedImageUrl);
-      
+
       // Get the final high quality image
       const highQualityImageUrl = finalCanvas.toDataURL("image/jpeg", quality);
       console.log("Ảnh đã được tạo với độ phân giải:", desiredWidth, "x", desiredHeight);
@@ -550,7 +550,7 @@ export default function Step8() {
       // Capture a single snapshot of the preview content to use in all frames
       console.log("Capturing initial snapshot of preview content...");
       const html2canvas = (await import("html2canvas-pro")).default;
-      
+
       // Capture once for all frames
       const previewSnapshot = await html2canvas(previewContent, {
         backgroundColor: "#FFFFFF",
@@ -570,21 +570,21 @@ export default function Step8() {
         }
       });
       console.log("Initial snapshot captured successfully");
-      
+
       // Setup media recorder with more compatible options
       let mediaRecorder: MediaRecorder;
       let stream: MediaStream;
       const chunks: BlobPart[] = [];
-      
+
       try {
         // Test if captureStream is supported
         if (!canvas.captureStream) {
           throw new Error("Canvas captureStream not supported");
         }
-        
+
         // Create a media stream from the canvas with error handling
         stream = canvas.captureStream(24); // Reduced to 24 FPS for compatibility
-        
+
         // Try multiple codecs in order of preference
         const mimeOptions = [
           "video/webm;codecs=vp8",
@@ -592,7 +592,7 @@ export default function Step8() {
           "video/mp4",
           "" // Empty string means use default
         ];
-        
+
         // Find the first supported MIME type
         let mimeType = "";
         for (const mime of mimeOptions) {
@@ -601,7 +601,7 @@ export default function Step8() {
             break;
           }
         }
-        
+
         // Create media recorder with the supported MIME type
         const options = mimeType ? { mimeType, videoBitsPerSecond: 1000000 } : {};
         mediaRecorder = new MediaRecorder(stream, options);
@@ -611,7 +611,7 @@ export default function Step8() {
         alert("Trình duyệt của bạn không hỗ trợ tạo video. Chỉ tạo ảnh.");
         return;
       }
-      
+
       // Handle data chunks
       mediaRecorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
@@ -629,7 +629,7 @@ export default function Step8() {
       let frameCount = 0;
       const totalFrames = 36; // 1.5 seconds at 24fps
       const animationDuration = 1500; // 1.5 seconds
-      
+
       // Start recording with explicit error handling
       try {
         // Request small chunks of data every 100ms
@@ -639,7 +639,7 @@ export default function Step8() {
         console.error("Failed to start media recording:", startError);
         return;
       }
-      
+
       // Animation loop with simpler animations for better compatibility
       const startTime = Date.now();
       const animate = () => {
@@ -647,64 +647,64 @@ export default function Step8() {
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / animationDuration, 1);
           frameCount = Math.floor(progress * totalFrames);
-          
+
           if (progress < 1) {
             // Clear canvas for new frame
             ctx.clearRect(0, 0, width, height);
             ctx.fillStyle = "#FFFFFF";
             ctx.fillRect(0, 0, width, height);
-            
+
             // Apply simple animation - just scale
             let scale = 0.95 + (0.05 * Math.sin(progress * Math.PI * 2));
-            
+
             // Apply transformations
             ctx.save();
             ctx.translate(width / 2, height / 2);
             ctx.scale(scale, scale);
             ctx.translate(-width / 2, -height / 2);
-            
+
             // Draw the snapshot
             try {
               // Draw the captured content with proper scaling
               const aspectRatio = previewSnapshot.width / previewSnapshot.height;
               let drawWidth = width * 0.9;
               let drawHeight = height * 0.9;
-              
+
               if (aspectRatio > width / height) {
                 drawHeight = drawWidth / aspectRatio;
               } else {
                 drawWidth = drawHeight * aspectRatio;
               }
-              
+
               const offsetX = (width - drawWidth) / 2;
               const offsetY = (height - drawHeight) / 2;
-              
+
               ctx.drawImage(previewSnapshot, offsetX, offsetY, drawWidth, drawHeight);
-              
+
               // Add a simple border
               ctx.lineWidth = 5;
               ctx.strokeStyle = "rgba(0,0,0,0.2)";
               ctx.strokeRect(5, 5, width - 10, height - 10);
-              
+
               // Add frame info for debugging
               ctx.fillStyle = "rgba(255,255,255,0.5)";
               ctx.font = "10px Arial";
-              ctx.fillText(`S Photobooth - Frame ${frameCount+1}/${totalFrames}`, 10, 15);
+              ctx.fillText(`S Photobooth - Frame ${frameCount + 1}/${totalFrames}`, 10, 15);
             } catch (drawError) {
               console.warn("Error drawing frame:", drawError);
               // If drawing fails, create a simple colored frame as fallback
               ctx.fillStyle = "#FFFFFF";
               ctx.fillRect(0, 0, width, height);
-              
+
               ctx.fillStyle = "rgba(0,0,0,0.7)";
               ctx.font = "20px Arial";
               ctx.textAlign = "center";
-              ctx.fillText("S Photobooth", width/2, height/2);
+              ctx.fillText("S Photobooth", width / 2, height / 2);
             }
-            
+
             // Restore canvas state
             ctx.restore();
-            
+
             // Continue animation
             requestAnimationFrame(animate);
           } else {
@@ -727,23 +727,23 @@ export default function Step8() {
           }
         }
       };
-      
+
       // Start animation
       console.log("Starting animation loop");
       animate();
-      
+
       // Create blob URL for preview with improved error handling
       return new Promise((resolve) => {
         // Set up the onstop handler
         mediaRecorder.onstop = async () => {
           console.log(`Processing ${chunks.length} video chunks`);
-          
+
           if (chunks.length === 0) {
             console.error("No video data chunks collected");
             resolve("");
             return;
           }
-          
+
           // Try different MIME types for the blob based on browser support
           let videoBlob;
           try {
@@ -758,18 +758,18 @@ export default function Step8() {
             // Try without specifying type as last resort
             videoBlob = new Blob(chunks);
           }
-          
+
           console.log(`Video blob created: ${videoBlob.size} bytes, type: ${videoBlob.type}`);
-          
+
           if (videoBlob.size < 1000) {
             console.error("Video is too small, likely corrupt");
             resolve("");
             return;
           }
-          
+
           // Create a preview URL
           const blobUrl = URL.createObjectURL(videoBlob);
-          
+
           // Upload video with improved error handling
           try {
             console.log("Uploading video...");
@@ -778,11 +778,11 @@ export default function Step8() {
             const videoFile = new File([videoBlob], `photobooth.${fileExt}`, { type: videoBlob.type });
             const videoFormData = new FormData();
             videoFormData.append("file", videoFile);
-            
+
             // Set longer timeout for the fetch
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000); // 30-second timeout
-            
+
             const videoResponse = await fetch("/api/images/video", {
               method: "POST",
               body: videoFormData,
@@ -793,7 +793,7 @@ export default function Step8() {
             });
 
             clearTimeout(timeoutId);
-            
+
             if (!videoResponse.ok) {
               const errorText = await videoResponse.text();
               throw new Error(`Lỗi khi tải video lên (${videoResponse.status}): ${errorText}`);
@@ -801,12 +801,12 @@ export default function Step8() {
 
             const videoData = await videoResponse.json();
             console.log("Video đã được tải lên thành công:", videoData);
-            
+
             // Store video URL in context and localStorage
             const videoUrl = (process.env.API_BASE_URL || "") + videoData.path;
             setVideoQrCode(videoUrl);
             localStorage.setItem("videoQrCode", videoUrl);
-            
+
             resolve(blobUrl);
           } catch (error) {
             console.error("Lỗi khi tải video:", error);
@@ -885,87 +885,87 @@ export default function Step8() {
         console.log(`Tạo GIF: Khung hình ${i + 1}/${frameCount}`);
 
         try {
-        // Apply different animation effects to the preview
-        const scale = 0.95 + (0.05 * Math.sin(i * 0.6));
-        const rotate = Math.sin(i * 0.7) * 3;
-        
-        // Prepare canvas for this frame
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, width, height);
-        
-        // Use the snapshot we captured earlier instead of capturing for each frame
-        const capturedCanvas = previewSnapshot;
-        
-        // Apply transformations to the canvas with safe error handling
-        ctx.save();
-        
-        // Simple animation for frames that's less prone to errors
-        if (i % 2 === 0) {
-          // Even frames: zoom effect
-          const zoomScale = 0.95 + (0.05 * (i / frameCount));
-          ctx.translate(width / 2, height / 2);
-          ctx.scale(zoomScale, zoomScale);
-          ctx.translate(-width / 2, -height / 2);
-        } else {
-          // Odd frames: slight rotation
-          const angle = (i / frameCount) * 6 - 3; // -3 to +3 degrees
-          ctx.translate(width / 2, height / 2);
-          ctx.rotate((angle * Math.PI) / 180);
-          ctx.translate(-width / 2, -height / 2);
-        }
-        
-        // Draw the captured content with proper scaling
-        const aspectRatio = capturedCanvas.width / capturedCanvas.height;
-        let drawWidth = width * 0.9; // Slightly smaller to avoid edge issues
-        let drawHeight = height * 0.9;
-        
-        if (aspectRatio > width / height) {
-          drawHeight = drawWidth / aspectRatio;
-        } else {
-          drawWidth = drawHeight * aspectRatio;
-        }
-        
-        const offsetX = (width - drawWidth) / 2;
-        const offsetY = (height - drawHeight) / 2;
-        
-        // Draw with error handling
-        try {
-          ctx.drawImage(capturedCanvas, offsetX, offsetY, drawWidth, drawHeight);
-        } catch (drawError) {
-          console.warn("Error drawing to canvas:", drawError);
-          // Draw a fallback colored rectangle if image drawing fails
+          // Apply different animation effects to the preview
+          const scale = 0.95 + (0.05 * Math.sin(i * 0.6));
+          const rotate = Math.sin(i * 0.7) * 3;
+
+          // Prepare canvas for this frame
+          ctx.clearRect(0, 0, width, height);
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, width, height);
+
+          // Use the snapshot we captured earlier instead of capturing for each frame
+          const capturedCanvas = previewSnapshot;
+
+          // Apply transformations to the canvas with safe error handling
+          ctx.save();
+
+          // Simple animation for frames that's less prone to errors
+          if (i % 2 === 0) {
+            // Even frames: zoom effect
+            const zoomScale = 0.95 + (0.05 * (i / frameCount));
+            ctx.translate(width / 2, height / 2);
+            ctx.scale(zoomScale, zoomScale);
+            ctx.translate(-width / 2, -height / 2);
+          } else {
+            // Odd frames: slight rotation
+            const angle = (i / frameCount) * 6 - 3; // -3 to +3 degrees
+            ctx.translate(width / 2, height / 2);
+            ctx.rotate((angle * Math.PI) / 180);
+            ctx.translate(-width / 2, -height / 2);
+          }
+
+          // Draw the captured content with proper scaling
+          const aspectRatio = capturedCanvas.width / capturedCanvas.height;
+          let drawWidth = width * 0.9; // Slightly smaller to avoid edge issues
+          let drawHeight = height * 0.9;
+
+          if (aspectRatio > width / height) {
+            drawHeight = drawWidth / aspectRatio;
+          } else {
+            drawWidth = drawHeight * aspectRatio;
+          }
+
+          const offsetX = (width - drawWidth) / 2;
+          const offsetY = (height - drawHeight) / 2;
+
+          // Draw with error handling
+          try {
+            ctx.drawImage(capturedCanvas, offsetX, offsetY, drawWidth, drawHeight);
+          } catch (drawError) {
+            console.warn("Error drawing to canvas:", drawError);
+            // Draw a fallback colored rectangle if image drawing fails
+            ctx.fillStyle = `hsl(${(i * 30) % 360}, 80%, 70%)`;
+            ctx.fillRect(offsetX, offsetY, drawWidth, drawHeight);
+          }
+
+          // Add a subtle pulsing overlay for visual interest
+          const pulseValue = Math.sin(i * 0.6) * 0.5 + 0.5; // 0 to 1
+          const hue = (i * 20) % 360; // Cycle through colors
+          ctx.fillStyle = `hsla(${hue}, 70%, 60%, ${0.03 + pulseValue * 0.05})`;
+          ctx.fillRect(0, 0, width, height);
+
+          ctx.restore();
+        } catch (frameRenderError) {
+          console.warn(`Error rendering frame ${i}:`, frameRenderError);
+          // Create a simple fallback frame
+          ctx.clearRect(0, 0, width, height);
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, width, height);
           ctx.fillStyle = `hsl(${(i * 30) % 360}, 80%, 70%)`;
-          ctx.fillRect(offsetX, offsetY, drawWidth, drawHeight);
+          ctx.font = "20px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText("S Photobooth", width / 2, height / 2);
         }
-        
-        // Add a subtle pulsing overlay for visual interest
-        const pulseValue = Math.sin(i * 0.6) * 0.5 + 0.5; // 0 to 1
-        const hue = (i * 20) % 360; // Cycle through colors
-        ctx.fillStyle = `hsla(${hue}, 70%, 60%, ${0.03 + pulseValue * 0.05})`;
-        ctx.fillRect(0, 0, width, height);
-        
-        ctx.restore();
-      } catch (frameRenderError) {
-        console.warn(`Error rendering frame ${i}:`, frameRenderError);
-        // Create a simple fallback frame
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fillRect(0, 0, width, height);
-        ctx.fillStyle = `hsl(${(i * 30) % 360}, 80%, 70%)`;
-        ctx.font = "20px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("S Photobooth", width/2, height/2);
-      }
-        
+
         // Add the frame to the GIF with a safe approach
         try {
           // Use a promise to ensure frame is added properly
           await new Promise<void>((resolveFrame) => {
             // Add frame with error handling
             try {
-              gif.addFrame(canvas, { 
-                delay: 100, 
+              gif.addFrame(canvas, {
+                delay: 100,
                 copy: true,
                 dispose: 1 // Dispose previous frame to reduce memory usage
               });
@@ -975,7 +975,7 @@ export default function Step8() {
               resolveFrame(); // Continue even if frame fails
             }
           });
-          
+
           // Allow UI to update and GC to run
           await new Promise(resolve => setTimeout(resolve, 50));
         } catch (frameError) {
@@ -990,28 +990,28 @@ export default function Step8() {
         gif.on('progress', (p: number) => {
           console.log(`GIF rendering progress: ${Math.round(p * 100)}%`);
         });
-        
+
         // Handle errors during rendering
         gif.on('error' as string, (...args: unknown[]) => {
           console.error('GIF rendering error:', args[0]);
           resolve(''); // Resolve with empty string to continue workflow
         });
-        
+
         // Handle successful completion
         gif.on("finished", async (blob: Blob) => {
           try {
             console.log(`GIF created successfully: ${blob.size} bytes`);
-            
+
             // Skip upload if blob is too small (likely corrupted)
             if (blob.size < 1000) {
               throw new Error("GIF quá nhỏ, có thể bị hỏng");
             }
-            
+
             // Convert blob to file for upload
             const gifFile = new File([blob], "photobooth.gif", { type: "image/gif" });
             const gifFormData = new FormData();
             gifFormData.append("file", gifFile);
-            
+
             // Upload the GIF
             const gifResponse = await fetch("/api/images/gif", {
               method: "POST",
@@ -1027,17 +1027,17 @@ export default function Step8() {
 
             const gifData = await gifResponse.json();
             console.log("GIF đã được tải lên thành công:", gifData);
-            
+
             // Store GIF URL in context and localStorage
             const gifUrl = process.env.API_BASE_URL + gifData.path;
             setGifQrCode(gifUrl);
             localStorage.setItem("gifQrCode", gifUrl);
-            
+
             // Return blob URL for preview
             resolve(URL.createObjectURL(blob));
           } catch (error) {
             console.error("Lỗi khi tải GIF:", error);
-            
+
             // Still try to return a blob URL if we have a valid blob
             if (blob && blob.size > 0) {
               resolve(URL.createObjectURL(blob));
@@ -1046,7 +1046,7 @@ export default function Step8() {
             }
           }
         });
-        
+
         // Start rendering with try-catch
         try {
           console.log("Starting GIF rendering...");
@@ -1075,24 +1075,47 @@ export default function Step8() {
   const renderCell = (idx: number) => {
     const photoIndex = selectedIndices[idx];
 
-    if (photoIndex === undefined || !photos[photoIndex]) {
-      return (
-        <div className="flex h-full w-full flex-col items-center justify-center text-gray-400 bg-gray-100/10">
-          <span className="text-xs">{"Empty"}</span>
-        </div>
-      );
-    }
-
-    return (
-      <img
-        src={photos[photoIndex].image}
+    const cellContent = photoIndex !== undefined ? (
+      <Image
+        src={photos[photoIndex].image || "/placeholder.svg"}
         alt={`Slot ${idx}`}
         className={cn(
-          "h-full w-full object-cover",
+          "h-full w-full object-cover photo-booth-image",
           selectedFilter.className,
-           selectedFrame?.isCircle && "rounded-full"
+          selectedFrame?.isCircle && "rounded-full"
         )}
+        fill
+        sizes="(max-width: 768px) 100vw, 50vw"
       />
+    ) : (
+      <div className={cn(
+        "flex h-full w-full flex-col items-center justify-center text-gray-400",
+        selectedFrame?.isCircle && "rounded-full"
+      )}
+      >
+        <span className="text-xs">{"Empty"}</span>
+      </div>
+    );
+
+    const baseClass =
+      "relative w-full flex items-center justify-center transition-all duration-200 overflow-hidden border border-transparent";
+    const emptyClass = "border-dashed border-gray-200 bg-gray-50/50";
+    const hasPhoto = selectedIndices[idx] !== undefined;
+    const isLandscape = (selectedFrame?.columns ?? 0) > (selectedFrame?.rows ?? 0) && !selectedFrame?.isCustom;
+    const isSquare = selectedFrame?.columns === selectedFrame?.rows;
+    return (
+      <div
+        key={idx}
+        className={cn(
+          baseClass,
+          !hasPhoto && emptyClass,
+          hasPhoto && "cursor-pointer",
+          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? "ha aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-square"
+        )}
+      // No click handler needed in step8
+      >
+        {cellContent}
+      </div>
     );
   };
 
@@ -1100,18 +1123,17 @@ export default function Step8() {
     if (!selectedFrame) return null;
     const commonClasses = "mx-auto overflow-hidden shadow-md";
 
-    // Determine if the frame is landscape (columns > rows) unless it's a custom frame
+    // Determine if the frame is landscape based on its columns and rows
+    // For a landscape frame, columns > rows (e.g., 3x2 is landscape)
     const isLandscape = selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom;
-    // If columns = rows, it's a square frame
     const isSquare = selectedFrame.columns === selectedFrame.rows;
 
-    // Set dimensions based on orientation (portrait/landscape)
-    const previewHeight = isLandscape ? "4.2in" : "7.2in";
-    const previewWidth = isLandscape ? "7.2in" : "4.2in";
-    const aspectRatio = isLandscape ? "3/2" : "2/3"; // Reverse aspect ratio for landscape
+    // Set dimensions based on orientation
+    const previewHeight = isLandscape ? "4in" : "6in";
+    const previewWidth = isLandscape ? "6in" : "4in";
+    const aspectRatio = isLandscape ? "3/2" : "2/3";
 
-
-    // Frame overlay using selectedTemplate (similar to frameOverlay in the second code)
+    // Frame overlay using selectedTemplate
     const frameOverlay = selectedTemplate?.overlay ? (
       <div className="pointer-events-none absolute inset-0 z-20">
         <Image
@@ -1125,35 +1147,26 @@ export default function Step8() {
     ) : null;
 
     return (
-      <div
-        className={cn("relative w-full", commonClasses)}
-        style={{
-          height: previewHeight,
-          // Custom frames display as 2in preview, but print as two copies for 4in
-          width: selectedFrame.isCustom ? "2.4in" : previewWidth,
-          border: selectedFrame.isCustom ? "1px dashed #ff69b4" : "none",
-        }}
-      >
-
+      <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "2in" : previewWidth }} >
         <div
           ref={printPreviewRef}
-          data-preview="true"
+          data-preview
           id="photobooth-print-preview"
           className={cn(
-            "flex flex-col gap-4 p-[10%] print-preview bg-white"
+            "flex flex-col gap-4 print-preview photo-booth-preview bg-white",
+            selectedFrame.isCustom ? "pb-[10%] pt-[10%]" : "pb-[10%] pt-[5%]",
+            isSquare && selectedFrame.columns == 2 ? "pt-[10%]" : "",
+            isSquare && selectedFrame.columns == 1 ? "pt-[20%]" : "",
+            isLandscape ? "px-[5%]" : "px-[10%]"
           )}
           style={{
             height: previewHeight,
-            aspectRatio: selectedFrame.isCustom ? "1/3" : isSquare ? "1/1" : aspectRatio,
+            aspectRatio: selectedFrame.isCustom ? "1/3" : (isSquare && selectedFrame.columns == 1) ? "2/3" : aspectRatio,
           }}
         >
           {selectedFrame.isCustom ? (
             <div className="relative z-10 grid grid-cols-1 gap-[5%]">
-              {Array.from({ length: selectedFrame.rows }, (_, idx) => (
-                <div key={idx} className="aspect-[4/3] overflow-hidden">
-                  {renderCell(idx)}
-                </div>
-              ))}
+              {Array.from({ length: selectedFrame.rows }, (_, idx) => renderCell(idx))}
             </div>
           ) : (
             <div
@@ -1161,16 +1174,16 @@ export default function Step8() {
                 "relative z-10 grid gap-[calc(2.5%*3/2)]"
               )}
               style={{
-                gridTemplateColumns: `repeat(${selectedFrame.columns}, 1fr)`,
+                gridTemplateColumns: `repeat(${selectedFrame.columns}, 1fr)`
               }}
             >
               {Array.from({ length: selectedFrame.columns }, (_, colIdx) => (
                 <div key={colIdx} className="flex flex-col gap-1">
                   {Array.from({ length: selectedFrame.rows }, (_, rowIdx) => {
-                    // Correct the cell index calculation for the grid layout
+                    // Correctly calculate the index for each cell based on column and row
                     const cellIdx = colIdx + (rowIdx * selectedFrame.columns);
                     return (
-                      <div key={rowIdx} className="aspect-square overflow-hidden">
+                      <div key={rowIdx} className="">
                         {renderCell(cellIdx)}
                       </div>
                     );
@@ -1289,8 +1302,8 @@ export default function Step8() {
                       >
                         <div
                           className={`relative rounded-2xl overflow-hidden ${activeSkinFilter.id === filter.id
-                              ? "border-2 border-pink-400"
-                              : "border border-purple-400/50"
+                            ? "border-2 border-pink-400"
+                            : "border border-purple-400/50"
                             }`}
                         >
                           <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-purple-900/50 to-pink-900/50">
@@ -1323,8 +1336,8 @@ export default function Step8() {
 
                           <div
                             className={`p-2 text-center ${activeSkinFilter.id === filter.id
-                                ? "bg-pink-600/80"
-                                : "bg-purple-900/60"
+                              ? "bg-pink-600/80"
+                              : "bg-purple-900/60"
                               }`}
                           >
                             <span className="text-xs font-medium text-white">
@@ -1389,8 +1402,8 @@ export default function Step8() {
                         >
                           <div
                             className={`relative rounded-2xl overflow-hidden ${selectedTemplate?.id === template.id
-                                ? "border-2 border-indigo-400"
-                                : "border border-indigo-400/50"
+                              ? "border-2 border-indigo-400"
+                              : "border border-indigo-400/50"
                               }`}
                           >
                             <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-indigo-900/50 to-purple-900/50">
@@ -1410,8 +1423,8 @@ export default function Step8() {
 
                             <div
                               className={`p-2 text-center ${selectedTemplate?.id === template.id
-                                  ? "bg-indigo-600/80"
-                                  : "bg-indigo-900/60"
+                                ? "bg-indigo-600/80"
+                                : "bg-indigo-900/60"
                                 }`}
                             >
                               <span className="text-xs font-medium text-white">

@@ -180,21 +180,12 @@ export default function Step3() {
                       className={`object-contain ${frame.isCircle ? 'rounded-full' : 'rounded-lg'}`}
                       priority
                     />
-                    {/* label hot */}
-                    {frame.isHot && (
+                     {frame.isHot && (
                       <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
                         Hot
                       </div>
                     )}
-                    {/* label circle */}
-                    {frame.isCircle && (
-                      <div className="absolute bottom-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                        Tròn
-                      </div>
-                    )}
                   </div>
-
-
                 </div>
               ))
             ) : (
