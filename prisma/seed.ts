@@ -92,42 +92,42 @@ async function main() {
   const coupons = [
     {
       code: '1111111111',
-      discount: 10,
+      discount: 200,
       expires_at: new Date(2025, 11, 31), // December 31, 2025
       user_id: null, // Unassigned coupon
       usageLimit: 100
     },
     {
       code: '2222222222',
-      discount: 25,
+      discount: 200,
       expires_at: new Date(2025, 8, 30), // September 30, 2025
       user_id: allUsers[0]?.id, // Assigned to first user if exists
       usageLimit: 50
     },
     {
       code: '3333333333',
-      discount: 50,
+      discount: 200,
       expires_at: new Date(2025, 11, 25), // December 25, 2025
       user_id: allUsers[1]?.id, // Assigned to second user if exists
       usageLimit: 10
     },
     {
       code: '4444444444',
-      discount: 15,
+      discount: 200,
       expires_at: new Date(2025, 9, 15), // October 15, 2025
       user_id: allUsers[2]?.id, // Assigned to third user if exists
       usageLimit: 30
     },
     {
       code: '5555555555',
-      discount: 30,
+      discount: 200,
       expires_at: new Date(2026, 0, 1), // January 1, 2026
       user_id: null, // Unassigned coupon
       usageLimit: 20
     },
     {
       code: '6666666666',
-      discount: 20,
+      discount: 200,
       expires_at: new Date(2025, 11, 31), // December 31, 2025
       user_id: null, // Unassigned coupon
       usageLimit: 40
