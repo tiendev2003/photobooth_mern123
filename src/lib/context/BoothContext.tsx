@@ -94,5 +94,23 @@ export const useBooth = () => {
   if (!context) {
     throw new Error("useBooth must be used within a BoothProvider");
   }
-  return context;
+  
+  // Adding a utility function to clear all booth data
+  const clearAllBoothData = () => {
+    context.setPhotos([]);
+    context.setSelectedFrame(null);
+    context.setSelectedIndices(Array(8).fill(undefined));
+    context.setSelectedFilter(filterOptions[0]);
+    context.setSelectedTemplate(null);
+    context.setSelectedTotalAmount(1);
+    context.setVideos([]);
+    context.setImageQrCode("");
+    context.setVideoQrCode("");
+    context.setGifQrCode("");
+    
+    // Clear any localStorage items related to the booth
+    localStorage.removeItem("imageQrCode");
+  };
+  
+  return { ...context, clearAllBoothData };
 };

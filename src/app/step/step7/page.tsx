@@ -18,7 +18,7 @@ export default function Step7() {
   const handleNext = () => {
     // Check if enough photos are selected
     const maxPhotos = selectedFrame?.isCustom
-      ? 4 // For custom frames, we allow up to 8 photos (2x4)
+      ? selectedFrame.rows
       : selectedFrame
         ? selectedFrame.columns * selectedFrame.rows
         : 4; // Default to 4 if no frame selected
@@ -45,7 +45,7 @@ export default function Step7() {
 
     // Calculate maximum photos based on selected frame
     const maxPhotos = selectedFrame?.isCustom
-      ? 4 // For custom frames, we allow up to 8 photos (2x4)
+      ? selectedFrame.rows
       : selectedFrame
         ? selectedFrame.columns * selectedFrame.rows
         : 4; // Default to 4 if no frame selected
@@ -79,7 +79,10 @@ export default function Step7() {
       <Image
         src={photos[photoIndex].image || "/placeholder.svg"}
         alt={`Slot ${idx}`}
-        className="h-full w-full object-cover photo-booth-image"
+        className={cn(
+          "h-full w-full object-cover photo-booth-image",
+          selectedFrame?.isCircle && "rounded-full"
+        )}
         fill
         sizes="(max-width: 768px) 100vw, 50vw"
       />
@@ -111,38 +114,40 @@ export default function Step7() {
 
   const renderPreview = () => {
     if (!selectedFrame) return null;
-    const commonClasses =
-      "mx-auto overflow-hidden   shadow-md";
+    const commonClasses = "mx-auto overflow-hidden shadow-md";
 
-    // Kiểm tra nếu columns > rows thì đổi từ 6x4 sang 4x6 inches
+    // Determine if the frame is landscape based on its columns and rows
+    // For a landscape frame, columns > rows (e.g., 3x2 is landscape)
     const isLandscape = selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom;
+    const isSquare = selectedFrame.columns === selectedFrame.rows;
 
-    // Xác định kích thước dựa trên hướng (portrait/landscape)
+    // Set dimensions based on orientation
     const previewHeight = isLandscape ? "4in" : "6in";
     const previewWidth = isLandscape ? "6in" : "4in";
-    const aspectRatio = isLandscape ? "3/2" : "2/3"; // Đảo ngược tỷ lệ nếu là landscape
-    console.log("Aspect Ratio:", selectedFrame.columns, selectedFrame.rows, selectedFrame.isCustom);
+    const aspectRatio = isLandscape ? "3/2" : "2/3";
+    
+    console.log("Frame dimensions:", selectedFrame.columns, selectedFrame.rows, selectedFrame.isCustom);
     return (
       <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "2in" : previewWidth }} >
         <div
           data-preview
           className={cn(
-            "flex flex-col gap-4 p-[10%] print-preview photo-booth-preview bg-white"
+            "flex flex-col gap-4 px-[10%] print-preview photo-booth-preview bg-white",
+            selectedFrame.isCustom ? "pb-[10%] pt-[10%]" : "pb-[10%] pt-[5%]"
           )}
           style={{
             height: previewHeight,
-            aspectRatio: selectedFrame.isCustom ? "1/3 " : aspectRatio,
+            aspectRatio: selectedFrame.isCustom ? "1/3" : isSquare ? "1/1" : aspectRatio,
           }}
         >
           {selectedFrame.isCustom ? (
             <div className="relative z-10 grid grid-cols-1 gap-[5%]">
-              {Array.from({ length: 4 }, (_, idx) => renderCell(idx))}
+              {Array.from({ length: selectedFrame.rows }, (_, idx) => renderCell(idx))}
             </div>
           ) : (
             <div
               className={cn(
-                "relative z-10 grid gap-[calc(2.5%*3/2)]",
-                `grid-cols-${selectedFrame.columns}`
+                "relative z-10 grid gap-[calc(2.5%*3/2)]"
               )}
               style={{
                 gridTemplateColumns: `repeat(${selectedFrame.columns}, 1fr)`
@@ -151,9 +156,10 @@ export default function Step7() {
               {Array.from({ length: selectedFrame.columns }, (_, colIdx) => (
                 <div key={colIdx} className="flex flex-col gap-1">
                   {Array.from({ length: selectedFrame.rows }, (_, rowIdx) => {
-                    const cellIdx = rowIdx * selectedFrame.columns + colIdx;
+                    // Correctly calculate the index for each cell based on column and row
+                    const cellIdx = colIdx + (rowIdx * selectedFrame.columns);
                     return (
-                      <div key={rowIdx} className="aspect-square">
+                      <div key={rowIdx} className="">
                         {renderCell(cellIdx)}
                       </div>
                     );
@@ -209,7 +215,7 @@ export default function Step7() {
                   photos.map((photo, idx) => (
                     <div
                       key={idx}
-                      className={`relative border rounded-lg overflow-hidden group transition-all duration-300 cursor-pointer ${selectedIndices.includes(idx)
+                      className={`relative border  overflow-hidden group transition-all duration-300 cursor-pointer ${selectedIndices.includes(idx)
                         ? "border-pink-500 ring-2 ring-pink-500"
                         : "border-purple-700 hover:border-pink-500"
                         }`}
@@ -218,7 +224,7 @@ export default function Step7() {
                       <img
                         src={photo.image}
                         alt={`Photo ${idx + 1}`}
-                        className="w-full object-cover rounded-lg"
+                        className="w-full object-cover "
                       />
                       {selectedIndices.includes(idx) && (
                         <div className="absolute top-2 right-2 bg-pink-500 text-white rounded-full w-6 h-6 flex items-center justify-center">

@@ -47,6 +47,7 @@ export default function Home() {
           src="/lg.png"
           alt="Music Box Photobooth"
           width={1200}
+          priority
           height={1000}
           className="glow-image"
         />

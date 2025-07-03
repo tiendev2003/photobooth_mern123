@@ -9,14 +9,13 @@ interface HomeButtonProps {
 
 const HomeButton = ({ onClick, disabled = false }: HomeButtonProps) => {
     const router = useRouter();
-    const { setSelectedFrame,setPhotos,setSelectedIndices } = useBooth();
+    const { clearAllBoothData } = useBooth();
+
     return (
         <button
             onClick={
                 onClick ? onClick : () => {
-                    setSelectedFrame(null);
-                    setPhotos([]);
-                    setSelectedIndices([]);
+                    clearAllBoothData();
                     router.push("/");
                 }
             }

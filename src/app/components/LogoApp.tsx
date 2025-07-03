@@ -6,7 +6,8 @@ const LogoApp = () => {
             src="/logo.svg"
             alt="Music Box Photobooth"
             width={300}
-            height={200}
+            height={150}
+            
             className="glow-image"
         />
     );

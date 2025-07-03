@@ -1,5 +1,5 @@
 import { AuthProvider } from "@/lib/context/AuthContext";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Ubuntu } from "next/font/google";
 import { BoothProvider } from "../lib/context/BoothContext";
 import CleanupScheduler from "./components/CleanupScheduler";
@@ -12,12 +12,19 @@ const ubuntu = Ubuntu({
   variable: "--font-ubuntu", // optional: sử dụng biến CSS
 });
 
- export async function generateMetadata(): Promise<Metadata> {
-   return {
+ export const viewport: Viewport = {
+  themeColor: '#ffffff',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true
+};
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
     title: "S Photobooth - Unique Photo Booth",
     description: "Capture fun moments and create photo strips with S Photobooth. Try it now!",
     manifest: '/manifest.json',
-    themeColor: '#ffffff',
     appleWebApp: {
       capable: true,
       statusBarStyle: 'default',
@@ -48,8 +55,6 @@ const ubuntu = Ubuntu({
     other: {
       "apple-mobile-web-app-title": "S Photobooth",
       "apple-mobile-web-app-capable": "yes",
-      viewport:
-        "width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes",
       keywords:
         "photo booth, online camera, photo strips, selfie booth, fun photo app",
     },
@@ -67,7 +72,6 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/web-app-manifest-192x192.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon.ico" />
-        <meta name="theme-color" content="#ffffff" />
       </head>
       <body
         className={`${ubuntu.className} antialiased select-none`}

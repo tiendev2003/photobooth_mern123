@@ -22,43 +22,78 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    // Validate file type
-    const validTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
-    if (!validTypes.includes(file.type)) {
-      return NextResponse.json({ 
-        error: 'Invalid file type. Only mp4, webm, quicktime, and avi formats are allowed' 
-      }, { status: 400 });
+    // Log file info for debugging
+    console.log(`Received video upload - Type: ${file.type}, Size: ${file.size} bytes, Name: ${file.name}`);
+
+    // Accept a wider range of video types for compatibility
+    const validTypes = [
+      'video/mp4', 
+      'video/webm', 
+      'video/quicktime', 
+      'video/x-msvideo',
+      'video/ogg',
+      'application/octet-stream'  // For cases where type isn't detected correctly
+    ];
+    
+    if (!validTypes.includes(file.type) && file.size > 0) {
+      console.warn(`Non-standard video type received: ${file.type}`);
+      // Continue anyway since we'll try to determine the format from content
+    }
+
+    // Ensure filename has a valid extension based on content type
+    let filename = file.name.replace(/\s+/g, '_');
+    if (!filename.includes('.')) {
+      if (file.type.includes('webm')) {
+        filename += '.webm';
+      } else if (file.type.includes('mp4')) {
+        filename += '.mp4';
+      } else {
+        filename += '.webm'; // Default to webm if type is unknown
+      }
     }
 
     // Generate a unique filename
-    const uniqueFilename = `${uuidv4()}_${file.name.replace(/\s+/g, '_')}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'videos');
-    const filePath = path.join(uploadsDir, uniqueFilename);
-    const relativePath = `/uploads/videos/${uniqueFilename}`;
-
-    // Ensure the uploads directory exists
-    await createDirIfNotExists(uploadsDir);
-
-    // Write the file to disk
-    await writeFile(filePath, buffer);
-
-    // Get video duration (if we had ffmpeg installed, we would get it here)
-    // For now, we'll set it as null or use a default
-    const duration = null;
-
-    // Save the file information to the database
-    const newImage = await prisma.image.create({
-      data: {
-        filename: uniqueFilename,
-        path: relativePath,
-        fileType: 'VIDEO',
-        size: buffer.length,
-        duration
+    const uniqueFilename = `${uuidv4()}_${filename}`;
+    
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      
+      if (buffer.length === 0) {
+        return NextResponse.json({ error: 'Empty file received' }, { status: 400 });
       }
-    });
+      
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'videos');
+      const filePath = path.join(uploadsDir, uniqueFilename);
+      const relativePath = `/uploads/videos/${uniqueFilename}`;
 
-    return NextResponse.json(newImage, { status: 201 });
+      // Ensure the uploads directory exists
+      await createDirIfNotExists(uploadsDir);
+
+      // Write the file to disk
+      await writeFile(filePath, buffer);
+      console.log(`Video file written successfully: ${filePath}`);
+
+      // Get video duration (if we had ffmpeg installed, we would get it here)
+      // For now, we'll set it as null or use a default
+      const duration = null;
+
+      // Save the file information to the database
+      const newImage = await prisma.image.create({
+        data: {
+          filename: uniqueFilename,
+          path: relativePath,
+          fileType: 'VIDEO',
+          size: buffer.length,
+          duration
+        }
+      });
+
+      console.log(`Video file saved to database with ID: ${newImage.id}`);
+      return NextResponse.json(newImage, { status: 201 });
+    } catch (fileError) {
+      console.error('Error processing video file:', fileError);
+      return NextResponse.json({ error: 'Failed to process video file' }, { status: 500 });
+    }
   } catch (error) {
     console.error('Error uploading video:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -71,7 +106,7 @@ async function createDirIfNotExists(dirPath: string) {
   try {
     await fs.access(dirPath);
   } catch (error) {
-    console.error(error);
+    console.log(`Creating directory: ${dirPath}`);
     await fs.mkdir(dirPath, { recursive: true });
   }
 }

@@ -54,7 +54,7 @@ export default function Step3() {
     {
       id: "6",
       name: "Khung hình 4",
-      columns: 2,
+      columns: 2, // Nằm ngang - 2 ô ngang, 3 ô dọc
       rows: 3,
       image: "/uploads/type/3x2.png",
       isHot: false,
@@ -68,7 +68,7 @@ export default function Step3() {
       id: "4",
       name: "Khung hình 5",
       image: "/uploads/type/2x3.png",
-      columns: 3,
+      columns: 3, // Đứng dọc - 3 ô ngang, 2 ô dọc
       rows: 2,
       isHot: false,
       isCustom: false,
@@ -85,6 +85,33 @@ export default function Step3() {
       rows: 1,
       isHot: false,
       isCustom: false,
+      totalImages: 1,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "7",
+      name: "Khung hình tròn",
+      image: "/uploads/type/1x1_circle.png", // Cần tạo ảnh hình tròn
+      columns: 1,
+      rows: 1,
+      isHot: false,
+      isCustom: false,
+      totalImages: 1,
+      isActive: true,
+      isCircle: true, // Thuộc tính mới để đánh dấu đây là khung hình tròn
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "8",
+      name: "Khung hình 1x2",
+      image: "/uploads/type/1x2.png",
+      columns: 1,
+      rows: 2,
+      isHot: false,
+      isCustom: true, // Đánh dấu là khung tùy chỉnh
       totalImages: 1,
       isActive: true,
       createdAt: new Date(),
@@ -135,7 +162,7 @@ export default function Step3() {
       {/* Main content */}
       <main className="flex flex-col items-center justify-center z-10 w-full max-w-7xl px-3 sm:px-6 py-4">
         {(
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 w-full max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 w-full max-w-5xl mx-auto">
             {frameTypes.length > 0 ? (
               frameTypes.map((frame) => (
                 <div
@@ -144,19 +171,25 @@ export default function Step3() {
                     }`}
                   onClick={() => setSelectedFrame(frame)}
                 >
-                  <div className="w-full h-full relative  ">
+                  <div className="w-full h-full relative">
                     <Image
                       src={frame.image || `/anh/3.png`}
                       alt={frame.name}
                       fill
                       sizes="(max-width: 640px) 45vw, (max-width: 768px) 30vw, 180px"
-                      className="rounded-lg object-contain"
+                      className={`object-contain ${frame.isCircle ? 'rounded-full' : 'rounded-lg'}`}
                       priority
                     />
                     {/* label hot */}
                     {frame.isHot && (
                       <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
                         Hot
+                      </div>
+                    )}
+                    {/* label circle */}
+                    {frame.isCircle && (
+                      <div className="absolute bottom-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                        Tròn
                       </div>
                     )}
                   </div>

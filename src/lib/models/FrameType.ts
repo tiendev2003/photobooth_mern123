@@ -15,6 +15,7 @@ export interface FrameType {
   isCustom?: boolean;
   totalImages?: number;
   isActive: boolean;
+  isCircle?: boolean; // New property for circular frames
   createdAt: Date;
   updatedAt: Date;
   templates?: FrameTemplate[];

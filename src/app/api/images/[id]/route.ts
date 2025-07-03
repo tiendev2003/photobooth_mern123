@@ -3,24 +3,47 @@ import fs from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 
-// GET /api/images/[id] - Get a specific image by ID
+// GET /api/images/[id] - Get a specific image, video or GIF by ID
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const id = (await params).id;
-    const image = await prisma.image.findUnique({
+    const id = params.id;
+    
+    // First, try direct ID lookup
+    let media = await prisma.image.findUnique({
       where: { id }
     });
 
-    if (!image) {
-      return NextResponse.json({ error: 'Image not found' }, { status: 404 });
+    // If not found, try to find by UUID prefix in filename (for media page URLs)
+    if (!media) {
+      const images = await prisma.image.findMany({
+        where: {
+          filename: {
+            startsWith: `${id}_`,
+          },
+        },
+      });
+      
+      if (images.length > 0) {
+        media = images[0]; // Use the first matching image
+      }
     }
 
-    return NextResponse.json(image, { status: 200 });
+    if (!media) {
+      return NextResponse.json({ error: 'Media not found' }, { status: 404 });
+    }
+
+    // Add the full URL to the response but don't modify the media object
+    const baseUrl = process.env.API_BASE_URL || '';
+    
+    return NextResponse.json({
+      ...media,
+      fullUrl: `${baseUrl}${media.path}`
+    }, { status: 200 });
   } catch (error) {
-    console.error('Error fetching image:', error);
+    console.error('Error fetching media:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

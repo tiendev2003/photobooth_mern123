@@ -42,6 +42,7 @@ export default function Login() {
           layout="fill"
           objectFit="cover"
           className="opacity-30"
+        
           priority
         />
       </div>
