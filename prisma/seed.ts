@@ -157,6 +157,7 @@ async function main() {
   console.log('🖼️  Creating Frame Types...');
   const frameTypes = [
     {
+      id: '1',
       name: '1x1 Vuông',
       description: 'Frame 1 ảnh vuông',
       image: '/uploads/type/1x1.png',
@@ -168,6 +169,7 @@ async function main() {
       isCustom: false,
     },
     {
+      id: '2',
       name: '1x1 Tròn',
       description: 'Frame 1 ảnh tròn',
       image: '/uploads/type/1x1_circle.png',
@@ -179,6 +181,7 @@ async function main() {
       isCustom: false,
     },
     {
+      id: '3',
       name: '1x2 Dọc',
       description: 'Frame 2 ảnh dọc',
       image: '/uploads/type/1x2.png',
@@ -190,6 +193,7 @@ async function main() {
       isCustom: false,
     },
     {
+      id: '4',
       name: '2x1 Ngang',
       description: 'Frame 2 ảnh ngang',
       image: '/uploads/type/2x1.png',
@@ -201,6 +205,7 @@ async function main() {
       isCustom: false,
     },
     {
+      id: '5',
       name: '2x2 Vuông',
       description: 'Frame 4 ảnh vuông',
       image: '/uploads/type/2x2.png',
@@ -212,6 +217,7 @@ async function main() {
       isCustom: false,
     },
     {
+      id: '6',
       name: '1x4 Dọc',
       description: 'Frame 4 ảnh dọc',
       image: '/uploads/type/1x4.png',
@@ -223,6 +229,7 @@ async function main() {
       isCustom: false,
     },
     {
+      id: '7',
       name: '2x3 Lớn',
       description: 'Frame 6 ảnh',
       image: '/uploads/type/2x3.png',
@@ -234,6 +241,7 @@ async function main() {
       isCustom: false,
     },
     {
+      id: '8',
       name: '3x2 Ngang',
       description: 'Frame 6 ảnh ngang',
       image: '/uploads/type/3x2.png',

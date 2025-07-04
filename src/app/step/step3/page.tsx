@@ -13,7 +13,7 @@ export default function Step3() {
   const { selectedFrame, setSelectedFrame } = useBooth();
   const [frameTypes] = useState<FrameType[]>([
     {
-      id: "2",
+      id: "4",
       name: "Khung hình 1",
       image: "/uploads/type/2x1.png",
       isHot: false,
@@ -26,7 +26,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "5",
+      id: "6",
       name: "Khung hình 2",
       image: "/uploads/type/1x4.png",
       isHot: true,
@@ -39,7 +39,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "3",
+      id: "5",
       name: "Khung hình 3",
       image: "/uploads/type/2x2.png",
       isHot: false,
@@ -52,7 +52,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "6",
+      id: "8",
       name: "Khung hình 4",
       columns: 3, // Nằm ngang - 2 ô ngang, 3 ô dọc
       rows: 2,
@@ -65,10 +65,10 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "4",
+      id: "7",
       name: "Khung hình 5",
       image: "/uploads/type/2x3.png",
-      columns: 2, // Đứng dọc - 3 ô ngang, 2 ô dọc
+      columns: 2, 
       rows: 3,
       isHot: false,
       isCustom: false,
@@ -91,7 +91,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "7",
+      id: "2",
       name: "Khung hình tròn",
       image: "/uploads/type/1x1_circle.png", // Cần tạo ảnh hình tròn
       columns: 1,
@@ -105,7 +105,7 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "8",
+      id: "3",
       name: "Khung hình 1x2",
       image: "/uploads/type/1x2.png",
       columns: 1,
