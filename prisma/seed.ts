@@ -8,6 +8,7 @@ async function main() {
 
   // Clear existing data
   console.log('🗑️  Clearing existing data...');
+  await prisma.coupon.deleteMany();
   await prisma.image.deleteMany();
   await prisma.mediaSession.deleteMany();
   await prisma.frameTemplate.deleteMany();
