@@ -16,6 +16,9 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 
+// Import QR Code
+import * as QRCode from 'qrcode';
+
 // Enhanced filters for skin beautification with server-side processing support
 const skinFilters = [
   { id: "none", name: "Bình thường", className: "", preview: "/anh/1.png", icon: "🌟" },
@@ -72,6 +75,9 @@ export default function Step8() {
     selectedTemplate,
     setSelectedTemplate,
     setImageQrCode,
+    imageQrCode,
+    videoQrCode,
+    gifQrCode,
   } = useBooth();
 
   const activeSkinFilter = useMemo(() => {
@@ -81,6 +87,7 @@ export default function Step8() {
   const [frameTemplates, setFrameTemplates] = useState<FrameTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [mediaSessionUrl, setMediaSessionUrl] = useState<string>("");
 
   const printPreviewRef = useRef<HTMLDivElement>(null);
 
@@ -129,6 +136,19 @@ export default function Step8() {
     fetchTemplates();
   }, [selectedFrame, setSelectedTemplate]);
 
+  // Create media session URL on component mount
+  useEffect(() => {
+    const initializeMediaSession = async () => {
+      if (photos && photos.length > 0) {
+        const url = await createMediaSession();
+        setMediaSessionUrl(url);
+        console.log("Media session URL created:", url);
+      }
+    };
+
+    initializeMediaSession();
+  }, [photos]);
+
   // Slick carousel settings and refs
   const skinFilterSliderRef = useRef<Slider | null>(null);
   const frameTemplateSliderRef = useRef<Slider | null>(null);
@@ -171,6 +191,65 @@ export default function Step8() {
 
   const nextSlide = (sliderRef: React.RefObject<Slider | null>) => {
     sliderRef.current?.slickNext();
+  };
+
+  const createMediaSession = async (): Promise<string> => {
+    try {
+      // Tạo một placeholder URL để có thể hiển thị QR code
+      // Trong step8, chúng ta chưa có image/video/gif URL final
+      // Nên tạo một session tạm thời với thông tin cơ bản
+      const tempSessionData = {
+        timestamp: Date.now(),
+        preview: true, // Đánh dấu là preview session
+        photos: photos.map(photo => photo.image).filter(Boolean)
+      };
+
+      console.log('Creating media session with data:', tempSessionData);
+
+      // Tạo session tạm thời
+      const response = await fetch('/api/media-session-temp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mediaUrls: tempSessionData.photos, // Sử dụng photos từ context
+          isPreview: true
+        })
+      });
+
+      console.log('API response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to create media session:', errorText);
+        // Trả về URL placeholder nếu API fail
+        const baseUrl = typeof window !== 'undefined' ?
+          `${window.location.protocol}//${window.location.host}` : '';
+        const fallbackUrl = `${baseUrl}/session-temp/preview-${tempSessionData.timestamp}`;
+        console.log('Using fallback URL:', fallbackUrl);
+        return fallbackUrl;
+      }
+
+      const session = await response.json();
+      console.log('Created session:', session);
+
+      // Create session URL
+      const baseUrl = typeof window !== 'undefined' ?
+        `${window.location.protocol}//${window.location.host}` : '';
+      const sessionUrl = `${baseUrl}/session-temp/${session.sessionCode}`;
+      console.log('Generated session URL:', sessionUrl);
+      return sessionUrl;
+
+    } catch (error) {
+      console.error('Error creating media session:', error);
+      // Trả về URL placeholder nếu có lỗi
+      const baseUrl = typeof window !== 'undefined' ?
+        `${window.location.protocol}//${window.location.host}` : '';
+      const fallbackUrl = `${baseUrl}/session-temp/preview-${Date.now()}`;
+      console.log('Using fallback URL due to error:', fallbackUrl);
+      return fallbackUrl;
+    }
   };
   const handlePrint = async () => {
     setIsPrinting(true);
@@ -288,6 +367,9 @@ export default function Step8() {
     if (!previewContent) return;
 
     try {
+      // Use existing media session URL or create new one
+      const sessionUrl = mediaSessionUrl || await createMediaSession();
+      console.log("Using media session URL:", sessionUrl);
       const isCustomFrame = selectedFrame?.isCustom === true;
       const isSquare = selectedFrame?.columns === selectedFrame?.rows;
 
@@ -304,6 +386,57 @@ export default function Step8() {
       await preloadImages(Array.from(images));
 
       console.log("Bắt đầu tạo ảnh chất lượng cao với HTML2Canvas");
+
+      // Create QR code element if session URL exists
+      let qrCodeElement: HTMLElement | null = null;
+      if (sessionUrl) {
+        console.log('Creating QR code for URL:', sessionUrl);
+        qrCodeElement = document.createElement('div');
+        qrCodeElement.style.position = 'absolute';
+        const paddingPercent = isLandscape ? 5 : 10;
+        qrCodeElement.style.bottom = `${paddingPercent}%`;
+        qrCodeElement.style.left = `${paddingPercent}%`;
+        qrCodeElement.style.width = '55px';
+        qrCodeElement.style.height = '55px';
+        qrCodeElement.style.zIndex = '30';
+        qrCodeElement.style.backgroundColor = 'white';
+        qrCodeElement.style.padding = '2px';
+        qrCodeElement.style.borderRadius = '2px';
+        qrCodeElement.style.border = '1px solid #ccc';
+
+        // Create QR code canvas
+        const qrCanvas = document.createElement('canvas');
+        try {
+          await QRCode.toCanvas(qrCanvas, sessionUrl, {
+            width: 50,
+            margin: 0,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF'
+            },
+            errorCorrectionLevel: 'M' // Medium error correction
+          });
+          qrCanvas.style.width = '50px';
+          qrCanvas.style.height = '50px';
+          qrCodeElement.appendChild(qrCanvas);
+          console.log('QR code created successfully');
+        } catch (error) {
+          console.error('Error generating QR code:', error);
+          // Fallback: tạo một placeholder text
+          const fallbackText = document.createElement('div');
+          fallbackText.innerText = 'QR';
+          fallbackText.style.fontSize = '10px';
+          fallbackText.style.textAlign = 'center';
+          fallbackText.style.lineHeight = '50px';
+          fallbackText.style.color = '#000';
+          qrCodeElement.appendChild(fallbackText);
+        }
+
+        previewContent.appendChild(qrCodeElement);
+      } else {
+        console.log('No session URL available for QR code');
+      }
+
       const canvas = await html2canvas(previewContent, {
         allowTaint: true,
         useCORS: true,
@@ -401,6 +534,12 @@ export default function Step8() {
           }
         },
       });
+
+      // Remove QR code element after capturing
+      if (qrCodeElement) {
+        previewContent.removeChild(qrCodeElement);
+      }
+
       console.log("HTML2Canvas đã tạo ảnh cơ bản thành công");
 
       // Create the final canvas with the desired dimensions
@@ -682,6 +821,14 @@ export default function Step8() {
               {renderPreview()}
             </div>
           </div>
+
+          {/* Debug info */}
+          {mediaSessionUrl && (
+            <div className="bg-black/50 p-2 rounded text-xs text-white">
+              <div>Session URL: {mediaSessionUrl}</div>
+              <div>Photos: {photos.length}</div>
+            </div>
+          )}
         </div>
 
         <div className="lg:col-span-1">

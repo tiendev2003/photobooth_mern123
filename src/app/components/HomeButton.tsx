@@ -20,9 +20,9 @@ const HomeButton = ({ onClick, disabled = false }: HomeButtonProps) => {
                 }
             }
             disabled={disabled}
-            className="w-18 h-18 rounded-full border-2 border-white flex items-center justify-center"
+            className="w-24 h-24 rounded-full border-2 border-white flex items-center justify-center"
         >
-            <HomeIcon className="w-10 h-10" />
+            <HomeIcon className="w-14 h-14" />
         </button>
     );
 }

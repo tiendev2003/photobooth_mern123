@@ -13,6 +13,47 @@ export default function Step3() {
   const { selectedFrame, setSelectedFrame } = useBooth();
   const [frameTypes] = useState<FrameType[]>([
     {
+      id: "1",
+      name: "Khung hình 6",
+      image: "/uploads/type/1x1.png",
+      columns: 1,
+      rows: 1,
+      isHot: false,
+      isCustom: false,
+      totalImages: 1,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
+      id: "2",
+      name: "Khung hình tròn",
+      image: "/uploads/type/1x1_circle.png", // Cần tạo ảnh hình tròn
+      columns: 1,
+      rows: 1,
+      isHot: false,
+      isCustom: false,
+      totalImages: 1,
+      isActive: true,
+      isCircle: true, // Thuộc tính mới để đánh dấu đây là khung hình tròn
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+
+    {
+      id: "3",
+      name: "Khung hình 1x2",
+      image: "/uploads/type/1x2.png",
+      columns: 1,
+      rows: 2,
+      isHot: false,
+      isCustom: true, // Đánh dấu là khung tùy chỉnh
+      totalImages: 1,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    {
       id: "4",
       name: "Khung hình 1",
       image: "/uploads/type/2x1.png",
@@ -25,19 +66,7 @@ export default function Step3() {
       createdAt: new Date(),
       updatedAt: new Date(),
     },
-    {
-      id: "6",
-      name: "Khung hình 2",
-      image: "/uploads/type/1x4.png",
-      isHot: true,
-      columns: 1,
-      rows: 4,
-      isCustom: true,
-      totalImages: 1,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
+
     {
       id: "5",
       name: "Khung hình 3",
@@ -68,7 +97,7 @@ export default function Step3() {
       id: "7",
       name: "Khung hình 5",
       image: "/uploads/type/2x3.png",
-      columns: 2, 
+      columns: 2,
       rows: 3,
       isHot: false,
       isCustom: false,
@@ -78,40 +107,13 @@ export default function Step3() {
       updatedAt: new Date(),
     },
     {
-      id: "1",
-      name: "Khung hình 6",
-      image: "/uploads/type/1x1.png",
+      id: "6",
+      name: "Khung hình 2",
+      image: "/uploads/type/1x4.png",
+      isHot: true,
       columns: 1,
-      rows: 1,
-      isHot: false,
-      isCustom: false,
-      totalImages: 1,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "2",
-      name: "Khung hình tròn",
-      image: "/uploads/type/1x1_circle.png", // Cần tạo ảnh hình tròn
-      columns: 1,
-      rows: 1,
-      isHot: false,
-      isCustom: false,
-      totalImages: 1,
-      isActive: true,
-      isCircle: true, // Thuộc tính mới để đánh dấu đây là khung hình tròn
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "3",
-      name: "Khung hình 1x2",
-      image: "/uploads/type/1x2.png",
-      columns: 1,
-      rows: 2,
-      isHot: false,
-      isCustom: true, // Đánh dấu là khung tùy chỉnh
+      rows: 4,
+      isCustom: true,
       totalImages: 1,
       isActive: true,
       createdAt: new Date(),
@@ -177,11 +179,6 @@ export default function Step3() {
                   className={`object-contain `}
                   priority
                 />
-                {frame.isHot && (
-                  <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                    Hot
-                  </div>
-                )}
               </div>
             </div>
           ))

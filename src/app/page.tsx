@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/context/AuthContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import LogoApp from "./components/LogoApp";
 
 export default function Home() {
   const { user, isAdmin, isLoading } = useAuth();
@@ -43,15 +44,14 @@ export default function Home() {
 
       {/* Main content */}
       <main className="flex flex-col items-center justify-center flex-grow z-10 px-4">
-        <Image
-          src="/lg.png"
-          alt="Music Box Photobooth"
-          width={1200}
-          priority
-          height={1000}
-          className="glow-image"
-        />
-
+        <LogoApp className="w-[500px] " />
+        <h1 className="text-4xl md:text-6xl font-bold text-center mt-8 glow-text">
+          Welcome to the S Photo Booth App
+        </h1>
+        {/* xin chào tiếng hàn */}
+        <h1 className="text-xl md:text-6xl font-bold text-center mt-8 glow-text">
+          "안녕 하세요" (annyeong haseyo)
+        </h1>
 
       </main>
 

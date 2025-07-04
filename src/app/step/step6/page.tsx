@@ -14,7 +14,7 @@ export default function Step6() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { photos, setPhotos, setVideos } = useBooth();
+  const { photos, setPhotos, setVideos, selectedFrame } = useBooth();
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [shotCount, setShotCount] = useState<number>(0);
@@ -27,7 +27,7 @@ export default function Step6() {
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [showCameraSelector, setShowCameraSelector] = useState<boolean>(false);
 
-  const maxShots: number = 8;
+  const maxShots: number = (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) >= 4 ? (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) + 4 : (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) + 3;
 
   // Refs cho việc quay video
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -403,7 +403,7 @@ export default function Step6() {
                 </div>
               ) : (
                 <div className="grid grid-cols-4 gap-3">
-                  {photos.reverse().map((photo, index) => (
+                  {photos.map((photo, index) => (
                     <div
                       key={index}
                       className="relative border border-purple-700 rounded-lg overflow-hidden group transition-all duration-300"
