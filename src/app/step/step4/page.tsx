@@ -37,7 +37,6 @@ export default function Step4() {
 
   return (
     <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
-      {/* Background graphics */}
       <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
       <div className="absolute top-0 left-0 right-0 w-full h-full">
         <Image
@@ -50,7 +49,8 @@ export default function Step4() {
         />
       </div>
 
-      <header className="flex justify-between items-start w-full p-6 z-10">
+
+      <header className="flex justify-between items-center w-full px-6 pt-10 z-10">
         <div className="flex items-center">
           <LogoApp />
 
@@ -61,47 +61,42 @@ export default function Step4() {
         <HomeButton />
 
       </header>
-      {/* Main content */}
-      <main className="flex flex-col items-center justify-center flex-grow z-10 w-full max-w-4xl px-8">
 
-        <div className="flex-1 flex flex-col items-center justify-center px-6 md:px-8 -mt-8">
-          {/* Quantity Selection Area */}
-          <div className="flex items-center justify-center gap-8 md:gap-12 mb-12 md:mb-16">
-            {/* Decrease Button */}
-            <button
-              onClick={decreaseQuantity}
-              disabled={quantity <= 1}
-              className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-pink-400 flex items-center justify-center text-pink-400  transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed neon-glow-pink"
-            >
-              <Minus className="w-8 h-8 md:w-10 md:h-10   transition-transform" />
-            </button>
 
-            {/* Display Area */}
-            <div className="w-80 h-48 md:w-96 md:h-56 border-4 border-cyan-400 rounded-2xl flex items-center justify-center neon-glow-blue bg-black/20 backdrop-blur-sm">
-              <span className="text-white text-6xl md:text-8xl font-bold">{quantity}</span>
-            </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 md:px-8 -mt-8 z-10">
+        <div className="flex items-center justify-center gap-8 md:gap-12 mb-12 md:mb-16">
+          <button
+            onClick={decreaseQuantity}
+            disabled={quantity <= 1}
+            className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-pink-400 flex items-center justify-center text-pink-400  transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed neon-glow-pink"
+          >
+            <Minus className="w-8 h-8 md:w-10 md:h-10   transition-transform" />
+          </button>
 
-            {/* Increase Button */}
-            <button
-              onClick={increaseQuantity}
-              disabled={quantity >= 3}
-              className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-pink-400 flex items-center justify-center text-pink-400  transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed neon-glow-pink"
-            >
-              <Plus className="w-8 h-8 md:w-10 md:h-10  transition-transform" />
-            </button>
+          {/* Display Area */}
+          <div className="w-[600px] h-[400px]  border-4 border-cyan-400 rounded-2xl flex items-center justify-center neon-glow-blue bg-black/20 backdrop-blur-sm">
+            <span className="text-white text-6xl md:text-8xl font-bold">{quantity}</span>
           </div>
 
-          {/* Confirm Button */}
-          <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-pink-500 rounded-full flex items-center justify-center text-white text-xl md:text-4xl font-semibold  transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
-            {
-              quantity == 1 ? "70 xu" : quantity == 2 ? "120 xu" : quantity == 3 ? "150 xu" : null
-            }
+          {/* Increase Button */}
+          <button
+            onClick={increaseQuantity}
+            disabled={quantity >= 3}
+            className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-pink-400 flex items-center justify-center text-pink-400  transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed neon-glow-pink"
+          >
+            <Plus className="w-16 h-16  transition-transform" />
           </button>
         </div>
-      </main>
 
-      {/* Navigation buttons */}
-      <div className="flex justify-between w-full px-16 py-12 z-10">
+        {/* Confirm Button */}
+        <button className="w-[400px] h-[100px] border-4 border-pink-500 rounded-full flex items-center justify-center text-white text-xl md:text-4xl font-semibold  transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
+          {
+            quantity == 1 ? "70 xu" : quantity == 2 ? "120 xu" : quantity == 3 ? "150 xu" : null
+          }
+        </button>
+      </div>
+
+      <div className="flex justify-between w-full px-16 pb-20 z-10">
         <button
           onClick={handleBack}
           className="rounded-full p-6 bg-transparent border-2 border-white   glow-button"

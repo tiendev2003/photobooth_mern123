@@ -51,7 +51,7 @@ export default function Login() {
         <div className="text-center">
           <div className="flex items-center justify-center mb-4">
             <Image
-              src="/logo.svg"
+              src="/logo.png"
               alt="Music Box Photobooth"
               width={150}
               height={50}

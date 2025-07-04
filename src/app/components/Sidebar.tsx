@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
     Camera,
     Grid,
+    Home,
     Image,
     Layers,
     LogOut,
@@ -20,7 +21,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const pathname = usePathname();
   
   const menuItems = [
@@ -31,6 +32,11 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     { href: '/admin/coupons', label: 'Coupons', icon: Tag },
     { href: '/admin/images', label: 'Images', icon: Camera },
   ];
+
+  // Thêm menu Stores chỉ cho ADMIN
+  if (user?.role === 'ADMIN') {
+    menuItems.splice(1, 0, { href: '/admin/stores', label: 'Stores', icon: Home });
+  }
 
   return (
     <>

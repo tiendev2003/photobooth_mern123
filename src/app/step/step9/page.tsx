@@ -18,14 +18,14 @@ export default function Step9() {
   const [sessionUrl, setSessionUrl] = useState<string>("");
   const [isCreatingSession, setIsCreatingSession] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
- 
 
-   useEffect(() => {
+
+  useEffect(() => {
     const createMediaSession = async () => {
       try {
         setIsCreatingSession(true);
 
-         const imageUrl = localStorage.getItem("imageQrCode") || imageQrCode;
+        const imageUrl = localStorage.getItem("imageQrCode") || imageQrCode;
         const videoUrl = localStorage.getItem("videoQrCode") || videoQrCode;
         const gifUrl = localStorage.getItem("gifQrCode") || gifQrCode;
 
@@ -107,7 +107,7 @@ export default function Step9() {
         />
       </div>
 
-      <header className="flex justify-between items-start w-full p-6 z-10">
+      <header className="flex justify-between items-center w-full px-6 pt-10 z-10">
         <div className="flex items-center">
           <LogoApp />
         </div>
@@ -159,8 +159,7 @@ export default function Step9() {
 
       </main>
 
-      {/* Navigation buttons */}
-      <div className="flex justify-center items-center w-full px-12 py-16 z-10">
+      <div className="flex justify-center w-full px-16 pb-20 z-10">
 
         <h1 className="text-white text-2xl md:text-3xl lg:text-4xl font-bold text-center tracking-wide">
           Cảm ơn quý khách đã ghé thăm S Photobooth

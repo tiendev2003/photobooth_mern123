@@ -148,7 +148,7 @@ export default function Step3() {
         />
       </div>
 
-      <header className="flex justify-between items-start w-full p-6 z-10">
+      <header className="flex justify-between items-center w-full px-6 pt-10 z-10">
         <div className="flex items-center">
           <LogoApp />
 
@@ -159,46 +159,39 @@ export default function Step3() {
         <HomeButton />
       </header>
 
-      {/* Main content */}
-      <main className="flex flex-col items-center justify-center z-10 w-full max-w-7xl px-3 sm:px-6 py-4">
-        {(
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 w-full max-w-5xl mx-auto">
-            {frameTypes.length > 0 ? (
-              frameTypes.map((frame) => (
-                <div
-                  key={frame.id}
-                  className={`relative cursor-pointer transition-transform transform  aspect-[4/3] ${selectedFrame && selectedFrame.id === frame.id ? "ring-4 ring-pink-500  scale-105" : ""
-                    }`}
-                  onClick={() => setSelectedFrame(frame)}
-                >
-                  <div className="w-full h-full relative">
-                    <Image
-                      src={frame.image || `/anh/3.png`}
-                      alt={frame.name}
-                      fill
-                      sizes="(max-width: 640px) 45vw, (max-width: 768px) 30vw, 180px"
-                      className={`object-contain ${frame.isCircle ? 'rounded-full' : 'rounded-lg'}`}
-                      priority
-                    />
-                     {frame.isHot && (
-                      <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                        Hot
-                      </div>
-                    )}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-8 w-full px-36">
+        {frameTypes.length > 0 ? (
+          frameTypes.map((frame) => (
+            <div
+              key={frame.id}
+              className={`relative cursor-pointer transition-transform transform  aspect-[4/3] ${selectedFrame && selectedFrame.id === frame.id ? "ring-4 ring-pink-500  scale-105" : ""
+                }`}
+              onClick={() => setSelectedFrame(frame)}
+            >
+              <div className="w-full h-full relative">
+                <Image
+                  src={frame.image || `/anh/3.png`}
+                  alt={frame.name}
+                  fill
+                  className={`object-contain `}
+                  priority
+                />
+                {frame.isHot && (
+                  <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                    Hot
                   </div>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full text-center p-8">
-                <p>Không có khung hình nào khả dụng</p>
+                )}
               </div>
-            )}
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full text-center p-8">
+            <p>Không có khung hình nào khả dụng</p>
           </div>
         )}
-      </main>
-
-      {/* Navigation buttons */}
-      <div className="flex justify-between w-full px-16 py-12 z-10">
+      </div>
+      <div className="flex justify-between w-full px-16 pb-20 z-10">
         <button
           onClick={handleBack}
           className="rounded-full p-6 bg-transparent border-2 border-white   transition glow-button"
@@ -207,7 +200,7 @@ export default function Step3() {
             &#8592;
           </div>
         </button>
-        <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-white rounded-full flex items-center justify-center text-pink-400 text-xl md:text-2xl font-semibold hover:bg-pink-500/20 transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
+        <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-white rounded-full flex items-center justify-center text-pink-400 text-5xl font-semibold hover:bg-pink-500/20 transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
           70 xu
         </button>
         <button
@@ -222,13 +215,6 @@ export default function Step3() {
         </button>
       </div>
 
-      <style jsx global>{`
-        .glow-text {
-          text-shadow: 0 0 15px rgba(255, 0, 255, 0.7),
-            0 0 30px rgba(255, 0, 255, 0.5);
-          letter-spacing: 2px;
-        }
-      `}</style>
-    </div>
+    </div >
   );
 }

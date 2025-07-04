@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 
 interface FrameType {
@@ -544,9 +545,11 @@ export default function FrameTypesManagement() {
 
                   {imagePreview && (
                     <div className="border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700 max-w-xs">
-                      <img
+                      <Image
                         src={imagePreview.startsWith('data:') ? imagePreview : `${imagePreview}`}
                         alt="Frame preview"
+                        width={320}
+                        height={128}
                         className="w-full h-auto max-h-32 object-contain"
                         onError={(e) => {
                           console.error('Image failed to load:', imagePreview);
@@ -683,9 +686,11 @@ export default function FrameTypesManagement() {
                   <tr key={frameType.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {frameType.image ? (
-                        <img
+                        <Image
                           src={`${frameType.image}`}
                           alt={frameType.name}
+                          width={64}
+                          height={64}
                           className="w-16 h-16 object-fill rounded"
                           onError={(e) => {
                             // Backup handling nếu ảnh không load được

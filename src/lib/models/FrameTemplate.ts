@@ -1,4 +1,3 @@
-// Import FrameType type để tránh circular dependency
 import { prisma } from '@/lib/prisma';
 import type { FrameType } from './FrameType';
 
@@ -9,6 +8,12 @@ export interface User {
   role: string;
 }
 
+export interface Store {
+  id: string;
+  name: string;
+  manager: User;
+}
+
 export interface FrameTemplate {
   id: string;
   name: string;
@@ -17,9 +22,10 @@ export interface FrameTemplate {
   overlay: string;
   frameTypeId: string;
   frameType?: FrameType;
-  userId?: string | null;
-  user?: User | null;
+  storeId?: string | null;
+  store?: Store | null;
   isActive: boolean;
+  isGlobal: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,8 +36,9 @@ export interface CreateFrameTemplateInput {
   background: string;
   overlay: string;
   frameTypeId: string;
-  userId?: string | null;
+  storeId?: string | null;
   isActive?: boolean;
+  isGlobal?: boolean;
 }
 
 export interface UpdateFrameTemplateInput {
@@ -40,8 +47,9 @@ export interface UpdateFrameTemplateInput {
   background?: string;
   overlay?: string;
   frameTypeId?: string;
-  userId?: string | null;
+  storeId?: string | null;
   isActive?: boolean;
+  isGlobal?: boolean;
 }
 
 // Add pagination function for FrameTemplate
@@ -57,16 +65,22 @@ export async function getAllFrameTemplates(options?: {
   const search = options?.search || '';
   const frameTypeId = options?.frameTypeId || '';
   
-  // Fetch all frame templates with user relation
+  // Fetch all frame templates with frameType and store relations
   const allFrameTemplates = await prisma.frameTemplate.findMany({
     include: {
       frameType: true,
-      user: {
+      store: {
         select: {
           id: true,
           name: true,
-          email: true,
-          role: true
+          manager: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          }
         }
       }
     },

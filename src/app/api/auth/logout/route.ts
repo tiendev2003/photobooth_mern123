@@ -21,6 +21,20 @@ export async function POST(request: Request) {
     const { payload } = await jwtVerify(token, secretKey);
     const userId = payload.id as string;
     
+    if (!userId) {
+      return NextResponse.json({ error: 'Invalid token payload' }, { status: 401 });
+    }
+    
+    // Check if user exists before updating
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    
+    if (!user) {
+      // User doesn't exist, but logout is still successful
+      return NextResponse.json({ success: true }, { status: 200 });
+    }
+    
     // Clear the token from the database
     await prisma.user.update({
       where: { id: userId },

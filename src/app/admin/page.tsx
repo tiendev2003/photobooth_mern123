@@ -9,6 +9,7 @@ interface DashboardStats {
   templatesCount: number;
   imagesCount: number;
   couponsCount: number;
+  storesCount: number;
 }
 
 export default function AdminDashboard() {
@@ -50,12 +51,19 @@ export default function AdminDashboard() {
         });
         const couponsData = await couponsResponse.json();
         
+        // Fetch stores count
+        const storesResponse = await fetch('/api/stores', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const storesData = await storesResponse.json();
+        
         setStats({
           userCount: userData.pagination?.total ?? userData.users?.length ?? 0,
           frameTypesCount: frameTypesData.pagination?.total ?? frameTypesData.data?.length ?? 0,
           templatesCount: templatesData.pagination?.total ?? templatesData.data?.length ?? 0,
           imagesCount: imagesData.pagination?.total ?? imagesData.images?.length ?? 0,
           couponsCount: couponsData.pagination?.total ?? couponsData.coupons?.length ?? 0,
+          storesCount: storesData.stores?.length ?? 0,
         });
       } catch (err) {
         console.error('Error fetching dashboard stats:', err);
@@ -105,6 +113,9 @@ export default function AdminDashboard() {
         <StatCard title="Templates" value={stats?.templatesCount || 0} icon="image" />
         <StatCard title="Images" value={stats?.imagesCount || 0} icon="camera" />
         <StatCard title="Coupons" value={stats?.couponsCount || 0} icon="tag" />
+        {user?.role === 'ADMIN' && (
+          <StatCard title="Stores" value={stats?.storesCount || 0} icon="store" />
+        )}
       </div>
       
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -135,6 +146,7 @@ function StatCard({ title, value, icon }: StatCardProps) {
             {icon === 'image' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>}
             {icon === 'camera' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>}
             {icon === 'tag' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>}
+            {icon === 'store' && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>}
           </svg>
         </div>
         <div className="ml-5">

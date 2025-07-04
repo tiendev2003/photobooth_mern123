@@ -4,8 +4,9 @@ import { prisma } from '../prisma';
 export interface CouponData {
   code: string;
   discount: number;
-  expires_at: Date;
-  user_id?: string | null;
+  expiresAt: Date;
+  userId?: string | null;
+  storeId?: string | null;
   isActive?: boolean;
   usageLimit?: number | null;
   currentUsage?: number;
@@ -41,6 +42,12 @@ export async function getAllCoupons(options?: {
           id: true,
           name: true,
           email: true
+        }
+      },
+      store: {
+        select: {
+          id: true,
+          name: true
         }
       }
     },
@@ -100,10 +107,12 @@ export async function createCoupon(data: CouponData) {
     data: {
       code: data.code,
       discount: data.discount,
-      expires_at: data.expires_at,
-      user_id: data.user_id,
+      expiresAt: data.expiresAt,
+      userId: data.userId,
+      storeId: data.storeId,
       usageLimit: data.usageLimit ?? null,
-      isActive: data.isActive ?? true
+      isActive: data.isActive ?? true,
+      currentUsage: data.currentUsage ?? 0
     },
     include: {
       user: {
@@ -111,6 +120,12 @@ export async function createCoupon(data: CouponData) {
           id: true,
           name: true,
           email: true
+        }
+      },
+      store: {
+        select: {
+          id: true,
+          name: true
         }
       }
     }
@@ -139,9 +154,9 @@ export async function deleteCoupon(id: string) {
   });
 }
 
-export async function isExpiredCoupon(coupon: { expires_at: Date }) {
+export async function isExpiredCoupon(coupon: { expiresAt: Date }) {
   const now = new Date();
-  return now > coupon.expires_at;
+  return now > coupon.expiresAt;
 }
 
 export async function validateCoupon(code: string) {

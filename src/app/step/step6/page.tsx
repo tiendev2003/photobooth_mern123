@@ -274,8 +274,7 @@ export default function Step6() {
         />
       </div>
 
-      {/* Header */}
-      <header className="flex justify-between items-start w-full p-6 z-10">
+      <header className="flex justify-between items-center w-full px-6 pt-10 z-10">
         <div className="flex items-center">
           <LogoApp />
 
@@ -287,8 +286,8 @@ export default function Step6() {
       </header>
 
       {/* Main content */}
-      <main className="flex flex-col md:flex-row items-center justify-center flex-grow z-10 w-full max-w-7xl px-4 gap-6">
-        <div className="w-full md:w-2/3 aspect-[4/3] bg-black bg-opacity-70 rounded-2xl border border-purple-500 shadow-lg shadow-purple-500/30 overflow-hidden relative">
+      <main className="flex flex-col md:flex-row items-center justify-center flex-grow z-10 w-full  px-4 gap-6">
+        <div className="aspect-[4/3] bg-black bg-opacity-70 rounded-2xl border border-purple-500 shadow-lg shadow-purple-500/30 overflow-hidden relative">
           {/* Camera selector button */}
           {availableCameras.length > 1 && (
             <div className="absolute top-4 right-4 z-20">
@@ -302,7 +301,6 @@ export default function Step6() {
                 <Monitor size={20} />
               </button>
 
-              {/* Camera selector dropdown */}
               {showCameraSelector && (
                 <div className="absolute top-full right-0 mt-2 bg-black bg-opacity-90 rounded-lg border border-purple-500 shadow-lg min-w-48">
                   {availableCameras.map((camera, index) => (
@@ -358,7 +356,7 @@ export default function Step6() {
           )}
         </div>
 
-        <div className="w-full md:w-1/3 h-full flex flex-col gap-4">
+        <div className="w-full md:w-1/5 h-full flex flex-col gap-4">
           {/* Controls */}
           <div className="bg-black bg-opacity-70 rounded-xl border border-purple-500 shadow-md p-6 flex flex-col items-center gap-4">
             <h2 className="text-3xl font-semibold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600">
@@ -380,10 +378,10 @@ export default function Step6() {
                 }`}
             >
               <Camera size={20} />
-              {isCapturing 
-                ? `Đang chụp (${countdown}s)` 
-                : isCompleted 
-                  ? "Đã hoàn thành" 
+              {isCapturing
+                ? `Đang chụp (${countdown}s)`
+                : isCompleted
+                  ? "Đã hoàn thành"
                   : "Bắt đầu chụp"}
             </button>
           </div>
@@ -410,9 +408,11 @@ export default function Step6() {
                       key={index}
                       className="relative border border-purple-700 rounded-lg overflow-hidden group transition-all duration-300"
                     >
-                      <img
+                      <Image
                         src={photo.image}
                         alt={`Photo ${index + 1}`}
+                        width={320}
+                        height={320}
                         className="w-full aspect-square object-cover rounded-lg"
                       />
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity">
@@ -427,8 +427,7 @@ export default function Step6() {
         </div>
       </main>
 
-      {/* Navigation buttons */}
-      <div className="flex justify-between w-full px-16 pb-12 z-10">
+      <div className="flex justify-between w-full px-16 pb-20 z-10">
         <button
           onClick={handleBack}
           className="rounded-full p-6 bg-transparent border-2 border-white   glow-button"

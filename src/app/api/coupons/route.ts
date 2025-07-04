@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { code, discount, expires_at, user_id, usageLimit, isActive } = body;
+    const { code, discount, expires_at, user_id, store_id, usageLimit, isActive } = body;
 
     // Validate required fields
     if (!code || !discount || !expires_at) {
@@ -64,8 +64,9 @@ export async function POST(req: NextRequest) {
     const couponData: CouponData = {
       code,
       discount: parseFloat(discount.toString()),
-      expires_at: new Date(expires_at),
-      user_id,
+      expiresAt: new Date(expires_at),
+      userId: user_id,
+      storeId: store_id,
       usageLimit: usageLimit === undefined ? null : usageLimit,
       isActive: isActive === undefined ? true : isActive
     };

@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if code has expired
-    if (discountCode.expires_at && new Date(discountCode.expires_at) < new Date()) {
+    if (discountCode.expiresAt && new Date(discountCode.expiresAt) < new Date()) {
       return NextResponse.json(
         { isValid: false, message: "Mã giảm giá đã hết hạn" },
         { status: 200 }

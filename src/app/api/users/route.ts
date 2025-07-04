@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
+import { Prisma, Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
     const pageParam = searchParams.get('page');
     const limitParam = searchParams.get('limit');
     const searchQuery = searchParams.get('search') || '';
+    const roleFilter = searchParams.get('role'); // Add role filter
     
     // Set default pagination values
     const page = pageParam ? parseInt(pageParam) : 1;
@@ -18,14 +19,15 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
     
     // Filter criteria
-    const where: Prisma.UserWhereInput = searchQuery 
-      ? {
-          OR: [
-            { name: { contains: searchQuery } },
-            { email: { contains: searchQuery } }
-          ]
-        } 
-      : {};
+    const where: Prisma.UserWhereInput = {
+      ...(searchQuery && {
+        OR: [
+          { name: { contains: searchQuery } },
+          { email: { contains: searchQuery } }
+        ]
+      }),
+      ...(roleFilter && { role: roleFilter as Role }) // Add role filter
+    };
     
     // Get total count for pagination metadata
     const totalUsers = await prisma.user.count({ where });

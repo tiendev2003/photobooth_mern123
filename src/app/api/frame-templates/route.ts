@@ -1,9 +1,32 @@
-import { CreateFrameTemplateInput } from '@/lib/models';
 import { prisma } from '@/lib/prisma';
 import { writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
+
+// Type for Prisma where clause
+interface FrameTemplateWhereClause {
+  isActive: boolean;
+  name?: { contains: string };
+  frameTypeId?: string;
+  storeId?: string;
+  isGlobal?: boolean;
+  OR?: Array<{
+    storeId?: string;
+    isGlobal?: boolean;
+  }>;
+}
+
+// Function to ensure directory exists
+async function createDirIfNotExists(dir: string) {
+  try {
+    const { access  } = await import('fs/promises');
+    await access(dir);
+  } catch {
+    const { mkdir } = await import('fs/promises');
+    await mkdir(dir, { recursive: true });
+  }
+}
 
 // Function to upload an image and return its details
 async function uploadImage(file: File) {
@@ -48,253 +71,249 @@ async function uploadImage(file: File) {
   }
 }
 
-// Helper function to create directory if it doesn't exist
-async function createDirIfNotExists(dirPath: string) {
-  const fs = await import('fs').then(module => module.promises);
-  try {
-    await fs.access(dirPath);
-  } catch (error) {
-    console.log(error);
-    await fs.mkdir(dirPath, { recursive: true });
-  }
-}
-
-// GET - Get frame templates with pagination using the model function
+// GET - Get frame templates with store filtering and pagination
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const storeId = searchParams.get('storeId');
+    const includeGlobal = searchParams.get('includeGlobal') === 'true';
     const frameTypeId = searchParams.get('frameTypeId');
     const pageParam = searchParams.get('page');
     const limitParam = searchParams.get('limit');
     const search = searchParams.get('search') || '';
     
-    // Set options for getAllFrameTemplates function
-    const options = {
-      page: pageParam ? parseInt(pageParam) : 1,
-      limit: limitParam ? parseInt(limitParam) : 10,
-      search,
-      frameTypeId: frameTypeId || undefined
-    };
+    // Set pagination options
+    const page = pageParam ? parseInt(pageParam) : 1;
+    const limit = limitParam ? parseInt(limitParam) : 10;
+    const skip = (page - 1) * limit;
     
-    // Manually fetch templates with the required relations
-    const skip = (options.page - 1) * options.limit;
-    const where: {
-      frameTypeId?: string;
-      OR?: Array<{ name: { contains: string } }>;
-    } = {};
+    // Build where clause
+    const whereClause: FrameTemplateWhereClause = { isActive: true };
     
-    if (options.frameTypeId) {
-      where.frameTypeId = options.frameTypeId;
+    // Add search filter
+    if (search) {
+      whereClause.name = { contains: search };
     }
     
-    if (options.search) {
-      where.OR = [
-        { name: { contains: options.search } }
-      ];
+    // Add frameType filter
+    if (frameTypeId) {
+      whereClause.frameTypeId = frameTypeId;
     }
     
+    // Add store filter
+    if (storeId) {
+      if (includeGlobal) {
+        // Lấy templates của store và global templates
+        whereClause.OR = [
+          { storeId: storeId },
+          { isGlobal: true }
+        ];
+      } else {
+        // Chỉ lấy templates của store
+        whereClause.storeId = storeId;
+      }
+    } else if (includeGlobal) {
+      // Chỉ lấy global templates
+      whereClause.isGlobal = true;
+    }
+
     // Get total count for pagination
-    const total = await prisma.frameTemplate.count({ where });
+    const total = await prisma.frameTemplate.count({ where: whereClause });
     
-    // Get paginated templates with frame type only (remove user relation until migration is complete)
+    // Get paginated templates
     const templates = await prisma.frameTemplate.findMany({
-      where,
+      where: whereClause,
       include: {
-        frameType: true
+        frameType: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            image: true,
+            columns: true,
+            rows: true,
+            totalImages: true,
+            isCircle: true,
+            isHot: true,
+            isCustom: true,
+          }
+        },
+        store: {
+          select: {
+            id: true,
+            name: true,
+          }
+        }
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { isGlobal: "asc" },  // Templates của store trước
+        { createdAt: "desc" }
+      ],
       skip,
-      take: options.limit
+      take: limit
     });
-    
+
     // Calculate pagination metadata
-    const totalPages = Math.ceil(total / options.limit);
-    
+    const totalPages = Math.ceil(total / limit);
+
     return NextResponse.json({
       success: true,
       data: templates,
-      templates: templates,  // Add this to ensure backward compatibility
-      frameTemplates: templates,  // Add this to support the client-side expected format
+      templates: templates,
+      frameTemplates: templates,
       pagination: {
         total,
-        page: options.page,
-        limit: options.limit,
+        page,
+        limit,
         totalPages,
-        hasNextPage: options.page < totalPages,
-        hasPrevPage: options.page > 1
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      },
+      filters: {
+        storeId,
+        includeGlobal,
+        frameTypeId,
+        search
       }
     });
   } catch (error) {
-    console.error('Error fetching frame templates:', error);
+    console.error("Error fetching frame templates:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Không thể lấy danh sách frame templates' 
-      },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
 }
 
-// POST - Create new frame template
+// POST - Create frame template
 export async function POST(request: NextRequest) {
   try {
-    const contentType = request.headers.get("content-type");
-    
-    let templateData: CreateFrameTemplateInput;
-    let backgroundImage, overlayImage;
-    
-    // Handle multipart/form-data (file uploads) and application/json differently
-    if (contentType && contentType.includes("multipart/form-data")) {
-      // Process form data with file uploads
-      const formData = await request.formData();
-      
-      templateData = {
-        name: formData.get("name") as string,
-        filename: '',  // Will be set from the uploaded file
-        background: '', // Will be set from the background file
-        overlay: '',   // Will be set from the overlay file
-        frameTypeId: formData.get("frameTypeId") as string,
-        userId: formData.get("userId") as string || null,
-        isActive: formData.get("isActive") ? 
-          (formData.get("isActive") === "true") : true
-      };
-      
-      // Get background image file (required)
-      const backgroundFile = formData.get("backgroundFile") as File;
-      if (backgroundFile && backgroundFile.size > 0) {
-        // Upload background file
-        backgroundImage = await uploadImage(backgroundFile);
-        if (backgroundImage) {
-          templateData.background = backgroundImage.path;
-          templateData.filename = backgroundImage.filename;
-        } else {
-          return NextResponse.json(
-            { 
-              success: false, 
-              error: 'Không thể tải lên ảnh nền (background)' 
-            },
-            { status: 400 }
-          );
-        }
-      } else {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Thiếu ảnh nền (background)' 
-          },
-          { status: 400 }
-        );
-      }
-      
-      // Get overlay image file (required)
-      const overlayFile = formData.get("overlayFile") as File;
-      if (overlayFile && overlayFile.size > 0) {
-        // Upload overlay file
-        overlayImage = await uploadImage(overlayFile);
-        if (overlayImage) {
-          templateData.overlay = overlayImage.path;
-        } else {
-          return NextResponse.json(
-            { 
-              success: false, 
-              error: 'Không thể tải lên ảnh lớp phủ (overlay)' 
-            },
-            { status: 400 }
-          );
-        }
-      } else {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Thiếu ảnh lớp phủ (overlay)' 
-          },
-          { status: 400 }
-        );
-      }
-    } else {
-      // Handle JSON data
-      templateData = await request.json();
-    }
-    
+    const formData = await request.formData();
+    const name = formData.get('name') as string;
+    const frameTypeId = formData.get('frameTypeId') as string;
+    const storeId = formData.get('storeId') as string;
+    const isGlobal = formData.get('isGlobal') === 'true';
+    const backgroundFile = formData.get('backgroundFile') as File;
+    const overlayFile = formData.get('overlayFile') as File;
+
+    console.log('Frame template creation data:', {
+      name,
+      frameTypeId,
+      storeId,
+      isGlobal,
+      backgroundFile: backgroundFile ? backgroundFile.name : 'null',
+      overlayFile: overlayFile ? overlayFile.name : 'null'
+    });
+
     // Validate required fields
-    if (!templateData.name || !templateData.filename || !templateData.background || !templateData.overlay || !templateData.frameTypeId) {
+    if (!name || !frameTypeId) {
+      console.log('Missing required fields');
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Thiếu thông tin bắt buộc: name, filename, background, overlay, frameTypeId' 
-        },
+        { error: "Name and frameTypeId are required" },
         { status: 400 }
       );
     }
 
-    // Check if frameType exists
+    // Validate files
+    if (!backgroundFile) {
+      console.log('Missing background file');
+      return NextResponse.json(
+        { error: "Background file is required" },
+        { status: 400 }
+      );
+    }
+
+    // Kiểm tra frameType có tồn tại
     const frameType = await prisma.frameType.findUnique({
-      where: { id: templateData.frameTypeId },
+      where: { id: frameTypeId }
     });
 
     if (!frameType) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Frame type không tồn tại' 
-        },
+        { error: "Frame type not found" },
         { status: 404 }
       );
     }
 
-    // Comment out userId validation until migration is complete
-    // if (templateData.userId && templateData.userId !== 'null') {
-    //   const user = await prisma.user.findUnique({
-    //     where: { id: templateData.userId },
-    //   });
+    // Nếu không phải global template thì phải có storeId
+    if (!isGlobal && !storeId) {
+      console.log('Store validation failed:', { isGlobal, storeId });
+      return NextResponse.json(
+        { error: "storeId is required for non-global templates" },
+        { status: 400 }
+      );
+    }
 
-    //   if (!user) {
-    //     return NextResponse.json(
-    //       { 
-    //         success: false, 
-    //         error: 'User không tồn tại' 
-    //       },
-    //       { status: 404 }
-    //     );
-    //   }
-    // }
-    
-    // Tạo frame template với trường background và overlay
-    // Create an object with the correct fields
-    const createData = {
-        name: templateData.name,
-        filename: templateData.filename,
-        background: templateData.background,
-        overlay: templateData.overlay,
-        frameTypeId: templateData.frameTypeId,
-        isActive: templateData.isActive ?? true,
-        // Remove userId until migration is complete
-        // userId: templateData.userId === 'null' ? null : templateData.userId || null,
-    };
-    
-    // Use type assertion at the call site level to avoid TypeScript errors
-    // This is a temporary workaround for the schema/type mismatch during migration
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const frameTemplate = await (prisma.frameTemplate.create as any)({
-      data: createData,
-      include: {
-        frameType: true,
-        // Remove user relation until migration is complete
+    // Upload background image
+    const backgroundUpload = await uploadImage(backgroundFile);
+    if (!backgroundUpload) {
+      return NextResponse.json(
+        { error: "Failed to upload background image" },
+        { status: 500 }
+      );
+    }
+
+    // Upload overlay image (optional)
+    let overlayPath = '';
+    if (overlayFile && overlayFile.size > 0) {
+      const overlayUpload = await uploadImage(overlayFile);
+      if (!overlayUpload) {
+        return NextResponse.json(
+          { error: "Failed to upload overlay image" },
+          { status: 500 }
+        );
+      }
+      overlayPath = overlayUpload.path;
+    }
+
+    // Generate unique filename
+    const filename = `${uuidv4()}_${name.replace(/\s+/g, '_')}`;
+
+    // Tạo frame template mới
+    const frameTemplate = await prisma.frameTemplate.create({
+      data: {
+        name,
+        filename,
+        background: backgroundUpload.path,
+        overlay: overlayPath,
+        frameTypeId,
+        storeId: isGlobal ? null : storeId,
+        isGlobal,
+        isActive: true
       },
+      include: {
+        frameType: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            image: true,
+            columns: true,
+            rows: true,
+            totalImages: true,
+            isCircle: true,
+            isHot: true,
+            isCustom: true,
+          }
+        },
+        store: {
+          select: {
+            id: true,
+            name: true,
+          }
+        }
+      }
     });
 
     return NextResponse.json({
       success: true,
-      data: frameTemplate,
-    }, { status: 201 });
+      frameTemplate,
+      message: "Frame template created successfully"
+    });
   } catch (error) {
-    console.error('Error creating frame template:', error);
+    console.error("Error creating frame template:", error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Không thể tạo frame template' 
-      },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

@@ -11,6 +11,11 @@ interface User {
   phone: string | null;
   address: string | null;
   createdAt: string;
+  isActive?: boolean;
+  store?: {
+    id: string;
+    name: string;
+  };
 }
 
 export default function UserManagement() {

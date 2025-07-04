@@ -555,8 +555,8 @@ export default function Step8() {
     const isSquare = selectedFrame.columns === selectedFrame.rows;
 
     // Set dimensions based on orientation
-    const previewHeight = isLandscape ? "4in" : "6in";
-    const previewWidth = isLandscape ? "6in" : "4in";
+    const previewHeight = isLandscape ? "7.2in" : "10.8in";
+    const previewWidth = isLandscape ? "10.8in" : "7.2in";
     const aspectRatio = isLandscape ? "3/2" : "2/3";
 
     // Frame overlay using selectedTemplate
@@ -573,7 +573,7 @@ export default function Step8() {
     ) : null;
 
     return (
-      <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "2in" : previewWidth }} >
+      <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "3.6in" : previewWidth }} >
         <div
           ref={printPreviewRef}
           data-preview
@@ -648,9 +648,9 @@ export default function Step8() {
       document.head.removeChild(style);
     };
   }, []);
-  
+
   return (
-    <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white  ">
+    <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
       {/* Background graphics */}
       <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
       <div className="absolute top-0 left-0 right-0 w-full h-full">
@@ -664,7 +664,7 @@ export default function Step8() {
         />
       </div>
 
-      <header className="flex justify-between items-start w-full px-6 pt-6 z-10">
+      <header className="flex justify-between items-center w-full px-6 pt-10 z-10">
         <div className="flex items-center">
           <LogoApp />
         </div>
@@ -674,212 +674,213 @@ export default function Step8() {
         <HomeButton />
       </header>
 
-      {/* Main content */}
-      <div className="w-full px-4 md:px-16 z-10">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Left column - Frame preview */}
-          <div className="w-full lg:w-2/5 rounded-lg flex flex-col items-center justify-center">
-            <div className="w-full flex justify-center">
-              <div className={` `}>
-                {renderPreview()}
+      <div className="grid grid-cols-2 gap-6 mx-32 z-30">
+
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          <div className="w-full flex justify-center">
+            <div className={` `}>
+              {renderPreview()}
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-1">
+          <div className=" bg-zinc-200 rounded-2xl p-2 border border-indigo-500/30  ">
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-black">
+                    Bộ lọc làm đẹp da
+                  </h3>
+                  <p className="text-xs text-black opacity-80">Chọn hiệu ứng yêu thích</p>
+                </div>
               </div>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => prevSlide(skinFilterSliderRef)}
+                  className="p-1.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg"
+                >
+                  <ChevronLeft size={18} className="text-white" />
+                </button>
+                <button
+                  onClick={() => nextSlide(skinFilterSliderRef)}
+                  className="p-1.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg"
+                >
+                  <ChevronRight size={18} className="text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="px-2">
+              <Slider ref={skinFilterSliderRef} {...slickSettings}>
+                {skinFilters.map((filter) => (
+                  <div key={filter.id} className="px-2">
+                    <div
+                      onClick={() => handleFilterSelect(filter)}
+                      className="cursor-pointer"
+                    >
+                      <div
+                        className={`relative rounded-2xl overflow-hidden ${activeSkinFilter.id === filter.id
+                          ? "border-2 border-pink-400"
+                          : "border border-purple-400/50"
+                          }`}
+                      >
+                        <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-purple-900/50 to-pink-900/50">
+                          {photos && photos.length > 0 ? (
+                            <Image
+                              src={photos[0].image || "/placeholder.svg"}
+                              alt={filter.name}
+                              fill
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              style={{ objectFit: "cover" }}
+                              className={`w-full h-full object-cover ${filter.className}`}
+                            />
+                          ) : (
+                            <Image
+                              src={filter.preview || "/placeholder.svg"}
+                              alt={filter.name}
+                              fill
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              style={{ objectFit: "cover" }}
+                              className={`w-full h-full object-cover ${filter.className}`}
+                            />
+                          )}
+
+                          {/* Filter icon overlay */}
+                          <div className="absolute top-1 right-1 w-6 h-6 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center">
+                            <span className="text-sm">{filter.icon}</span>
+                          </div>
+
+                          {/* Selected indicator */}
+                          {activeSkinFilter.id === filter.id && (
+                            <div className="absolute bottom-1 left-1 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                              <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div
+                          className={`p-2 text-center ${activeSkinFilter.id === filter.id
+                            ? "bg-pink-600/80"
+                            : "bg-purple-900/60"
+                            }`}
+                        >
+                          <span className="text-xs font-medium text-white">
+                            {filter.name}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </Slider>
             </div>
           </div>
 
-          {/* Right column - Filter options and Frame Templates */}
-          <div className="w-full lg:w-3/5 flex flex-col gap-8">
-            {/* Enhanced Skin Beautifying Filters */}
-            <div className=" bg-zinc-200 rounded-2xl p-2 border border-indigo-500/30  ">
-              <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-gradient-to-r from-pink-500 to-purple-500 rounded-lg">
-                    <Sparkles className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-black">
-                      Bộ lọc làm đẹp da
-                    </h3>
-                    <p className="text-xs text-black opacity-80">Chọn hiệu ứng yêu thích</p>
-                  </div>
+          <div className=" bg-zinc-200 rounded-2xl p-2 border border-indigo-500/30 mt-2 ">
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg">
+                  <ImageIcon className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => prevSlide(skinFilterSliderRef)}
-                    className="p-1.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg"
-                  >
-                    <ChevronLeft size={18} className="text-white" />
-                  </button>
-                  <button
-                    onClick={() => nextSlide(skinFilterSliderRef)}
-                    className="p-1.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg"
-                  >
-                    <ChevronRight size={18} className="text-white" />
-                  </button>
+                <div>
+                  <h3 className="text-xl font-bold text-black">
+                    Mẫu khung ảnh
+                  </h3>
+                  <p className="text-xs text-black opacity-80">Tùy chỉnh khung cho ảnh</p>
                 </div>
               </div>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => prevSlide(frameTemplateSliderRef)}
+                  className="p-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg"
+                >
+                  <ChevronLeft size={18} className="text-white" />
+                </button>
+                <button
+                  onClick={() => nextSlide(frameTemplateSliderRef)}
+                  className="p-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg"
+                >
+                  <ChevronRight size={18} className="text-white" />
+                </button>
+              </div>
+            </div>
 
-              <div className="px-2">
-                <Slider ref={skinFilterSliderRef} {...slickSettings}>
-                  {skinFilters.map((filter) => (
-                    <div key={filter.id} className="px-2">
+            <div className="px-2">
+              <Slider ref={frameTemplateSliderRef} {...slickSettings}>
+                {loading ? (
+                  <div className="px-2">
+                    <div className="bg-gradient-to-br from-indigo-800/50 to-purple-800/50 rounded-2xl flex items-center justify-center border border-indigo-500/30 aspect-square">
+                      <div className="relative">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-400"></div>
+                        <div className="absolute inset-0 animate-ping rounded-full h-8 w-8 border border-indigo-400/30"></div>
+                      </div>
+                    </div>
+                  </div>
+                ) : frameTemplates.length > 0 ? (
+                  frameTemplates.map((template) => (
+                    <div key={template.id} className="px-2">
                       <div
-                        onClick={() => handleFilterSelect(filter)}
+                        onClick={() => setSelectedTemplate(template)}
                         className="cursor-pointer"
                       >
                         <div
-                          className={`relative rounded-2xl overflow-hidden ${activeSkinFilter.id === filter.id
-                            ? "border-2 border-pink-400"
-                            : "border border-purple-400/50"
+                          className={`relative rounded-2xl overflow-hidden ${selectedTemplate?.id === template.id
+                            ? "border-2 border-indigo-400"
+                            : "border border-indigo-400/50"
                             }`}
                         >
-                          <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-purple-900/50 to-pink-900/50">
-                            {photos && photos.length > 0 ? (
-                              <img
-                                src={photos[0].image || "/placeholder.svg"}
-                                alt={filter.name}
-                                className={`w-full h-full object-cover ${filter.className}`}
-                              />
-                            ) : (
-                              <img
-                                src={filter.preview || "/placeholder.svg"}
-                                alt={filter.name}
-                                className={`w-full h-full object-cover ${filter.className}`}
-                              />
-                            )}
-
-                            {/* Filter icon overlay */}
-                            <div className="absolute top-1 right-1 w-6 h-6 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center">
-                              <span className="text-sm">{filter.icon}</span>
-                            </div>
+                          <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-indigo-900/50 to-purple-900/50">
+                            <Image
+                              src={template.overlay || template.overlay}
+                              alt={template.name}
+                              className="w-full h-full object-cover"
+                              width={128}
+                              height={128}
+                            />
 
                             {/* Selected indicator */}
-                            {activeSkinFilter.id === filter.id && (
-                              <div className="absolute bottom-1 left-1 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                            {selectedTemplate?.id === template.id && (
+                              <div className="absolute bottom-1 left-1 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
                                 <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
                               </div>
                             )}
                           </div>
 
                           <div
-                            className={`p-2 text-center ${activeSkinFilter.id === filter.id
-                              ? "bg-pink-600/80"
-                              : "bg-purple-900/60"
+                            className={`p-2 text-center ${selectedTemplate?.id === template.id
+                              ? "bg-indigo-600/80"
+                              : "bg-indigo-900/60"
                               }`}
                           >
                             <span className="text-xs font-medium text-white">
-                              {filter.name}
+                              {template.name}
                             </span>
                           </div>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </Slider>
-              </div>
-            </div>
-
-            {/* Enhanced Frame Templates */}
-            <div className=" bg-zinc-200 rounded-2xl p-2 border border-indigo-500/30 mt-2 ">
-              <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg">
-                    <ImageIcon className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-black">
-                      Mẫu khung ảnh
-                    </h3>
-                    <p className="text-xs text-black opacity-80">Tùy chỉnh khung cho ảnh</p>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => prevSlide(frameTemplateSliderRef)}
-                    className="p-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg"
-                  >
-                    <ChevronLeft size={18} className="text-white" />
-                  </button>
-                  <button
-                    onClick={() => nextSlide(frameTemplateSliderRef)}
-                    className="p-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg"
-                  >
-                    <ChevronRight size={18} className="text-white" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="px-2">
-                <Slider ref={frameTemplateSliderRef} {...slickSettings}>
-                  {loading ? (
-                    <div className="px-2">
-                      <div className="bg-gradient-to-br from-indigo-800/50 to-purple-800/50 rounded-2xl flex items-center justify-center border border-indigo-500/30 aspect-square">
-                        <div className="relative">
-                          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-400"></div>
-                          <div className="absolute inset-0 animate-ping rounded-full h-8 w-8 border border-indigo-400/30"></div>
-                        </div>
+                  ))
+                ) : (
+                  <div className="px-2">
+                    <div className="w-full flex items-center justify-center h-40 bg-gradient-to-br from-indigo-800/30 to-purple-800/30 rounded-2xl border border-indigo-500/30">
+                      <div className="text-center">
+                        <ImageIcon className="w-12 h-12 text-white mx-auto mb-2 opacity-50" />
+                        <p className="text-white">Không có mẫu khung ảnh cho kiểu khung này</p>
                       </div>
                     </div>
-                  ) : frameTemplates.length > 0 ? (
-                    frameTemplates.map((template) => (
-                      <div key={template.id} className="px-2">
-                        <div
-                          onClick={() => setSelectedTemplate(template)}
-                          className="cursor-pointer"
-                        >
-                          <div
-                            className={`relative rounded-2xl overflow-hidden ${selectedTemplate?.id === template.id
-                              ? "border-2 border-indigo-400"
-                              : "border border-indigo-400/50"
-                              }`}
-                          >
-                            <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-indigo-900/50 to-purple-900/50">
-                              <img
-                                src={template.overlay || template.overlay}
-                                alt={template.name}
-                                className="w-full h-full object-cover"
-                              />
-
-                              {/* Selected indicator */}
-                              {selectedTemplate?.id === template.id && (
-                                <div className="absolute bottom-1 left-1 w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center">
-                                  <div className="w-2.5 h-2.5 bg-white rounded-full"></div>
-                                </div>
-                              )}
-                            </div>
-
-                            <div
-                              className={`p-2 text-center ${selectedTemplate?.id === template.id
-                                ? "bg-indigo-600/80"
-                                : "bg-indigo-900/60"
-                                }`}
-                            >
-                              <span className="text-xs font-medium text-white">
-                                {template.name}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="px-2">
-                      <div className="w-full flex items-center justify-center h-40 bg-gradient-to-br from-indigo-800/30 to-purple-800/30 rounded-2xl border border-indigo-500/30">
-                        <div className="text-center">
-                          <ImageIcon className="w-12 h-12 text-indigo-300 mx-auto mb-2 opacity-50" />
-                          <p className="text-indigo-200">Không có mẫu khung ảnh cho kiểu khung này</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </Slider>
-              </div>
+                  </div>
+                )}
+              </Slider>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation buttons */}
-      <div className="flex justify-end w-full px-12 pb-8 z-10">
+      <div className="flex justify-end w-full px-16 pb-20 z-10">
         <button
           onClick={handlePrint}
           className={`rounded-full p-6 bg-transparent border-2 border-white glow-button mr-4 ${isPrinting ? 'opacity-50 cursor-not-allowed' : ''

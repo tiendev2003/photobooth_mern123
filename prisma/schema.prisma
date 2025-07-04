@@ -7,80 +7,102 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Brand {
-  id              String   @id @default(uuid())
-  userId          String   @unique
-  name            String
-  logo            String?
-  background      String?
-  primaryColor    String?
-  secondaryColor  String?
-  socialFacebook  String?
-  socialInstagram String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  user            User     @relation(fields: [userId], references: [id])
+// Model Store - Quản lý thông tin cửa hàng
+model Store {
+  id            String          @id @default(uuid())
+  name          String          // Tên cửa hàng
+  slogan        String?         // Slogan của cửa hàng
+  logo          String?         // Logo cửa hàng
+  background    String?         // Ảnh background cửa hàng
+  description   String?         // Mô tả cửa hàng
+  address       String?         // Địa chỉ cửa hàng
+  phone         String?         // Số điện thoại cửa hàng
+  email         String?         // Email cửa hàng
+  accountNumber String?         // Số tài khoản cửa hàng
+  primaryColor  String?         // Màu chủ đạo
+  secondaryColor String?        // Màu phụ
+  isActive      Boolean         @default(true) // Trạng thái hoạt động
+  maxEmployees  Int             @default(10)   // Giới hạn số nhân viên
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  managerId     String          // ID của quản lý cửa hàng
+  manager       User            @relation("StoreManager", fields: [managerId], references: [id])
+  employees     User[]          @relation("StoreEmployees") // Danh sách nhân viên
+  frameTemplates FrameTemplate[] // Templates riêng của cửa hàng
+  coupons       Coupon[]        // Mã giảm giá của cửa hàng
+
+  @@index([managerId])
 }
 
-model Coupon {
-  id           String   @id @default(uuid())
-  code         String   @unique
-  discount     Float
-  expires_at   DateTime
-  user_id      String?
-  usageLimit   Int?      
-  currentUsage Int      @default(0) 
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         User?    @relation(fields: [user_id], references: [id])
+// Model User - Quản lý thông tin người dùng
+model User {
+  id            String          @id @default(uuid())
+  name          String          // Tên người dùng
+  email         String          @unique // Email đăng nhập
+  password      String          // Mật khẩu
+  role          Role            @default(USER) // Vai trò: ADMIN, MANAGER, USER
+  phone         String?         // Số điện thoại
+  address       String?         // Địa chỉ
+  avatar        String?         // Ảnh đại diện
+  currentToken  String?         @db.Text // Token hiện tại
+  isActive      Boolean         @default(true) // Trạng thái hoạt động
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  storeId       String?         // ID cửa hàng (null nếu là ADMIN)
+  store         Store?          @relation("StoreEmployees", fields: [storeId], references: [id])
+  managedStores Store[]         @relation("StoreManager") // Cửa hàng mà user quản lý
+  coupons       Coupon[]        // Mã giảm giá do user tạo
 
-  @@index([user_id])
+  @@index([storeId])
 }
 
+// Model FrameType - Loại frame dùng chung toàn hệ thống
+model FrameType {
+  id            String          @id @default(uuid())
+  name          String          @unique // Tên loại frame
+  description   String?         // Mô tả
+  image         String?         // Ảnh minh họa
+  columns       Int             // Số cột
+  rows          Int             // Số hàng
+  totalImages   Int             // Tổng số ảnh
+  isActive      Boolean         @default(true) // Trạng thái hoạt động
+  isHot         Boolean         @default(false) // Là hot template
+  isCustom      Boolean         @default(false) // Là template tùy chỉnh
+  isCircle      Boolean         @default(false) // Là frame hình tròn
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  templates     FrameTemplate[] // Danh sách template thuộc loại này
+}
+
+// Model FrameTemplate - Quản lý frame template
 model FrameTemplate {
   id          String    @id @default(uuid())
-  name        String
-  filename    String    @unique
+  name        String    // Tên template
+  filename    String    @unique // Tên file
   background  String    // Background image
   overlay     String    // Overlay image
-  frameTypeId String
-  userId      String?   // ID của người dùng sở hữu template này
-  isActive    Boolean   @default(true)
+  frameTypeId String    // ID loại frame
+  storeId     String?   // ID cửa hàng sở hữu template (null nếu là global)
+  isActive    Boolean   @default(true) // Trạng thái hoạt động
+  isGlobal    Boolean   @default(false) // Template toàn cục
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   frameType   FrameType @relation(fields: [frameTypeId], references: [id], onDelete: Cascade)
-  user        User?     @relation(fields: [userId], references: [id])
+  store       Store?    @relation(fields: [storeId], references: [id])
 
   @@index([frameTypeId])
-  @@index([userId])
+  @@index([storeId])
 }
 
-model FrameType {
-  id            String          @id @default(uuid())
-  name          String          @unique
-  description   String?
-  image         String?
-  columns       Int
-  rows          Int
-  totalImages   Int
-  isActive      Boolean         @default(true)
-  isHot         Boolean         @default(false)
-  isCustom      Boolean         @default(false)
-  isCircle      Boolean         @default(false)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  templates     FrameTemplate[]
-}
-
+// Model Image - Quản lý file ảnh/video
 model Image {
   id        String    @id @default(uuid())
-  filename  String    @unique
-  path      String
-  fileType  FileType  @default(IMAGE)
-  size      Int?
-  duration  Int?
-  sessionId String?   // Link to MediaSession
+  filename  String    @unique // Tên file
+  path      String    // Đường dẫn file
+  fileType  FileType  @default(IMAGE) // Loại file: IMAGE, GIF, VIDEO
+  size      Int?      // Kích thước file
+  duration  Int?      // Thời lượng (cho video)
+  sessionId String?   // ID phiên media
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   session   MediaSession? @relation(fields: [sessionId], references: [id])
@@ -88,39 +110,48 @@ model Image {
   @@index([sessionId])
 }
 
+// Model MediaSession - Quản lý phiên chụp ảnh
 model MediaSession {
   id          String   @id @default(uuid())
-  sessionCode String   @unique // Code to access this session
-  images      Image[]  // All media files in this session
+  sessionCode String   @unique // Mã phiên để truy cập
+  images      Image[]  // Danh sách media trong phiên
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  expiresAt   DateTime // When this session expires
+  expiresAt   DateTime // Thời gian hết hạn phiên
 }
 
-model User {
-  id            String          @id @default(uuid())
-  name          String
-  email         String          @unique
-  password      String
-  role          Role            @default(USER)
-  phone         String?
-  address       String?
-  currentToken  String?         @db.Text
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  coupons       Coupon[]
-  brand         Brand?
-  frameTemplates FrameTemplate[] // Thêm quan hệ với FrameTemplate
+// Model Coupon - Quản lý mã giảm giá
+model Coupon {
+  id           String   @id @default(uuid())
+  code         String   @unique // Mã giảm giá
+  discount     Float    // Mức giảm giá (%)
+  expiresAt    DateTime @map("expires_at") // Ngày hết hạn
+  userId       String?  @map("user_id") // ID người dùng tạo (optional)
+  storeId      String?  // ID cửa hàng (null nếu global)
+  isActive     Boolean  @default(true) // Trạng thái hoạt động
+  usageLimit   Int?     // Giới hạn sử dụng
+  currentUsage Int      @default(0) // Số lần đã sử dụng
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User?    @relation(fields: [userId], references: [id])
+  store        Store?   @relation(fields: [storeId], references: [id])
+
+  @@index([userId])
+  @@index([storeId])
+  @@index([code])
 }
 
+// Enum FileType - Loại file media
 enum FileType {
   IMAGE
   GIF
   VIDEO
 }
 
+// Enum Role - Vai trò người dùng
 enum Role {
-  ADMIN
-  KETOAN
-  USER
+  ADMIN          // Admin cấp cao
+  MANAGER        // Quản lý cửa hàng
+  USER           // Nhân viên cửa hàng
+  KETOAN         // Kế toán (nếu cần)
 }
