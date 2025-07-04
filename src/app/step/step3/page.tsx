@@ -54,8 +54,8 @@ export default function Step3() {
     {
       id: "6",
       name: "Khung hình 4",
-      columns: 2, // Nằm ngang - 2 ô ngang, 3 ô dọc
-      rows: 3,
+      columns: 3, // Nằm ngang - 2 ô ngang, 3 ô dọc
+      rows: 2,
       image: "/uploads/type/3x2.png",
       isHot: false,
       isCustom: false,
@@ -68,8 +68,8 @@ export default function Step3() {
       id: "4",
       name: "Khung hình 5",
       image: "/uploads/type/2x3.png",
-      columns: 3, // Đứng dọc - 3 ô ngang, 2 ô dọc
-      rows: 2,
+      columns: 2, // Đứng dọc - 3 ô ngang, 2 ô dọc
+      rows: 3,
       isHot: false,
       isCustom: false,
       totalImages: 1,

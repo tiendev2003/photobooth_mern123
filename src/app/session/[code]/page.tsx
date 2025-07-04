@@ -15,27 +15,40 @@ interface MediaItem {
   size: number;
 }
 
-export default function MediaPage() {
+interface MediaSession {
+  id: string;
+  sessionCode: string;
+  images: MediaItem[];
+  createdAt: string;
+  expiresAt: string;
+}
+
+export default function MediaSessionPage() {
   const params = useParams();
-  const id = params?.id as string;
+  const code = params?.code as string;
   
-  const [media, setMedia] = useState<MediaItem | null>(null);
+  const [session, setSession] = useState<MediaSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const fetchMedia = async () => {
+    const fetchSession = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/images/${id}`);
+        const response = await fetch(`/api/media-session/${code}`);
 
         if (!response.ok) {
-          throw new Error("Không tìm thấy media này hoặc đã hết hạn");
+          if (response.status === 404) {
+            throw new Error("Không tìm thấy session này");
+          } else if (response.status === 410) {
+            throw new Error("Session này đã hết hạn");
+          }
+          throw new Error("Có lỗi xảy ra khi tải session");
         }
 
         const data = await response.json();
-        setMedia(data);
+        setSession(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Có lỗi xảy ra");
       } finally {
@@ -43,46 +56,44 @@ export default function MediaPage() {
       }
     };
 
-    if (id) {
-      fetchMedia();
+    if (code) {
+      fetchSession();
     }
-  }, [id]);
+  }, [code]);
 
-  const handleDownload = () => {
-    if (!media) return;
+  const handleDownloadAll = () => {
+    if (!session || !session.images.length) return;
 
-    // Properly construct the download URL
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    const downloadUrl = baseUrl ? `${baseUrl}${media.path}` : media.path;
-    
-    // Ensure the path starts with a slash if it's a relative path
-    const finalDownloadUrl = downloadUrl.startsWith('http') ? downloadUrl : 
-                           downloadUrl.startsWith('/') ? downloadUrl : `/${downloadUrl}`;
+    session.images.forEach((media) => {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const downloadUrl = baseUrl ? `${baseUrl}${media.path}` : media.path;
+      const finalDownloadUrl = downloadUrl.startsWith('http') ? downloadUrl : 
+                             downloadUrl.startsWith('/') ? downloadUrl : `/${downloadUrl}`;
 
-    const link = document.createElement('a');
-    link.href = finalDownloadUrl;
-    link.download = media.filename;
-    link.target = '_blank'; // Open in new tab to avoid CORS issues
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      const link = document.createElement('a');
+      link.href = finalDownloadUrl;
+      link.download = media.filename;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
   };
 
   const handleShare = async () => {
-    if (!media) return;
+    if (!session) return;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Photobooth Media',
-          text: 'Hãy xem media của tôi từ S Photobooth!',
+          title: 'S Photobooth Media Session',
+          text: `Xem ${session.images.length} media từ S Photobooth!`,
           url: window.location.href,
         });
       } catch (err) {
         console.log('Error sharing:', err);
       }
     } else {
-      // Fallback to clipboard copy
       try {
         await navigator.clipboard.writeText(window.location.href);
         setCopied(true);
@@ -93,41 +104,32 @@ export default function MediaPage() {
     }
   };
 
-  // Helper function to render the appropriate media type
-  const renderMedia = () => {
-    if (!media) return null;
-
-    // Properly construct the media URL
+  const renderMedia = (media: MediaItem) => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
     const mediaUrl = baseUrl ? `${baseUrl}${media.path}` : media.path;
-    
-    // Ensure the path starts with a slash if it's a relative path
     const finalMediaUrl = mediaUrl.startsWith('http') ? mediaUrl : 
                          mediaUrl.startsWith('/') ? mediaUrl : `/${mediaUrl}`;
 
     switch (media.fileType) {
       case "IMAGE":
         return (
-          <div className="relative w-full h-full">
+          <div className="relative w-full h-64 bg-black rounded-lg overflow-hidden">
             <Image
               src={finalMediaUrl}
               alt="Photobooth Image"
-              className="rounded-xl shadow-lg object-contain"
+              className="object-cover w-full h-full"
               fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 60vw"
-              priority
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           </div>
         );
       case "VIDEO":
         return (
-          <div className="relative w-full h-full rounded-xl overflow-hidden">
+          <div className="relative w-full h-64 bg-black rounded-lg overflow-hidden">
             <video
               src={finalMediaUrl}
               controls
-              autoPlay
-              loop
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
             >
               Your browser does not support the video tag.
             </video>
@@ -135,45 +137,38 @@ export default function MediaPage() {
         );
       case "GIF":
         return (
-          <div className="relative w-full h-full">
+          <div className="relative w-full h-64 bg-black rounded-lg overflow-hidden">
             <Image
               src={finalMediaUrl}
               alt="Photobooth GIF"
-              className="rounded-xl shadow-lg object-contain"
+              className="object-cover w-full h-full"
               fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 60vw"
-              priority
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           </div>
         );
       default:
-        return <div className="text-red-500">Định dạng không được hỗ trợ</div>;
+        return <div className="text-red-500 p-4">Định dạng không được hỗ trợ</div>;
     }
   };
 
-  // Helper function to get the icon for media type
-  const getMediaTypeIcon = () => {
-    if (!media) return <ImageIcon />;
-
-    switch (media.fileType) {
+  const getMediaTypeIcon = (fileType: string) => {
+    switch (fileType) {
       case "IMAGE":
-        return <ImageIcon className="w-6 h-6" />;
+        return <ImageIcon className="w-5 h-5" />;
       case "VIDEO":
-        return <Film className="w-6 h-6" />;
+        return <Film className="w-5 h-5" />;
       case "GIF":
-        return <Gift className="w-6 h-6" />;
+        return <Gift className="w-5 h-5" />;
       default:
-        return <ImageIcon className="w-6 h-6" />;
+        return <ImageIcon className="w-5 h-5" />;
     }
   };
 
-  // Helper function to get the formatted time since creation
-  const getTimeSince = () => {
-    if (!media) return "";
-
-    const createdAt = new Date(media.createdAt);
+  const getTimeSince = (createdAt: string) => {
+    const created = new Date(createdAt);
     const now = new Date();
-    const diffMs = now.getTime() - createdAt.getTime();
+    const diffMs = now.getTime() - created.getTime();
     const diffMinutes = Math.floor(diffMs / 60000);
 
     if (diffMinutes < 1) return "Vài giây trước";
@@ -210,14 +205,13 @@ export default function MediaPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center h-[70vh]">
             <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-pink-500"></div>
-            <p className="mt-4 text-lg">Đang tải media...</p>
+            <p className="mt-4 text-lg">Đang tải session...</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center h-[70vh] text-center">
             <div className="bg-red-500/20 p-8 rounded-lg">
               <h2 className="text-2xl font-bold text-red-300 mb-4">Lỗi</h2>
               <p className="text-xl">{error}</p>
-              <p className="mt-4">Media này có thể không tồn tại hoặc đã bị xóa.</p>
               <Link
                 href="/"
                 className="mt-6 inline-block px-6 py-3 bg-pink-600 hover:bg-pink-700 rounded-full transition"
@@ -226,36 +220,52 @@ export default function MediaPage() {
               </Link>
             </div>
           </div>
-        ) : media ? (
+        ) : session ? (
           <>
-            {/* Media title */}
-            <div className="flex items-center justify-between mb-4">
+            {/* Session info */}
+            <div className="flex items-center justify-between mb-6">
               <div className="flex items-center">
-                {getMediaTypeIcon()}
-                <h2 className="text-xl font-medium ml-2">
-                  {media.fileType === "IMAGE" ? "Ảnh" : media.fileType === "VIDEO" ? "Video" : "GIF"} từ S Photobooth
+                <h2 className="text-2xl font-bold mr-4">
+                  Media Session: {session.sessionCode}
                 </h2>
+                <span className="bg-pink-600/40 px-3 py-1 rounded-full text-sm">
+                  {session.images.length} media
+                </span>
               </div>
               <div className="text-sm text-gray-300">
-                {getTimeSince()}
+                {getTimeSince(session.createdAt)}
               </div>
             </div>
 
-            {/* Media display */}
-            <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 mb-6 max-h-[70vh] flex items-center justify-center">
-              <div className="relative w-full h-[60vh] max-w-3xl mx-auto">
-                {renderMedia()}
-              </div>
+            {/* Media grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {session.images.map((media) => (
+                <div key={media.id} className="bg-black/20 backdrop-blur-sm rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center text-sm text-gray-300">
+                      {getMediaTypeIcon(media.fileType)}
+                      <span className="ml-2">
+                        {media.fileType === "IMAGE" ? "Ảnh" : 
+                         media.fileType === "VIDEO" ? "Video" : "GIF"}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {getTimeSince(media.createdAt)}
+                    </span>
+                  </div>
+                  {renderMedia(media)}
+                </div>
+              ))}
             </div>
 
             {/* Action buttons */}
             <div className="flex justify-center space-x-4 mt-6">
               <button
-                onClick={handleDownload}
+                onClick={handleDownloadAll}
                 className="flex items-center px-6 py-3 bg-pink-600 hover:bg-pink-700 rounded-full transition"
               >
                 <Download className="mr-2" />
-                Tải xuống
+                Tải tất cả
               </button>
               <button
                 onClick={handleShare}
@@ -270,7 +280,7 @@ export default function MediaPage() {
             <div className="mt-12 text-center">
               <p>Tạo bởi S Photobooth - Lưu giữ khoảnh khắc đẹp</p>
               <p className="text-sm text-gray-400 mt-2">
-                Media này sẽ bị xóa sau 72 giờ
+                Session này sẽ bị xóa sau 72 giờ
               </p>
             </div>
           </>

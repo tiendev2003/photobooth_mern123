@@ -80,8 +80,21 @@ model Image {
   fileType  FileType  @default(IMAGE)
   size      Int?
   duration  Int?
+  sessionId String?   // Link to MediaSession
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  session   MediaSession? @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+}
+
+model MediaSession {
+  id          String   @id @default(uuid())
+  sessionCode String   @unique // Code to access this session
+  images      Image[]  // All media files in this session
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  expiresAt   DateTime // When this session expires
 }
 
 model User {

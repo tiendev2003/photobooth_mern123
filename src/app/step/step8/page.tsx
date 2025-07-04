@@ -1,6 +1,6 @@
 "use client";
 
- 
+
 import HomeButton from "@/app/components/HomeButton";
 import LogoApp from "@/app/components/LogoApp";
 import { useBooth } from "@/lib/context/BoothContext";
@@ -57,9 +57,9 @@ const skinFilters = [
 
 export default function Step8() {
   interface ExtendedCSSStyleDeclaration extends CSSStyleDeclaration {
-    colorAdjust?: string;  
-    webkitPrintColorAdjust?: string; 
-    printColorAdjust: string;  
+    colorAdjust?: string;
+    webkitPrintColorAdjust?: string;
+    printColorAdjust: string;
   }
 
   const router = useRouter();
@@ -72,10 +72,8 @@ export default function Step8() {
     selectedTemplate,
     setSelectedTemplate,
     setImageQrCode,
- 
   } = useBooth();
 
-  // Use this to keep skinFilters and context filter in sync
   const activeSkinFilter = useMemo(() => {
     return skinFilters.find(filter => filter.id === selectedFilter.id) || skinFilters[0];
   }, [selectedFilter]);
@@ -135,7 +133,7 @@ export default function Step8() {
   const skinFilterSliderRef = useRef<Slider | null>(null);
   const frameTemplateSliderRef = useRef<Slider | null>(null);
 
-   const slickSettings = {
+  const slickSettings = {
     dots: false,
     infinite: false,
     speed: 500,
@@ -167,7 +165,7 @@ export default function Step8() {
     ]
   };
 
-   const prevSlide = (sliderRef: React.RefObject<Slider | null>) => {
+  const prevSlide = (sliderRef: React.RefObject<Slider | null>) => {
     sliderRef.current?.slickPrev();
   };
 
@@ -178,7 +176,7 @@ export default function Step8() {
     setIsPrinting(true);
 
     try {
-       const previewContent = printPreviewRef.current;
+      const previewContent = printPreviewRef.current;
       if (!previewContent) {
         alert('Không tìm thấy nội dung để in');
         setIsPrinting(false);
@@ -241,7 +239,7 @@ export default function Step8() {
           body: JSON.stringify({
             "imageUrl": imageData.data.url,
             "fileName": imageData.data.fileName,
-            "printerName": selectedFrame?.isCustom ?  "DS-RX1-Cut": "DS-RX1" ,
+            "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
           }),
         })
           .then((response) => {
@@ -257,18 +255,7 @@ export default function Step8() {
             console.error("Error submitting print job:", error);
           });
 
-        // Check if the browser supports the required APIs for video/GIF generation
-        const supportsMediaGeneration = typeof window !== 'undefined' &&
-          window.MediaRecorder &&
-          HTMLCanvasElement.prototype.captureStream;
 
-        // Generate video and GIF in parallel, but don't block navigation
-        if (supportsMediaGeneration) {
-          // Start media generation in the background
-         
-        } else {
-          console.log("Browser doesn't support media generation APIs, skipping video/GIF creation");
-        }
 
         // Navigate to step 9 after the image is ready
         router.push("/step/step9");
@@ -303,28 +290,19 @@ export default function Step8() {
     try {
       const isCustomFrame = selectedFrame?.isCustom === true;
       const isSquare = selectedFrame?.columns === selectedFrame?.rows;
-      
-      // Match dimensions with what's shown in the preview
-      const desiredWidth = isLandscape ? 2400 : 1800;
-      const desiredHeight = isLandscape ? 1800 : 2400;
-      
-      // Get the current dimensions to calculate proper scaling
+
+      // Optimize resolution for print quality while keeping file size manageable
+      const desiredWidth = isLandscape ? 2400 : 1800;  // Reduced from 3600/2400 to keep file size under limits
+      const desiredHeight = isLandscape ? 1800 : 2400; // Reduced from 2400/3600 to keep file size under limits
+
       const rect = previewContent.getBoundingClientRect();
-      
-      // Calculate a scale factor to ensure high resolution
-      const scaleFactor = Math.max(
-        desiredWidth / rect.width,
-        desiredHeight / rect.height,
-        3 // Minimum scale factor for quality
-      );
+      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 3); // Reduced scale factor
 
       const html2canvas = (await import("html2canvas-pro")).default;
 
-      // Preload all images
       const images = previewContent.querySelectorAll("img");
       await preloadImages(Array.from(images));
 
-      // Apply the same styles during capture as in the preview
       console.log("Bắt đầu tạo ảnh chất lượng cao với HTML2Canvas");
       const canvas = await html2canvas(previewContent, {
         allowTaint: true,
@@ -339,27 +317,25 @@ export default function Step8() {
         foreignObjectRendering: false,
         ignoreElements: (element) => element.tagName === "SCRIPT" || element.classList?.contains("no-print"),
         onclone: (clonedDoc) => {
-          // Ensure we're applying the same styling as in renderPreview
           const container = clonedDoc.querySelector("[data-preview]") as HTMLElement;
           if (container && container.style) {
-            // Apply the same padding and styling from renderPreview
             container.style.backgroundColor = "#FFFFFF";
-            
-            // Match the padding settings from renderPreview
+            container.style.transform = "translateZ(0)";
+            container.style.backfaceVisibility = "hidden";
+
             if (isCustomFrame) {
               container.style.paddingTop = "10%";
               container.style.paddingBottom = "10%";
             } else {
               container.style.paddingTop = isSquare && selectedFrame?.columns === 1 ? "20%" :
-                                          isSquare && selectedFrame?.columns === 2 ? "10%" : "5%";
+                isSquare && selectedFrame?.columns === 2 ? "10%" : "5%";
               container.style.paddingBottom = "10%";
             }
-            
-            // Match the horizontal padding
+
             container.style.paddingLeft = isLandscape ? "5%" : "10%";
             container.style.paddingRight = isLandscape ? "5%" : "10%";
-            
-            // Maintain proper aspect ratio and dimensions
+            container.style.paddingTop = isLandscape ? "5%" : "10%";
+
             if (isCustomFrame) {
               container.style.aspectRatio = "1/3";
             } else if (isSquare && selectedFrame?.columns === 1) {
@@ -367,45 +343,56 @@ export default function Step8() {
             } else {
               container.style.aspectRatio = isLandscape ? "3/2" : "2/3";
             }
-            
-            container.style.transform = "translateZ(0)";
-            container.style.backfaceVisibility = "hidden";
           }
-          
-          // Remove any filter classes from images before capturing - we'll apply filters server-side
+
           const images = clonedDoc.querySelectorAll("img");
           images.forEach((img) => {
-            // Remove filter classes while keeping other classes
-            if (img.className && selectedFilter?.className) {
-              const classes = img.className.split(' ').filter(cls =>
-                !selectedFilter.className.split(' ').includes(cls));
-              img.className = classes.join(' ');
-            }
-
+            // Ensure high-quality rendering
             img.style.imageRendering = "crisp-edges";
             img.style.imageRendering = "-webkit-optimize-contrast";
             const imgStyle = img.style as ExtendedCSSStyleDeclaration;
             imgStyle.colorAdjust = "exact";
             imgStyle.webkitPrintColorAdjust = "exact";
             imgStyle.printColorAdjust = "exact";
+
+            // Apply CSS filters directly as a filter string
+            if (selectedFilter?.className) {
+              // Convert className to a valid CSS filter string
+              const filterString = selectedFilter.className
+                .split(" ")
+                .filter((cls) => cls.includes("-"))
+                .map((cls) => {
+                  const [prop, val] = cls.split("-");
+                  if (["brightness", "contrast", "saturate"].includes(prop)) {
+                    return `${prop}(${val}%)`;
+                  } else if (prop === "hue-rotate") {
+                    return `${prop}(${val})`;
+                  } else if (prop === "blur") {
+                    return `${prop}(${val})`;
+                  } else if (prop === "sepia") {
+                    return `${prop}(1)`; // Sepia is a boolean-like filter in CSS
+                  }
+                  return "";
+                })
+                .filter(Boolean)
+                .join(" ");
+              img.style.filter = filterString;
+            }
           });
-          
-          // Ensure frame template overlay is properly captured
+
           const overlayElement = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-20 img");
           if (overlayElement) {
             (overlayElement as HTMLElement).style.objectFit = "contain";
             (overlayElement as HTMLElement).style.width = "100%";
             (overlayElement as HTMLElement).style.height = "100%";
           }
-          
-          // Apply grid settings for custom frame
+
           if (isCustomFrame) {
             const gridElement = clonedDoc.querySelector(".grid");
             if (gridElement) {
               gridElement.className = "relative z-10 grid grid-cols-1 gap-[5%]";
             }
           } else {
-            // Apply grid settings for regular frame
             const gridElement = clonedDoc.querySelector(".grid");
             if (gridElement && selectedFrame) {
               gridElement.className = "relative z-10 grid gap-[calc(2.5%*3/2)]";
@@ -415,69 +402,6 @@ export default function Step8() {
         },
       });
       console.log("HTML2Canvas đã tạo ảnh cơ bản thành công");
-
-      // Create a temporary canvas for working with the image
-      const tempCanvas = document.createElement("canvas");
-      tempCanvas.width = canvas.width;
-      tempCanvas.height = canvas.height;
-      const tempCtx = tempCanvas.getContext("2d");
-      if (!tempCtx) throw new Error("Không thể tạo temporary canvas context");
-
-      // Draw the base image to the temporary canvas
-      tempCtx.drawImage(canvas, 0, 0);
-
-      // Get the image data as a blob
-      const imageBlob = await new Promise<Blob>((resolve) => {
-        tempCanvas.toBlob((blob) => {
-          resolve(blob!);
-        }, "image/jpeg", 0.95);
-      });
-
-      let processedImageUrl: string;
-
-      // If a filter is selected, send to server for processing
-      if (selectedFilter?.id && selectedFilter.id !== "none") {
-        console.log(`Áp dụng filter "${selectedFilter.id}" với server-side processing`);
-
-        // Find the filter in skinFilters array for more accurate processing
-        const skinFilter = skinFilters.find(filter => filter.id === selectedFilter.id);
-        const filterToApply = skinFilter ? skinFilter.id : selectedFilter.id;
-
-        // Create form data with the image and filter type
-        const formData = new FormData();
-        formData.append("image", imageBlob);
-        formData.append("filterType", filterToApply);
-
-        // Send to the server for filter processing
-        const response = await fetch("/api/filters", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error(`Server không thể xử lý filter: ${response.statusText}`);
-        }
-
-        // Get the processed image as a blob
-        const processedImageBlob = await response.blob();
-        processedImageUrl = URL.createObjectURL(processedImageBlob);
-        console.log("Server đã xử lý filter thành công");
-      } else {
-        // No filter needed
-        processedImageUrl = URL.createObjectURL(imageBlob);
-        console.log("Không cần áp dụng filter");
-      }
-
-      // Load the processed image
-      const processedImage = document.createElement('img');
-      processedImage.src = processedImageUrl;
-      await new Promise<void>((resolve) => {
-        processedImage.onload = () => resolve();
-        processedImage.onerror = () => {
-          console.error("Lỗi khi tải ảnh đã xử lý");
-          resolve();
-        };
-      });
 
       // Create the final canvas with the desired dimensions
       const finalCanvas = document.createElement("canvas");
@@ -496,14 +420,67 @@ export default function Step8() {
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
 
-      // Draw the processed image onto the final canvas
-      // Maintain the same aspect ratio and proportions as in the preview
-      ctx.drawImage(processedImage, 0, 0, processedImage.width, processedImage.height, 0, 0, desiredWidth, desiredHeight);
+      if (isCustomFrame) {
+        // Custom frame: Render two identical images side by side to create 6x4 in layout
+        const singleImageWidth = desiredWidth / 2;
+        const singleImageHeight = desiredHeight;
 
-      // Release the object URL to prevent memory leaks
-      URL.revokeObjectURL(processedImageUrl);
+        // Calculate dimensions to fit the image
+        const aspectRatio = canvas.width / canvas.height;
+        const targetAspectRatio = singleImageWidth / singleImageHeight;
 
-      // Get the final high quality image
+        let drawWidth = singleImageWidth;
+        let drawHeight = singleImageHeight;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (aspectRatio > targetAspectRatio) {
+          drawHeight = singleImageWidth / aspectRatio;
+          offsetY = (singleImageHeight - drawHeight) / 2;
+        } else {
+          drawWidth = singleImageHeight * aspectRatio;
+          offsetX = (singleImageWidth - drawWidth) / 2;
+        }
+
+        // Draw first image (left)
+        ctx.drawImage(
+          canvas,
+          0, 0, canvas.width, canvas.height,
+          offsetX, offsetY, drawWidth, drawHeight
+        );
+
+        // Draw second image (right)
+        ctx.drawImage(
+          canvas,
+          0, 0, canvas.width, canvas.height,
+          singleImageWidth + offsetX, offsetY, drawWidth, drawHeight
+        );
+      } else {
+        // Regular frame: Render a single image
+        const aspectRatio = canvas.width / canvas.height;
+        const targetAspectRatio = desiredWidth / desiredHeight;
+
+        let drawWidth = desiredWidth;
+        let drawHeight = desiredHeight;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        if (aspectRatio > targetAspectRatio) {
+          drawHeight = desiredWidth / aspectRatio;
+          offsetY = (desiredHeight - drawHeight) / 2;
+        } else {
+          drawWidth = desiredHeight * aspectRatio;
+          offsetX = (desiredWidth - drawWidth) / 2;
+        }
+
+        ctx.drawImage(
+          canvas,
+          0, 0, canvas.width, canvas.height,
+          offsetX, offsetY, drawWidth, drawHeight
+        );
+      }
+
+      // Optimize image format and quality for good balance between quality and file size
       const highQualityImageUrl = finalCanvas.toDataURL("image/jpeg", quality);
       console.log("Ảnh đã được tạo với độ phân giải:", desiredWidth, "x", desiredHeight);
       return highQualityImageUrl;
@@ -512,9 +489,9 @@ export default function Step8() {
       alert("❌ Có lỗi xảy ra khi tạo ảnh. Vui lòng thử lại.");
     }
   };
- 
+
   const handleFilterSelect = (filter: typeof skinFilters[0]) => {
-     const convertedFilter = {
+    const convertedFilter = {
       id: filter.id,
       name: filter.name,
       className: filter.className
@@ -573,8 +550,7 @@ export default function Step8() {
     if (!selectedFrame) return null;
     const commonClasses = "mx-auto overflow-hidden shadow-md";
 
-    // Determine if the frame is landscape based on its columns and rows
-    // For a landscape frame, columns > rows (e.g., 3x2 is landscape)
+
     const isLandscape = selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom;
     const isSquare = selectedFrame.columns === selectedFrame.rows;
 
@@ -607,7 +583,7 @@ export default function Step8() {
             selectedFrame.isCustom ? "pb-[10%] pt-[10%]" : "pb-[10%] pt-[5%]",
             isSquare && selectedFrame.columns == 2 ? "pt-[10%]" : "",
             isSquare && selectedFrame.columns == 1 ? "pt-[20%]" : "",
-            isLandscape ? "px-[5%]" : "px-[10%]"
+            isLandscape ? "px-[5%] pt-[5%]" : "px-[10%] pt-[10%]"
           )}
           style={{
             height: previewHeight,
@@ -672,7 +648,7 @@ export default function Step8() {
       document.head.removeChild(style);
     };
   }, []);
-
+  
   return (
     <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white  ">
       {/* Background graphics */}
@@ -704,7 +680,7 @@ export default function Step8() {
           {/* Left column - Frame preview */}
           <div className="w-full lg:w-2/5 rounded-lg flex flex-col items-center justify-center">
             <div className="w-full flex justify-center">
-              <div className={`w-full flex ${selectedFrame && selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom ? 'max-w-xl' : 'max-w-md'} mx-auto`}>
+              <div className={` `}>
                 {renderPreview()}
               </div>
             </div>
@@ -918,9 +894,9 @@ export default function Step8() {
             )}
           </div>
         </button>
-
-
       </div>
+
+
     </div>
   );
 }

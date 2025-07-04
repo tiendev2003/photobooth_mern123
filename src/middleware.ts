@@ -11,6 +11,8 @@ interface JWTPayload {
 
 // Paths that don't require authentication
 const publicPaths = [
+  "/api/media-session",
+  "/api/media-session-temp",
   "/api/auth/login",
   "/api/auth/register",
   "/api/frame-types",
@@ -34,6 +36,9 @@ const publicPaths = [
   "/step/step8",
   "/step/step9",
   "/step/step10",
+  "/session", // Add session routes
+  "/session-temp", // Add temp session routes
+  "/media", // Add media routes
 ];
 
 // Middleware function

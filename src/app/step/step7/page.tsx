@@ -132,7 +132,7 @@ export default function Step7() {
     const previewHeight = isLandscape ? "4in" : "6in";
     const previewWidth = isLandscape ? "6in" : "4in";
     const aspectRatio = isLandscape ? "3/2" : "2/3";
-
+    console.log("isLandscape:", isLandscape);
     return (
       <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "2in" : previewWidth }} >
         <div
@@ -142,7 +142,7 @@ export default function Step7() {
             selectedFrame.isCustom ? "pb-[10%] pt-[10%]" : "pb-[10%] pt-[5%]",
             isSquare && selectedFrame.columns == 2 ? "pt-[10%]" : "",
             isSquare &&  selectedFrame.columns == 1 ? "pt-[20%]" : "",
-            isLandscape ? "px-[5%]" : "px-[10%]"
+            isLandscape ? "px-[5%] pt-[5%]" : "px-[10%] pt-[10%]"
           )}
           style={{
             height: previewHeight,

@@ -111,6 +111,35 @@ const nextConfig = {
   reactStrictMode: true,
   // Enable standalone output for improved Docker support
   output: 'standalone',
+  
+  // Configure images for Next.js Image component
+  images: {
+    domains: ['localhost'],
+    remotePatterns: [
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3000',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'localhost',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        port: '3000',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**',
+        pathname: '/uploads/**',
+      },
+    ],
+  },
 };
 
 module.exports = withPWA(nextConfig);

@@ -79,7 +79,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CleanupScheduler />
-           <BoothProvider>
+            <BoothProvider>
             {children}
            </BoothProvider>
         </AuthProvider>

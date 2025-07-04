@@ -48,7 +48,7 @@ export async function generateToken(user: User): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("24h")
+    // .setExpirationTime("24h") // Removed expiration - token never expires
     .sign(secretKey);
 }
 

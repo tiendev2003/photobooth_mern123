@@ -3,6 +3,7 @@
 import { useAuth } from '@/lib/context/AuthContext';
 import { useState } from 'react';
 import { Menu } from 'react-feather';
+import LogoutButton from './LogoutButton';
 import Sidebar from './Sidebar';
 
 interface AdminLayoutProps {
@@ -33,8 +34,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             
             <div className="flex-1 px-4 md:px-0"></div>
             
-            <div className="flex items-center">
-              <div className="ml-3 relative">
+            <div className="flex items-center space-x-4">
+               <LogoutButton />
+              <div className="relative">
                 <div className="flex items-center">
                   <span className="hidden md:inline-block mr-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                     {user?.name}

@@ -25,6 +25,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isAdmin, setIsAdmin] = useState(false);
   // Use ref instead of state to avoid render cycles
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Removed idle timeout functionality as tokens should persist indefinitely
 
   // Load user and token from localStorage and verify token validity on initial render
   useEffect(() => {
@@ -92,11 +93,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
 
-    // Clear any heartbeat interval
+    // Clear any timers
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
     }
+    // Removed idle timeout cleanup as it's no longer needed
   }, [user, token]);
 
   // Setup token verification heartbeat when token changes
@@ -108,6 +110,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     if (token) {
+      // More frequent heartbeat (every 5 minutes instead of 50 minutes)
       const interval = setInterval(async () => {
         try {
           const response = await fetch('/api/auth/verify', {
@@ -119,13 +122,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
           });
 
           if (!response.ok) {
-            console.log('Session invalidated: Another login detected');
+            console.log('Session invalidated: Token no longer valid');
             logout();
           }
         } catch (error) {
           console.error('Heartbeat verification failed:', error);
         }
-      }, 3000000);
+      }, 300000); // 5 minutes
 
       heartbeatIntervalRef.current = interval;
     }
@@ -136,6 +139,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     };
   }, [token, logout]);
+
+  // Removed idle timeout and activity tracking - tokens persist indefinitely
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
