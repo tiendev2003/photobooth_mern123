@@ -192,7 +192,8 @@ export async function POST(request: NextRequest) {
     const name = formData.get('name') as string;
     const frameTypeId = formData.get('frameTypeId') as string;
     const storeId = formData.get('storeId') as string;
-    const isGlobal = formData.get('isGlobal') === 'true';
+    const isGlobalValue = formData.get('isGlobal') as string;
+    const isGlobal = isGlobalValue === 'true';
     const backgroundFile = formData.get('backgroundFile') as File;
     const overlayFile = formData.get('overlayFile') as File;
 
@@ -201,6 +202,7 @@ export async function POST(request: NextRequest) {
       frameTypeId,
       storeId,
       isGlobal,
+      isGlobalValue,
       backgroundFile: backgroundFile ? backgroundFile.name : 'null',
       overlayFile: overlayFile ? overlayFile.name : 'null'
     });
@@ -236,8 +238,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Nếu không phải global template thì phải có storeId
-    if (!isGlobal && !storeId) {
-      console.log('Store validation failed:', { isGlobal, storeId });
+    if (!isGlobal && (!storeId || storeId.trim() === '')) {
+      console.log('Store validation failed:', { isGlobal, storeId: storeId || 'null' });
       return NextResponse.json(
         { error: "storeId is required for non-global templates" },
         { status: 400 }
@@ -277,7 +279,7 @@ export async function POST(request: NextRequest) {
         background: backgroundUpload.path,
         overlay: overlayPath,
         frameTypeId,
-        storeId: isGlobal ? null : storeId,
+        storeId: isGlobal ? null : (storeId || null),
         isGlobal,
         isActive: true
       },

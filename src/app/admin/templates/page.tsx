@@ -285,8 +285,10 @@ export default function TemplatesManagement() {
     
     // Validate store selection for admin users
     if (user?.role === 'ADMIN' && !formData.isGlobal && !formData.storeId) {
-      setError('Please select a store for non-global templates');
-      return;
+      const shouldProceed = confirm('No store selected. This template will be created as a global template. Do you want to continue?');
+      if (!shouldProceed) {
+        return;
+      }
     }
     
     try {
@@ -307,28 +309,51 @@ export default function TemplatesManagement() {
       formDataToSubmit.append('frameTypeId', formData.frameTypeId);
       formDataToSubmit.append('isActive', formData.isActive.toString());
       
+      // Debug: Log what we're about to submit
+      console.log('About to submit form data:', {
+        name: formData.name,
+        frameTypeId: formData.frameTypeId,
+        isActive: formData.isActive,
+        isGlobal: formData.isGlobal,
+        storeId: formData.storeId,
+        userRole: user?.role
+      });
+      
       // Handle store vs global template
       if (user?.role === 'ADMIN') {
         if (formData.isGlobal) {
           formDataToSubmit.append('isGlobal', 'true');
+          console.log('Setting as global template');
         } else {
           // For non-global templates, storeId is required
-          formDataToSubmit.append('storeId', formData.storeId);
+          if (formData.storeId) {
+            formDataToSubmit.append('storeId', formData.storeId);
+            formDataToSubmit.append('isGlobal', 'false');
+            console.log('Setting as store-specific template with storeId:', formData.storeId);
+          } else {
+            // If no storeId selected, make it global by default
+            formDataToSubmit.append('isGlobal', 'true');
+            console.log('No storeId selected, defaulting to global template');
+          }
         }
       } else if (user?.role === 'MANAGER') {
         // For managers, always use their store ID
         const userStoreId = (user as UserWithStore).storeId || formData.storeId;
         if (userStoreId) {
           formDataToSubmit.append('storeId', userStoreId);
+          formDataToSubmit.append('isGlobal', 'false');
+          console.log('Manager: Setting as store-specific template with storeId:', userStoreId);
+        } else {
+          // If no storeId available, make it global
+          formDataToSubmit.append('isGlobal', 'true');
+          console.log('Manager: No storeId available, defaulting to global template');
         }
       }
       
-      if (backgroundFile) {
-        formDataToSubmit.append('backgroundFile', backgroundFile);
-      }
-      
-      if (overlayFile) {
-        formDataToSubmit.append('overlayFile', overlayFile);
+      // Debug: Log all FormData entries
+      console.log('FormData entries:');
+      for (const [key, value] of formDataToSubmit.entries()) {
+        console.log(`${key}:`, value);
       }
       
       const url = isEditing ? `/api/frame-templates/${formData.id}` : '/api/frame-templates';

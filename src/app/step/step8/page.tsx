@@ -79,6 +79,7 @@ export default function Step8() {
     videoQrCode,
     gifQrCode,
   } = useBooth();
+  console.log("Step 8 - Current selected frame:", videoQrCode, gifQrCode, imageQrCode, selectedTemplate);
 
   const activeSkinFilter = useMemo(() => {
     return skinFilters.find(filter => filter.id === selectedFilter.id) || skinFilters[0];
@@ -513,6 +514,14 @@ export default function Step8() {
             }
           });
 
+          // Ensure frame background is rendered properly
+          const backgroundElement = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-0 img");
+          if (backgroundElement) {
+            (backgroundElement as HTMLElement).style.objectFit = "contain";
+            (backgroundElement as HTMLElement).style.width = "100%";
+            (backgroundElement as HTMLElement).style.height = "100%";
+          }
+
           const overlayElement = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-20 img");
           if (overlayElement) {
             (overlayElement as HTMLElement).style.objectFit = "contain";
@@ -689,7 +698,6 @@ export default function Step8() {
     if (!selectedFrame) return null;
     const commonClasses = "mx-auto overflow-hidden shadow-md";
 
-
     const isLandscape = selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom;
     const isSquare = selectedFrame.columns === selectedFrame.rows;
 
@@ -698,7 +706,20 @@ export default function Step8() {
     const previewWidth = isLandscape ? "10.8in" : "7.2in";
     const aspectRatio = isLandscape ? "3/2" : "2/3";
 
-    // Frame overlay using selectedTemplate
+    // Frame background (ở phía sau - z-index thấp)
+    const frameBackground = selectedTemplate?.background ? (
+      <div className="pointer-events-none absolute inset-0 z-0">
+        <Image
+          src={selectedTemplate.background}
+          alt="Frame Background"
+          className="h-full w-full object-contain"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      </div>
+    ) : null;
+
+    // Frame overlay (ở phía trước - z-index cao)
     const frameOverlay = selectedTemplate?.overlay ? (
       <div className="pointer-events-none absolute inset-0 z-20">
         <Image
@@ -729,6 +750,7 @@ export default function Step8() {
             aspectRatio: selectedFrame.isCustom ? "1/3" : (isSquare && selectedFrame.columns == 1) ? "2/3" : aspectRatio,
           }}
         >
+          {frameBackground}
           {selectedFrame.isCustom ? (
             <div className="relative z-10 grid grid-cols-1 gap-[5%]">
               {Array.from({ length: selectedFrame.rows }, (_, idx) => renderCell(idx))}
@@ -981,13 +1003,28 @@ export default function Step8() {
                             }`}
                         >
                           <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-indigo-900/50 to-purple-900/50">
+                            {/* Show background if available, otherwise show overlay */}
                             <Image
-                              src={template.overlay || template.overlay}
+                              src={template.background || template.overlay || "/placeholder.svg"}
                               alt={template.name}
                               className="w-full h-full object-cover"
                               width={128}
                               height={128}
                             />
+
+                            {/* Indicator for template type */}
+                            <div className="absolute top-1 right-1 flex gap-1">
+                              {template.background && (
+                                <div className="w-4 h-4 bg-blue-500/80 backdrop-blur-sm rounded-full flex items-center justify-center">
+                                  <span className="text-xs text-white">B</span>
+                                </div>
+                              )}
+                              {template.overlay && (
+                                <div className="w-4 h-4 bg-pink-500/80 backdrop-blur-sm rounded-full flex items-center justify-center">
+                                  <span className="text-xs text-white">O</span>
+                                </div>
+                              )}
+                            </div>
 
                             {/* Selected indicator */}
                             {selectedTemplate?.id === template.id && (
@@ -1006,6 +1043,10 @@ export default function Step8() {
                             <span className="text-xs font-medium text-white">
                               {template.name}
                             </span>
+                            <div className="text-xs text-white/70 mt-1">
+                              {template.background && template.overlay ? "BG + Overlay" :
+                                template.background ? "Background" : "Overlay"}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1043,8 +1084,6 @@ export default function Step8() {
           </div>
         </button>
       </div>
-
-
     </div>
   );
 }

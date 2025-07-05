@@ -364,8 +364,8 @@ async function main() {
     {
       name: 'Template Sài Gòn - Sáng Tạo',
       filename: 'saigon_creative_1x4.png',
-      background: '/templates/store2/bg_creative_1x4.png',
-      overlay: '/templates/store2/overlay_creative_1x4.png',
+      background: '/uploads/images/1.png',
+      overlay: '',
       frameTypeId: createdFrameTypes[5].id, // 1x4 Dọc
     },
   ];

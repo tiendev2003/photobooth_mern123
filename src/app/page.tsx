@@ -50,7 +50,7 @@ export default function Home() {
         </h1>
         {/* xin chào tiếng hàn */}
         <h1 className="text-xl md:text-6xl font-bold text-center mt-8 glow-text">
-          "안녕 하세요" (annyeong haseyo)
+          &#34;안녕 하세요&#34; (annyeong haseyo)
         </h1>
 
       </main>
