@@ -110,6 +110,8 @@ export const useBooth = () => {
     
     // Clear any localStorage items related to the booth
     localStorage.removeItem("imageQrCode");
+    localStorage.removeItem("videoQrCode");
+    localStorage.removeItem("gifQrCode");
   };
   
   return { ...context, clearAllBoothData };

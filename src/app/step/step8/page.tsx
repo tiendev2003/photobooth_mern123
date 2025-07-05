@@ -335,8 +335,6 @@ export default function Step8() {
             console.error("Error submitting print job:", error);
           });
 
-
-
         // Navigate to step 9 after the image is ready
         router.push("/step/step9");
       } catch (error) {
@@ -375,18 +373,22 @@ export default function Step8() {
       const isSquare = selectedFrame?.columns === selectedFrame?.rows;
 
       // Optimize resolution for print quality while keeping file size manageable
-      const desiredWidth = isLandscape ? 2400 : 1800;  // Reduced from 3600/2400 to keep file size under limits
-      const desiredHeight = isLandscape ? 1800 : 2400; // Reduced from 2400/3600 to keep file size under limits
+      const desiredWidth = isLandscape ? 2400 : 1600;  // Reduced from 3600/2400 to keep file size under limits
+      const desiredHeight = isLandscape ? 1600 : 2400; // Reduced from 2400/3600 to keep file size under limits
 
       const rect = previewContent.getBoundingClientRect();
-      const scaleFactor = Math.max(desiredWidth / (isCustomFrame ? rect.width * 2 : rect.width), 3); // Reduced scale factor
+      // Improved scale factor calculation based on target dimensions
+      const scaleFactor = Math.max(
+        desiredWidth / rect.width, 
+        desiredHeight / rect.height,
+        3
+      ); // Ensure at least 3x scaling for quality
 
-      const html2canvas = (await import("html2canvas-pro")).default;
-
+      // Pre-load and optimize all images to ensure high-quality rendering
       const images = previewContent.querySelectorAll("img");
       await preloadImages(Array.from(images));
 
-      console.log("Bắt đầu tạo ảnh chất lượng cao với HTML2Canvas");
+      console.log("Starting high-quality image generation with HTML2Canvas");
 
       // Create QR code element if session URL exists
       let qrCodeElement: HTMLElement | null = null;
@@ -423,7 +425,7 @@ export default function Step8() {
           console.log('QR code created successfully');
         } catch (error) {
           console.error('Error generating QR code:', error);
-          // Fallback: tạo một placeholder text
+          // Fallback for QR code errors
           const fallbackText = document.createElement('div');
           fallbackText.innerText = 'QR';
           fallbackText.style.fontSize = '10px';
@@ -438,6 +440,9 @@ export default function Step8() {
         console.log('No session URL available for QR code');
       }
 
+      const html2canvas = (await import("html2canvas-pro")).default;
+      
+      // Enhanced HTML2Canvas configuration for better quality
       const canvas = await html2canvas(previewContent, {
         allowTaint: true,
         useCORS: true,
@@ -449,14 +454,20 @@ export default function Step8() {
         imageTimeout: 30000,
         removeContainer: true,
         foreignObjectRendering: false,
-        ignoreElements: (element) => element.tagName === "SCRIPT" || element.classList?.contains("no-print"),
+        ignoreElements: (element) => 
+          element.tagName === "SCRIPT" || 
+          element.classList?.contains("no-print"),
         onclone: (clonedDoc) => {
           const container = clonedDoc.querySelector("[data-preview]") as HTMLElement;
           if (container && container.style) {
+            // Apply optimized styles to container
             container.style.backgroundColor = "#FFFFFF";
             container.style.transform = "translateZ(0)";
             container.style.backfaceVisibility = "hidden";
+            container.style.position = "relative";
+            container.style.overflow = "hidden";
 
+            // Adjust padding based on frame type and orientation
             if (isCustomFrame) {
               container.style.paddingTop = "10%";
               container.style.paddingBottom = "10%";
@@ -466,10 +477,11 @@ export default function Step8() {
               container.style.paddingBottom = "10%";
             }
 
+            // Adjust horizontal padding based on orientation
             container.style.paddingLeft = isLandscape ? "5%" : "10%";
             container.style.paddingRight = isLandscape ? "5%" : "10%";
-            container.style.paddingTop = isLandscape ? "5%" : "10%";
 
+            // Set correct aspect ratio for different frame types
             if (isCustomFrame) {
               container.style.aspectRatio = "1/3";
             } else if (isSquare && selectedFrame?.columns === 1) {
@@ -479,42 +491,44 @@ export default function Step8() {
             }
           }
 
+          // Process all images for optimal quality
           const images = clonedDoc.querySelectorAll("img");
           images.forEach((img) => {
             // Ensure high-quality rendering
             img.style.imageRendering = "crisp-edges";
             img.style.imageRendering = "-webkit-optimize-contrast";
+            
+            // Apply color adjustments for print
             const imgStyle = img.style as ExtendedCSSStyleDeclaration;
             imgStyle.colorAdjust = "exact";
             imgStyle.webkitPrintColorAdjust = "exact";
             imgStyle.printColorAdjust = "exact";
 
-            // Apply CSS filters directly as a filter string
+            // Apply filter effects if selected
             if (selectedFilter?.className) {
-              // Convert className to a valid CSS filter string
-              const filterString = selectedFilter.className
-                .split(" ")
+              // Parse CSS class names into proper filter string
+              const filterClasses = selectedFilter.className.split(" ");
+              const filterValues = filterClasses
                 .filter((cls) => cls.includes("-"))
                 .map((cls) => {
                   const [prop, val] = cls.split("-");
                   if (["brightness", "contrast", "saturate"].includes(prop)) {
                     return `${prop}(${val}%)`;
-                  } else if (prop === "hue-rotate") {
-                    return `${prop}(${val})`;
                   } else if (prop === "blur") {
                     return `${prop}(${val})`;
                   } else if (prop === "sepia") {
-                    return `${prop}(1)`; // Sepia is a boolean-like filter in CSS
+                    return `${prop}(1)`;
                   }
                   return "";
                 })
                 .filter(Boolean)
                 .join(" ");
-              img.style.filter = filterString;
+                
+              img.style.filter = filterValues;
             }
           });
 
-          // Ensure frame background is rendered properly
+          // Optimize frame background rendering
           const backgroundElement = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-0 img");
           if (backgroundElement) {
             (backgroundElement as HTMLElement).style.objectFit = "contain";
@@ -522,6 +536,7 @@ export default function Step8() {
             (backgroundElement as HTMLElement).style.height = "100%";
           }
 
+          // Optimize frame overlay rendering
           const overlayElement = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-20 img");
           if (overlayElement) {
             (overlayElement as HTMLElement).style.objectFit = "contain";
@@ -529,6 +544,7 @@ export default function Step8() {
             (overlayElement as HTMLElement).style.height = "100%";
           }
 
+          // Configure grid layout based on frame type
           if (isCustomFrame) {
             const gridElement = clonedDoc.querySelector(".grid");
             if (gridElement) {
@@ -549,64 +565,68 @@ export default function Step8() {
         previewContent.removeChild(qrCodeElement);
       }
 
-      console.log("HTML2Canvas đã tạo ảnh cơ bản thành công");
+      console.log("HTML2Canvas basic capture completed successfully");
 
       // Create the final canvas with the desired dimensions
       const finalCanvas = document.createElement("canvas");
       finalCanvas.width = desiredWidth;
       finalCanvas.height = desiredHeight;
+      
+      // Get canvas context with optimized settings for print quality
       const ctx = finalCanvas.getContext("2d", {
         alpha: true,
         willReadFrequently: false,
         desynchronized: false,
       });
-      if (!ctx) throw new Error("Không thể tạo 2D context");
+      
+      if (!ctx) throw new Error("Cannot create 2D context");
 
-      // Setup the final canvas
+      // Setup the final canvas with white background
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, desiredWidth, desiredHeight);
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
 
       if (isCustomFrame) {
-        // Custom frame: Render two identical images side by side to create 6x4 in layout
+        // Custom frame: Render two identical images side by side for 6x4 layout
         const singleImageWidth = desiredWidth / 2;
         const singleImageHeight = desiredHeight;
-
-        // For custom frames, we want the image to fill the entire space without any padding
-        // This ensures no gaps between the images when they're placed side by side
         
-        // Draw first image (left) - use the full half of the canvas width
+        // Draw first image (left)
         ctx.drawImage(
           canvas,
           0, 0, canvas.width, canvas.height,
           0, 0, singleImageWidth, singleImageHeight
         );
 
-        // Draw second image (right) - place it exactly next to the first image
+        // Draw second image (right) - exact duplicate
         ctx.drawImage(
           canvas,
           0, 0, canvas.width, canvas.height,
           singleImageWidth, 0, singleImageWidth, singleImageHeight
         );
       } else {
-        // Regular frame: Render a single image
+        // Regular frame: Render a single image centered and scaled
         const aspectRatio = canvas.width / canvas.height;
         const targetAspectRatio = desiredWidth / desiredHeight;
 
+        // Calculate dimensions to maintain proper aspect ratio
         let drawWidth = desiredWidth;
         let drawHeight = desiredHeight;
         let offsetX = 0;
         let offsetY = 0;
 
         if (aspectRatio > targetAspectRatio) {
+          // Canvas is wider than target - fit to width
           drawHeight = desiredWidth / aspectRatio;
           offsetY = (desiredHeight - drawHeight) / 2;
         } else {
+          // Canvas is taller than target - fit to height
           drawWidth = desiredHeight * aspectRatio;
           offsetX = (desiredWidth - drawWidth) / 2;
         }
 
+        // Draw the image centered
         ctx.drawImage(
           canvas,
           0, 0, canvas.width, canvas.height,
@@ -614,13 +634,13 @@ export default function Step8() {
         );
       }
 
-      // Optimize image format and quality for good balance between quality and file size
+      // Generate optimized JPEG with specified quality
       const highQualityImageUrl = finalCanvas.toDataURL("image/jpeg", quality);
-      console.log("Ảnh đã được tạo với độ phân giải:", desiredWidth, "x", desiredHeight);
+      console.log(`Image generated successfully at ${desiredWidth}x${desiredHeight} resolution`);
       return highQualityImageUrl;
     } catch (error) {
-      console.error("Lỗi khi tạo ảnh chất lượng cao:", error);
-      alert("❌ Có lỗi xảy ra khi tạo ảnh. Vui lòng thử lại.");
+      console.error("Error creating high-quality image:", error);
+      alert("❌ An error occurred while creating the image. Please try again.");
     }
   };
 
@@ -824,12 +844,8 @@ export default function Step8() {
       <div className="grid grid-cols-2 gap-6 mx-32 z-30">
 
         <div className="lg:col-span-1 flex flex-col gap-6">
-          <div className="w-full flex justify-center">
-            <div className={` `}>
-              {renderPreview()}
-            </div>
-          </div>
-        </div>
+               {renderPreview()}
+         </div>
 
         <div className="lg:col-span-1">
           <div className=" bg-zinc-200 rounded-2xl p-2 border border-indigo-500/30  ">
