@@ -1637,6 +1637,7 @@ export default function Step8() {
           alt="Frame Background"
           className="h-full w-full object-contain"
           fill
+          unoptimized 
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
       </div>
@@ -1650,6 +1651,7 @@ export default function Step8() {
           alt="Frame Overlay"
           className="h-full w-full object-contain"
           fill
+          unoptimized 
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
       </div>
@@ -1921,6 +1923,7 @@ export default function Step8() {
                               className="w-full h-full object-cover"
                               width={128}
                               height={128}
+                              unoptimized 
                             />
 
                             {/* Indicator for template type */}

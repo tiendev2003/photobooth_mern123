@@ -1,6 +1,5 @@
 "use client";
 
-import { getSanitizedImageUrl, handleImageError } from "@/lib/imageUtils";
 import { ArrowLeft, Download, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -104,16 +103,10 @@ export default function MediaSessionTempPage() {
       return (
         <div className="relative w-full bg-black rounded-lg overflow-hidden">
           <video
-            src={getSanitizedImageUrl(mediaUrl)}
+            src={mediaUrl}
             controls
             className="w-full h-auto max-h-[80vh] object-contain"
             style={{ minHeight: '200px' }}
-            onError={(e) => {
-              console.error('Video failed to load:', mediaUrl);
-              if (mediaUrl.includes('/_nextjs/')) {
-                (e.target as HTMLVideoElement).src = mediaUrl.replace('/_nextjs/', '/');
-              }
-            }}
           >
             Your browser does not support the video tag.
           </video>
@@ -123,10 +116,8 @@ export default function MediaSessionTempPage() {
       return (
         <div className="relative w-full bg-black rounded-lg overflow-hidden">
           <Image
-            src={getSanitizedImageUrl(mediaUrl)}
+            src={mediaUrl}
             alt={`Photobooth ${isGif ? 'GIF' : 'Image'} ${index + 1}`}
-            unoptimized={mediaUrl.includes('/_nextjs/')}
-            onError={(e) => handleImageError(e)}
             className="w-full h-auto max-h-[80vh] object-contain"
             width={800}
             height={600}
