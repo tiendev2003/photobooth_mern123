@@ -132,7 +132,7 @@ export default function CouponsManagement() {
 
   const generateCouponCode = () => {
     let result = '';
-    const length = 10;
+    const length = 4;
     for (let i = 0; i < length; i++) {
       result += Math.floor(Math.random() * 10).toString();
     }
@@ -439,8 +439,8 @@ export default function CouponsManagement() {
                       setFormData(prev => ({ ...prev, code: value }));
                     }}
                     required
-                    maxLength={10}
-                    pattern="[0-9]{1,10}"
+                    maxLength={4}
+                    pattern="[0-9]{1,4}"
                     className="flex-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
                   <button

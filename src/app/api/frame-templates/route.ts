@@ -38,8 +38,14 @@ async function uploadImage(file: File) {
       return null;
     }
 
+    // Properly sanitize the filename to remove all problematic characters
+    const sanitizedFileName = file.name
+      .replace(/\s+/g, '_')
+      .replace(/[()[\]{}áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữự]/g, '')
+      .replace(/[^\w.-]/g, ''); // Remove any non-alphanumeric characters except underscores, dots, and hyphens
+
     // Generate a unique filename
-    const uniqueFilename = `${uuidv4()}_${file.name.replace(/\s+/g, '_')}`;
+    const uniqueFilename = `${uuidv4()}_${sanitizedFileName}`;
     const buffer = Buffer.from(await file.arrayBuffer());
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'images');
     const filePath = path.join(uploadsDir, uniqueFilename);

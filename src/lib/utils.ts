@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
 import GIF from "gif.js";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -205,5 +205,54 @@ export async function createGifFromVideo(
     } catch (error) {
       reject(error);
     }
+  });
+}
+
+// Function to sanitize filenames for URL compatibility
+export function sanitizeFilename(filename: string): string {
+  return filename
+    .replace(/\s+/g, "_")
+    .replace(
+      /[()[\]{}áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữự]/g,
+      ""
+    )
+    .replace(/[^\w.-]/g, "");
+}
+
+// Function to create a URL with cache-busting parameter
+export function getCacheBustedUrl(url: string): string {
+  if (!url) return "";
+  const cacheBuster = `v=${Date.now()}`;
+  return url.includes("?") ? `${url}&${cacheBuster}` : `${url}?${cacheBuster}`;
+}
+
+// Function to preload an image and verify it loads correctly
+export function preloadImage(imageUrl: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Image load timeout for ${imageUrl}`));
+    }, 10000); // 10 second timeout
+
+    img.onload = () => {
+      clearTimeout(timeoutId);
+      if (img.naturalWidth === 0 || img.naturalHeight === 0) {
+        reject(
+          new Error(`Image loaded but has invalid dimensions: ${imageUrl}`)
+        );
+      } else {
+        resolve(img);
+      }
+    };
+
+    img.onerror = () => {
+      clearTimeout(timeoutId);
+      reject(new Error(`Failed to load image: ${imageUrl}`));
+    };
+
+    // Add cache-busting
+    img.src = getCacheBustedUrl(imageUrl);
   });
 }

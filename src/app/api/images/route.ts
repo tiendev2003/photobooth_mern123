@@ -115,8 +115,14 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Properly sanitize the filename to remove all problematic characters
+    const sanitizedFileName = file.name
+      .replace(/\s+/g, '_')
+      .replace(/[()[\]{}áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữự]/g, '')
+      .replace(/[^\w.-]/g, ''); // Remove any non-alphanumeric characters except underscores, dots, and hyphens
+
     // Generate a unique filename
-    const uniqueFilename = `${uuidv4()}_${file.name.replace(/\s+/g, '_')}`;
+    const uniqueFilename = `${uuidv4()}_${sanitizedFileName}`;
     const buffer = Buffer.from(await file.arrayBuffer());
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'images');
     const filePath = path.join(uploadsDir, uniqueFilename);
@@ -125,8 +131,13 @@ export async function POST(req: NextRequest) {
     // Ensure the uploads directory exists
     await createDirIfNotExists(uploadsDir);
 
-    // Write the file to disk
-    await writeFile(filePath, buffer);
+    try {
+      // Write the file to disk
+      await writeFile(filePath, buffer);
+    } catch (writeError) {
+      console.error('Error writing file to disk:', writeError);
+      return NextResponse.json({ error: 'Failed to save image file' }, { status: 500 });
+    }
 
     // Save the file information to the database
     const newImage = await prisma.image.create({

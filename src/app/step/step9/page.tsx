@@ -123,18 +123,19 @@ export default function Step9() {
           Quét mã QR để xem tất cả ảnh/video/GIF của bạn
         </h2>
 
-        <div className="flex flex-col items-center justify-center w-full mb-8">
-          {/* Single QR Code for Media Session */}
-          <div className="flex flex-col items-center bg-white bg-opacity-20 p-8 rounded-lg shadow-lg max-w-md">
+        <div className="flex flex-wrap justify-center gap-8 w-full mb-8">
+          {/* QR Code for All Media Session */}
+          <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg">
+            <h3 className="text-2xl font-semibold mb-4 text-center">Tất cả media</h3>
             {isCreatingSession ? (
-              <div className="w-[300px] h-[300px] flex items-center justify-center bg-black/20 rounded-lg">
+              <div className="w-[250px] h-[250px] flex items-center justify-center bg-black/20 rounded-lg">
                 <div className="flex flex-col items-center">
                   <Loader2 className="w-16 h-16 text-pink-400 animate-spin mb-4" />
                   <p className="text-white text-center">Đang tạo session...</p>
                 </div>
               </div>
             ) : error ? (
-              <div className="w-[300px] h-[300px] flex items-center justify-center bg-black/20 rounded-lg">
+              <div className="w-[250px] h-[250px] flex items-center justify-center bg-black/20 rounded-lg">
                 <div className="text-center p-4">
                   <p className="text-red-400 text-sm">{error}</p>
                 </div>
@@ -142,17 +143,16 @@ export default function Step9() {
             ) : sessionCode && sessionUrl ? (
               <QRCodeSVG
                 value={sessionUrl}
-                size={300}
+                size={250}
                 marginSize={2}
                 bgColor="#ffffff"
                 fgColor="#000000"
               />
             ) : (
-              <div className="w-[300px] h-[300px] flex items-center justify-center bg-black/20 rounded-lg">
+              <div className="w-[250px] h-[250px] flex items-center justify-center bg-black/20 rounded-lg">
                 <p className="text-white text-sm text-center px-4">Đang chuẩn bị...</p>
               </div>
             )}
-
           </div>
         </div>
 

@@ -20,7 +20,7 @@ export default function Step5() {
   const [paymentCode, setPaymentCode] = useState("")
 
   const handleNumberClick = (number: string) => {
-    if (paymentCode.length < 10) {
+    if (paymentCode.length < 4) {
       setPaymentCode(paymentCode + number)
     }
   }
@@ -40,8 +40,8 @@ export default function Step5() {
   const [isVerifying, setIsVerifying] = useState(false);
 
   const handleNext = async () => {
-    if (paymentCode.length !== 10) {
-      alert("Vui lòng nhập mã thanh toán 10 chữ số");
+    if (paymentCode.length !== 4) {
+      alert("Vui lòng nhập mã thanh toán 4 chữ số");
       return;
     }
     setIsVerifying(true);
@@ -103,7 +103,7 @@ export default function Step5() {
         <div className="w-full max-w-5xl   h-[150px] border-4 border-purple-400 rounded-full flex items-center justify-center mb-8 md:mb-12 neon-glow-purple bg-black/20 backdrop-blur-sm">
           <span className="text-white 50 text-7xl font-mono tracking-widest">{paymentCode || ""}</span>
           <span className="text-white/50 text-7xl font-mono ml-2 animate-pulse">
-            {paymentCode.length < 10 ? "|" : ""}
+            {paymentCode.length < 4 ? "|" : ""}
           </span>
         </div>
 

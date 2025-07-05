@@ -772,7 +772,7 @@ export default function TemplatesManagement() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Background Image *
+                  Ảnh nằm trên - Frame
                 </label>
                 <input
                   type="file"
@@ -796,7 +796,7 @@ export default function TemplatesManagement() {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Overlay Image (optional)
+                   Ảnh nằm dưới - Frame 
                 </label>
                 <input
                   type="file"
