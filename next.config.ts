@@ -103,6 +103,18 @@ const withPWA = require('next-pwa')({
         },
       },
     },
+    // Add specific cache for Next.js optimized images
+    {
+      urlPattern: /\/_next\/image\?url=.+$/i,
+      handler: 'StaleWhileRevalidate',
+      options: {
+        cacheName: 'next-image',
+        expiration: {
+          maxEntries: 64,
+          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+        },
+      },
+    },
   ],
 });
 
@@ -114,7 +126,7 @@ const nextConfig = {
   
   // Configure images for Next.js Image component
   images: {
-    domains: ['localhost'],
+    domains: ['localhost', '127.0.0.1'],
     remotePatterns: [
       {
         protocol: 'http',
@@ -139,6 +151,13 @@ const nextConfig = {
         pathname: '/uploads/**',
       },
     ],
+    // Add this to allow image optimization
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // Disable minimization to debug image issues
+    minimumCacheTTL: 60,
+    formats: ['image/webp'],
   },
 };
 

@@ -1979,7 +1979,7 @@ export default function Step8() {
         </div>
       </div>
 
-      <div className="flex justify-center w-full px-16 pb-20 z-10 gap-6">
+      <div className="flex justify-end w-full px-16 pb-20 z-10 gap-6">
         {/* Print button */}
         <button
           onClick={handlePrint}
@@ -1997,46 +1997,7 @@ export default function Step8() {
           <span className="block text-xs mt-1 text-white">In ảnh</span>
         </button>
 
-        {/* Video button - Only show if videos are available */}
-        {videos && videos.length > 0 && (
-          <button
-            onClick={handlePrint}
-            className={`rounded-full p-6 bg-transparent border-2 border-white glow-button ${isPrinting ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            disabled={isPrinting}
-          >
-            <div className="w-12 h-12 flex items-center justify-center text-blue-500 text-4xl">
-              {isPrinting ? (
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="23 7 16 12 23 17 23 7" />
-                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                </svg>
-              )}
-            </div>
-            <span className="block text-xs mt-1 text-white">Tạo video</span>
-          </button>
-        )}
-
-        {/* GIF button - Only show if videos are available */}
-        {videos && videos.length > 0 && (
-          <button
-            onClick={handlePrint}
-            className={`rounded-full p-6 bg-transparent border-2 border-white glow-button ${isPrinting ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            disabled={isPrinting}
-          >
-            <div className="w-12 h-12 flex items-center justify-center text-green-500 text-4xl">
-              {isPrinting ? (
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500"></div>
-              ) : (
-                <Sparkles size={36} />
-              )}
-            </div>
-            <span className="block text-xs mt-1 text-white">Tạo GIF</span>
-          </button>
-        )}
+        
       </div>
     </div>
   );

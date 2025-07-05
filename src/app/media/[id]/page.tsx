@@ -1,5 +1,6 @@
 "use client";
 
+import { getSanitizedImageUrl, handleImageError } from "@/lib/imageUtils";
 import { ArrowLeft, Download, Film, Gift, Image as ImageIcon, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -110,12 +111,14 @@ export default function MediaPage() {
         return (
           <div className="relative w-full h-full">
             <Image
-              src={finalMediaUrl}
+              src={getSanitizedImageUrl(finalMediaUrl)}
               alt="Photobooth Image"
               className="rounded-xl shadow-lg object-contain"
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 60vw"
               priority
+              unoptimized={finalMediaUrl.includes('/_nextjs/')}
+              onError={(e) => handleImageError(e)}
             />
           </div>
         );
@@ -123,11 +126,17 @@ export default function MediaPage() {
         return (
           <div className="relative w-full h-full rounded-xl overflow-hidden">
             <video
-              src={finalMediaUrl}
+              src={getSanitizedImageUrl(finalMediaUrl)}
               controls
               autoPlay
               loop
               className="w-full h-full object-contain"
+              onError={(e) => {
+                console.error('Video failed to load:', finalMediaUrl);
+                if (finalMediaUrl.includes('/_nextjs/')) {
+                  (e.target as HTMLVideoElement).src = finalMediaUrl.replace('/_nextjs/', '/');
+                }
+              }}
             >
               Your browser does not support the video tag.
             </video>
@@ -137,12 +146,14 @@ export default function MediaPage() {
         return (
           <div className="relative w-full h-full">
             <Image
-              src={finalMediaUrl}
+              src={getSanitizedImageUrl(finalMediaUrl)}
               alt="Photobooth GIF"
               className="rounded-xl shadow-lg object-contain"
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 60vw"
               priority
+              unoptimized={finalMediaUrl.includes('/_nextjs/')}
+              onError={(e) => handleImageError(e)}
             />
           </div>
         );

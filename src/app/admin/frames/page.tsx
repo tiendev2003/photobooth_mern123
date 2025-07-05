@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { getSanitizedImageUrl, handleImageError } from '@/lib/imageUtils';
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -546,15 +547,13 @@ export default function FrameTypesManagement() {
                   {imagePreview && (
                     <div className="border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700 max-w-xs">
                       <Image
-                        src={imagePreview.startsWith('data:') ? imagePreview : `${imagePreview}`}
+                        src={imagePreview.startsWith('data:') ? imagePreview : getSanitizedImageUrl(imagePreview)}
                         alt="Frame preview"
                         width={320}
                         height={128}
                         className="w-full h-auto max-h-32 object-contain"
-                        onError={(e) => {
-                          console.error('Image failed to load:', imagePreview);
-                          e.currentTarget.src = '/uploads/type/1x1.png'; // Fallback image
-                        }}
+                        unoptimized={imagePreview.includes('/_nextjs/')} // Disable optimization for problematic paths
+                        onError={(e) => handleImageError(e, '/uploads/type/1x1.png')}
                       />
                     </div>
                   )}
@@ -687,24 +686,13 @@ export default function FrameTypesManagement() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       {frameType.image ? (
                         <Image
-                          src={`${frameType.image}`}
+                          src={getSanitizedImageUrl(frameType.image)}
                           alt={frameType.name}
                           width={64}
                           height={64}
                           className="w-16 h-16 object-fill rounded"
-                          onError={(e) => {
-                            // Backup handling nếu ảnh không load được
-                            console.error('Image failed to load:', frameType.image);
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.style.display = 'none';
-                            const parent = e.currentTarget.parentElement;
-                            if (parent) {
-                              const fallback = document.createElement('div');
-                              fallback.className = 'w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center';
-                              fallback.innerHTML = '<span class="text-gray-500 dark:text-gray-400 text-xs">Image Error</span>';
-                              parent.appendChild(fallback);
-                            }
-                          }}
+                          onError={(e) => handleImageError(e, '/uploads/type/1x1.png')}
+                          unoptimized={frameType.image.includes('/_nextjs/')} // Disable optimization for problematic paths
                         />
                       ) : (
                         <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">

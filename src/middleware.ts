@@ -50,9 +50,9 @@ export async function middleware(request: NextRequest) {
   // Check if the path is public
   const path = request.nextUrl.pathname;
 
-  // Handle static files with higher priority
-  if (path.startsWith('/uploads/')) {
-    console.log(`Static file request bypassing middleware: ${path}`);
+  // Handle static files and Next.js image optimization paths with higher priority
+  if (path.startsWith('/uploads/') || path.startsWith('/_next/') || path.startsWith('/_nextjs/')) {
+    console.log(`Static file or Next.js resource request bypassing middleware: ${path}`);
     return NextResponse.next();
   }
 
@@ -147,7 +147,10 @@ export const config = {
     "/api/:path*", 
     "/admin/:path*",
     
-    // Explicitly exclude static file paths
-    "/((?!uploads|public|_next/static|_next/image|favicon.ico).*)"
+    // Explicitly exclude static file paths and Next.js image optimization paths
+    "/((?!uploads|public|_next/static|_next/image|_nextjs|favicon.ico).*)",
+
+    // Explicitly exclude Next.js image optimization paths - alternate format
+    "/((?!_next/image).+)"
   ],
 };

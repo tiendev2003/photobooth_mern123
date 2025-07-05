@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { getSanitizedImageUrl, handleImageError } from '@/lib/imageUtils';
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -260,7 +261,7 @@ export default function ImagesManagement() {
               <div className="aspect-w-16 aspect-h-9 bg-gray-100 dark:bg-gray-700">
                 {image.fileType === 'VIDEO' ? (
                   <video 
-                    src={image.path} 
+                    src={getSanitizedImageUrl(image.path)} 
                     className="w-full h-full object-cover" 
                     controls={false}
                     muted
@@ -270,14 +271,22 @@ export default function ImagesManagement() {
                       video.pause();
                       video.currentTime = 0;
                     }}
+                    onError={(e) => {
+                      console.error('Video failed to load:', image.path);
+                      if (image.path.includes('/_nextjs/')) {
+                        (e.target as HTMLVideoElement).src = image.path.replace('/_nextjs/', '/');
+                      }
+                    }}
                   />
                 ) : (
                   <Image 
-                    src={image.path} 
+                    src={getSanitizedImageUrl(image.path)} 
                     alt={image.filename}
                     width={320}
                     height={180}
                     className="w-full h-full object-cover"
+                    unoptimized={image.path.includes('/_nextjs/')}
+                    onError={(e) => handleImageError(e)}
                   />
                 )}
               </div>
