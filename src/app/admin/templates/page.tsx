@@ -309,6 +309,14 @@ export default function TemplatesManagement() {
       formDataToSubmit.append('frameTypeId', formData.frameTypeId);
       formDataToSubmit.append('isActive', formData.isActive.toString());
       
+      // Append the actual file objects, not just the names
+      if (backgroundFile) {
+        formDataToSubmit.append('backgroundFile', backgroundFile);
+      }
+      if (overlayFile) {
+        formDataToSubmit.append('overlayFile', overlayFile);
+      }
+      
       // Debug: Log what we're about to submit
       console.log('About to submit form data:', {
         name: formData.name,
@@ -316,44 +324,54 @@ export default function TemplatesManagement() {
         isActive: formData.isActive,
         isGlobal: formData.isGlobal,
         storeId: formData.storeId,
-        userRole: user?.role
+        userRole: user?.role,
+        backgroundFile: backgroundFile ? backgroundFile.name : 'none',
+        overlayFile: overlayFile ? overlayFile.name : 'none'
       });
       
       // Handle store vs global template
+      let finalIsGlobal = formData.isGlobal;
+      let finalStoreId = formData.storeId;
+      
       if (user?.role === 'ADMIN') {
-        if (formData.isGlobal) {
-          formDataToSubmit.append('isGlobal', 'true');
+        if (formData.isGlobal || !formData.storeId) {
+          // If isGlobal is true OR if no store is selected, make it global
+          finalIsGlobal = true;
+          finalStoreId = '';
           console.log('Setting as global template');
         } else {
-          // For non-global templates, storeId is required
-          if (formData.storeId) {
-            formDataToSubmit.append('storeId', formData.storeId);
-            formDataToSubmit.append('isGlobal', 'false');
-            console.log('Setting as store-specific template with storeId:', formData.storeId);
-          } else {
-            // If no storeId selected, make it global by default
-            formDataToSubmit.append('isGlobal', 'true');
-            console.log('No storeId selected, defaulting to global template');
-          }
+          // For non-global templates with store selected
+          console.log('Setting as store-specific template with storeId:', formData.storeId);
         }
       } else if (user?.role === 'MANAGER') {
         // For managers, always use their store ID
         const userStoreId = (user as UserWithStore).storeId || formData.storeId;
         if (userStoreId) {
-          formDataToSubmit.append('storeId', userStoreId);
-          formDataToSubmit.append('isGlobal', 'false');
+          finalStoreId = userStoreId;
+          finalIsGlobal = false;
           console.log('Manager: Setting as store-specific template with storeId:', userStoreId);
         } else {
           // If no storeId available, make it global
-          formDataToSubmit.append('isGlobal', 'true');
+          finalIsGlobal = true;
+          finalStoreId = '';
           console.log('Manager: No storeId available, defaulting to global template');
         }
+      }
+      
+      // Append the final values to formData
+      formDataToSubmit.append('isGlobal', finalIsGlobal.toString());
+      if (finalStoreId) {
+        formDataToSubmit.append('storeId', finalStoreId);
       }
       
       // Debug: Log all FormData entries
       console.log('FormData entries:');
       for (const [key, value] of formDataToSubmit.entries()) {
-        console.log(`${key}:`, value);
+        if (value instanceof File) {
+          console.log(`${key}:`, value.name, value.size, 'bytes');
+        } else {
+          console.log(`${key}:`, value);
+        }
       }
       
       const url = isEditing ? `/api/frame-templates/${formData.id}` : '/api/frame-templates';
@@ -390,6 +408,10 @@ export default function TemplatesManagement() {
   };
   
   const handleEdit = (template: FrameTemplate) => {
+    // Make sure to properly handle the storeId field for templates
+    // If it's global, storeId should be empty string
+    const storeId = template.isGlobal ? '' : (template.storeId || '');
+    
     setFormData({
       id: template.id,
       name: template.name,
@@ -397,10 +419,17 @@ export default function TemplatesManagement() {
       background: template.background,
       overlay: template.overlay,
       frameTypeId: template.frameTypeId,
-      storeId: template.storeId || '',
+      storeId: storeId,
       isGlobal: template.isGlobal,
       isActive: template.isActive
     });
+    
+    // Reset file state
+    setBackgroundFile(null);
+    setOverlayFile(null);
+    setBackgroundPreview(template.background || null);
+    setOverlayPreview(template.overlay || null);
+    
     setIsEditing(true);
     setIsFormOpen(true);
   };
@@ -691,12 +720,29 @@ export default function TemplatesManagement() {
                         type="checkbox"
                         name="isGlobal"
                         checked={formData.isGlobal}
-                        onChange={handleInputChange}
+                        onChange={(e) => {
+                          // Reset storeId if switching to global
+                          if (e.target.checked) {
+                            setFormData(prev => ({
+                              ...prev,
+                              isGlobal: true,
+                              storeId: ''
+                            }));
+                          } else {
+                            setFormData(prev => ({
+                              ...prev,
+                              isGlobal: false
+                            }));
+                          }
+                        }}
                         className="mr-2"
                       />
                       Global Template (available to all stores)
                     </label>
                   </div>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Global templates are available to all stores. Store-specific templates require selecting a store below.
+                  </p>
                 </div>
               )}
               
@@ -718,6 +764,9 @@ export default function TemplatesManagement() {
                       </option>
                     ))}
                   </select>
+                  <p className="mt-1 text-sm text-gray-500">
+                    If no store is selected, the template will be created as a global template automatically.
+                  </p>
                 </div>
               )}
               

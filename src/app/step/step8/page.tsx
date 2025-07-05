@@ -573,35 +573,21 @@ export default function Step8() {
         const singleImageWidth = desiredWidth / 2;
         const singleImageHeight = desiredHeight;
 
-        // Calculate dimensions to fit the image
-        const aspectRatio = canvas.width / canvas.height;
-        const targetAspectRatio = singleImageWidth / singleImageHeight;
-
-        let drawWidth = singleImageWidth;
-        let drawHeight = singleImageHeight;
-        let offsetX = 0;
-        let offsetY = 0;
-
-        if (aspectRatio > targetAspectRatio) {
-          drawHeight = singleImageWidth / aspectRatio;
-          offsetY = (singleImageHeight - drawHeight) / 2;
-        } else {
-          drawWidth = singleImageHeight * aspectRatio;
-          offsetX = (singleImageWidth - drawWidth) / 2;
-        }
-
-        // Draw first image (left)
+        // For custom frames, we want the image to fill the entire space without any padding
+        // This ensures no gaps between the images when they're placed side by side
+        
+        // Draw first image (left) - use the full half of the canvas width
         ctx.drawImage(
           canvas,
           0, 0, canvas.width, canvas.height,
-          offsetX, offsetY, drawWidth, drawHeight
+          0, 0, singleImageWidth, singleImageHeight
         );
 
-        // Draw second image (right)
+        // Draw second image (right) - place it exactly next to the first image
         ctx.drawImage(
           canvas,
           0, 0, canvas.width, canvas.height,
-          singleImageWidth + offsetX, offsetY, drawWidth, drawHeight
+          singleImageWidth, 0, singleImageWidth, singleImageHeight
         );
       } else {
         // Regular frame: Render a single image
@@ -843,14 +829,6 @@ export default function Step8() {
               {renderPreview()}
             </div>
           </div>
-
-          {/* Debug info */}
-          {mediaSessionUrl && (
-            <div className="bg-black/50 p-2 rounded text-xs text-white">
-              <div>Session URL: {mediaSessionUrl}</div>
-              <div>Photos: {photos.length}</div>
-            </div>
-          )}
         </div>
 
         <div className="lg:col-span-1">

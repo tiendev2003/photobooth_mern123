@@ -131,6 +131,25 @@ export async function PUT(
           : undefined,
       };
       
+      // Handle isGlobal and storeId
+      const isGlobalValue = formData.get("isGlobal") as string;
+      const isGlobal = isGlobalValue === 'true';
+      updateData.isGlobal = isGlobal;
+      
+      // If global, set storeId to null, otherwise use provided storeId
+      if (isGlobal) {
+        updateData.storeId = null;
+      } else {
+        const storeId = formData.get("storeId") as string;
+        if (storeId && storeId.trim() !== '') {
+          updateData.storeId = storeId;
+        } else {
+          // If not global but no storeId provided, make it global
+          updateData.isGlobal = true;
+          updateData.storeId = null;
+        }
+      }
+      
       // Comment out userId handling until migration is complete
       // const userId = formData.get("userId") as string;
       // if (userId === "null") {
@@ -140,8 +159,8 @@ export async function PUT(
       // }
 
       // Get background image file if provided
-      const backgroundFile = formData.get("backgroundFile") as File;
-      if (backgroundFile && backgroundFile.size > 0) {
+      const backgroundFile = formData.get("backgroundFile");
+      if (backgroundFile && backgroundFile instanceof File && backgroundFile.size > 0) {
         // Upload background file
         backgroundImage = await uploadImage(backgroundFile);
         if (backgroundImage) {
@@ -151,8 +170,8 @@ export async function PUT(
       }
 
       // Get overlay image file if provided
-      const overlayFile = formData.get("overlayFile") as File;
-      if (overlayFile && overlayFile.size > 0) {
+      const overlayFile = formData.get("overlayFile");
+      if (overlayFile && overlayFile instanceof File && overlayFile.size > 0) {
         // Upload overlay file
         overlayImage = await uploadImage(overlayFile);
         if (overlayImage) {
@@ -172,6 +191,8 @@ export async function PUT(
         // Comment out userId until migration is complete
         // userId: rawBody.userId === "null" ? null : rawBody.userId,
         isActive: rawBody.isActive,
+        isGlobal: rawBody.isGlobal,
+        storeId: rawBody.isGlobal ? null : (rawBody.storeId || null)
       };
     }
 
@@ -227,6 +248,8 @@ export async function PUT(
     if (updateData.overlay !== undefined) updateFields.overlay = updateData.overlay;
     if (updateData.frameTypeId !== undefined) updateFields.frameTypeId = updateData.frameTypeId;
     if (updateData.isActive !== undefined) updateFields.isActive = updateData.isActive;
+    if (updateData.isGlobal !== undefined) updateFields.isGlobal = updateData.isGlobal;
+    if (updateData.storeId !== undefined) updateFields.storeId = updateData.storeId;
     
     const frameTemplate = await prisma.frameTemplate.update({
       where: { id },

@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
     const frameTypeId = formData.get('frameTypeId') as string;
     const storeId = formData.get('storeId') as string;
     const isGlobalValue = formData.get('isGlobal') as string;
-    const isGlobal = isGlobalValue === 'true';
+    let isGlobal = isGlobalValue === 'true';
     const backgroundFile = formData.get('backgroundFile') as File;
     const overlayFile = formData.get('overlayFile') as File;
 
@@ -217,10 +217,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate files
-    if (!backgroundFile) {
-      console.log('Missing background file');
+    // For POST requests (new templates), we require a valid backgroundFile
+    // For PUT requests (edit), it's handled differently in the route handler
+    if (request.method === 'POST' && (!backgroundFile || !(backgroundFile instanceof File))) {
+      console.log('Missing background file for new template');
       return NextResponse.json(
-        { error: "Background file is required" },
+        { error: "Background file is required for new templates" },
         { status: 400 }
       );
     }
@@ -240,24 +242,35 @@ export async function POST(request: NextRequest) {
     // Nếu không phải global template thì phải có storeId
     if (!isGlobal && (!storeId || storeId.trim() === '')) {
       console.log('Store validation failed:', { isGlobal, storeId: storeId || 'null' });
-      return NextResponse.json(
-        { error: "storeId is required for non-global templates" },
-        { status: 400 }
-      );
+      // Change behavior to automatically make it global if no storeId is provided
+      console.log('Setting isGlobal=true since no storeId was provided');
+      // Instead of returning an error, we'll modify isGlobal
+      const modifiedIsGlobal = true;
+      isGlobal = modifiedIsGlobal;
     }
 
-    // Upload background image
-    const backgroundUpload = await uploadImage(backgroundFile);
-    if (!backgroundUpload) {
+    // Upload background image if it's a valid File object
+    let backgroundPath = '';
+    if (backgroundFile && backgroundFile instanceof File && backgroundFile.size > 0) {
+      const backgroundUpload = await uploadImage(backgroundFile);
+      if (!backgroundUpload) {
+        return NextResponse.json(
+          { error: "Failed to upload background image" },
+          { status: 500 }
+        );
+      }
+      backgroundPath = backgroundUpload.path;
+    } else if (request.method === 'POST') {
+      // For new template creation, background is required
       return NextResponse.json(
-        { error: "Failed to upload background image" },
-        { status: 500 }
+        { error: "Valid background image is required" },
+        { status: 400 }
       );
     }
 
     // Upload overlay image (optional)
     let overlayPath = '';
-    if (overlayFile && overlayFile.size > 0) {
+    if (overlayFile && overlayFile instanceof File && overlayFile.size > 0) {
       const overlayUpload = await uploadImage(overlayFile);
       if (!overlayUpload) {
         return NextResponse.json(
@@ -276,10 +289,10 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         filename,
-        background: backgroundUpload.path,
+        background: backgroundPath,
         overlay: overlayPath,
         frameTypeId,
-        storeId: isGlobal ? null : (storeId || null),
+        storeId: isGlobal ? null : (storeId && storeId.trim() !== '' ? storeId : null),
         isGlobal,
         isActive: true
       },
