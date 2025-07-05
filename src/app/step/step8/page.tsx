@@ -1313,8 +1313,9 @@ export default function Step8() {
         console.log('Creating QR code for URL:', sessionUrl);
         qrCodeElement = document.createElement('div');
         qrCodeElement.style.position = 'absolute';
-        qrCodeElement.style.bottom = `${5}%`;
-        qrCodeElement.style.left = `${5}%`;
+        const paddingPercent = 5;
+        qrCodeElement.style.bottom = `${paddingPercent}%`;
+        qrCodeElement.style.left = `${paddingPercent}%`;
         qrCodeElement.style.width = '55px';
         qrCodeElement.style.height = '55px';
         qrCodeElement.style.zIndex = '30';
@@ -1327,7 +1328,7 @@ export default function Step8() {
         const qrCanvas = document.createElement('canvas');
         try {
           await QRCode.toCanvas(qrCanvas, sessionUrl, {
-            width: 46,
+            width: 45,
             margin: 0,
             color: {
               dark: '#000000',
@@ -1388,19 +1389,14 @@ export default function Step8() {
               container.style.paddingTop = "10%";
               container.style.paddingBottom = "10%";
             } else {
-              container.style.paddingTop = isSquare && selectedFrame?.columns === 1 ? "5%" :
+              container.style.paddingTop = isSquare && selectedFrame?.columns === 1 ? "20%" :
                 isSquare && selectedFrame?.columns === 2 ? "10%" : "5%";
               container.style.paddingBottom = "10%";
             }
 
             // Adjust horizontal padding based on orientation
-            container.style.paddingLeft = "5%";
-            container.style.paddingRight = "5%";
-            if (selectedFrame?.isCircle) {
-              container.style.paddingLeft = "5%";
-              container.style.paddingRight = "5%";
-              container.style.paddingTop = "20%";
-            }
+            container.style.paddingLeft = isLandscape ? "5%" : "10%";
+            container.style.paddingRight = isLandscape ? "5%" : "10%";
 
             // Set correct aspect ratio for different frame types
             if (isCustomFrame) {
@@ -1411,7 +1407,6 @@ export default function Step8() {
               container.style.aspectRatio = isLandscape ? "3/2" : "2/3";
             }
           }
-
 
           // Process all images for optimal quality
           const images = clonedDoc.querySelectorAll("img");
