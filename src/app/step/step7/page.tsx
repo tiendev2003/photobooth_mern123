@@ -110,7 +110,7 @@ export default function Step7() {
           baseClass,
           !hasPhoto && emptyClass,
           hasPhoto && "cursor-pointer",
-          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? "ha aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]"
+          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? "ha aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 || selectedFrame?.isCircle ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]"
         )}
         onClick={() => hasPhoto && handleRemovePhoto(idx)}
       >
@@ -142,7 +142,8 @@ export default function Step7() {
             selectedFrame.isCustom ? "pb-[10%] pt-[10%]" : "pb-[10%] pt-[5%]",
             isSquare && selectedFrame.columns == 2 ? "pt-[10%]" : "",
             isSquare && selectedFrame.columns == 1 ? "pt-[20%]" : "",
-            isLandscape ? "px-[5%] pt-[5%]" : "px-[10%] pt-[10%]"
+            isLandscape ? "px-[5%] pt-[5%]" : "px-[10%] pt-[10%]",
+            selectedFrame?.isCircle && "px-[5%] pt-[20%]"
           )}
           style={{
             height: previewHeight,

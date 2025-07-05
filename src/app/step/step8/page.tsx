@@ -81,7 +81,7 @@ export default function Step8() {
     gifQrCode,
     setGifQrCode,
     videos,
-     
+
   } = useBooth();
   console.log("Step 8 - Current selected frame:", videoQrCode, gifQrCode, imageQrCode, selectedTemplate);
 
@@ -298,7 +298,7 @@ export default function Step8() {
 
       const data = await uploadResponse.json();
       console.log("Video uploaded successfully:", data);
-      
+
       // Check response structure and get the URL
       let url = '';
       if (data && data.path) {
@@ -314,7 +314,7 @@ export default function Step8() {
         console.error("Unexpected response format from video upload:", data);
         throw new Error("Invalid response format from server");
       }
-      
+
       return url;
     } catch (error) {
       console.error("Error uploading video:", error);
@@ -351,7 +351,7 @@ export default function Step8() {
 
       const data = await uploadResponse.json();
       console.log("GIF uploaded successfully:", data);
-      
+
       // Check response structure and get the URL
       let url = '';
       if (data && data.path) {
@@ -367,7 +367,7 @@ export default function Step8() {
         console.error("Unexpected response format from GIF upload:", data);
         throw new Error("Invalid response format from server");
       }
-      
+
       return url;
     } catch (error) {
       console.error("Error uploading GIF:", error);
@@ -394,7 +394,7 @@ export default function Step8() {
       try {
         // Process all media types in parallel
         const processTasks = [];
-        
+
         // Generate and upload image
         const imageTask = (async () => {
           try {
@@ -585,10 +585,10 @@ export default function Step8() {
       const cellIndices = selectedFrame?.isCustom
         ? Array.from({ length: selectedFrame.rows }, (_, i) => i)
         : Array.from({ length: selectedFrame!.columns * selectedFrame!.rows }, (_, i) => i);
-      
+
       // Create a map of cellIdx -> videoElement to ensure correct video mapping
       const cellVideoMap = new Map<number, HTMLVideoElement>();
-      
+
       // Load video elements for each cell index based on selectedIndices
       for (const idx of cellIndices) {
         if (selectedIndices[idx] !== undefined) {
@@ -598,7 +598,7 @@ export default function Step8() {
             videoElement.src = videos[photoIndex];
             videoElement.muted = true;
             videoElement.playsInline = true;
-            
+
             // Wait for video to load metadata
             await new Promise<void>((resolve) => {
               videoElement.onloadedmetadata = () => resolve();
@@ -607,7 +607,7 @@ export default function Step8() {
                 resolve();
               };
             });
-            
+
             cellVideoMap.set(idx, videoElement);
           }
         }
@@ -618,24 +618,24 @@ export default function Step8() {
       let overlayValid = false;
       if (selectedTemplate?.overlay) {
         overlayImg = document.createElement('img');
-        
+
         // Add crossOrigin attribute to handle CORS issues
         overlayImg.crossOrigin = "anonymous";
-        
+
         await new Promise<void>((resolve) => {
           overlayImg!.onload = () => {
             console.log("Overlay image loaded successfully for video");
             overlayValid = true;
             resolve();
           };
-          
+
           overlayImg!.onerror = (err) => {
             console.warn("Failed to load overlay image in video generation:", err);
             console.warn("Failed overlay URL:", selectedTemplate.overlay);
             overlayValid = false;
             resolve();
           };
-          
+
           // Set a timeout in case the image hangs
           const timeoutId = setTimeout(() => {
             console.warn("Overlay image load timeout in video generation");
@@ -643,11 +643,11 @@ export default function Step8() {
             overlayValid = false;
             resolve();
           }, 5000); // 5 second timeout
-          
+
           // Add cache-busting parameter to avoid caching issues
           const cacheBuster = `?v=${Date.now()}`;
           overlayImg!.src = `${selectedTemplate.overlay}${cacheBuster}`;
-          
+
           // If image is already complete when we assign src, the onload might not fire
           if (overlayImg!.complete) {
             clearTimeout(timeoutId);
@@ -671,7 +671,7 @@ export default function Step8() {
         const anyPlaying = Array.from(cellVideoMap.values()).some(
           (video) => !video.ended && !video.paused
         );
-        
+
         if (!anyPlaying) {
           mediaRecorder.stop();
           return;
@@ -685,11 +685,11 @@ export default function Step8() {
 
         // Get cell elements similar to renderCell function
         const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
-        
+
         cells.forEach((cell, idx) => {
           // Skip cells that don't have a corresponding video
           if (!cellVideoMap.has(idx)) return;
-          
+
           const cellRect = cell.getBoundingClientRect();
           const relativeLeft = cellRect.left - rect.left;
           const relativeTop = cellRect.top - rect.top;
@@ -736,7 +736,7 @@ export default function Step8() {
           try {
             previewCtx.globalCompositeOperation = 'source-over';
             previewCtx.filter = "none";
-            
+
             // Additional check to prevent broken image errors
             if (overlayImg.naturalWidth > 0 && overlayImg.naturalHeight > 0) {
               previewCtx.drawImage(
@@ -892,18 +892,18 @@ export default function Step8() {
         height: desiredHeight,
         background: '#ffffff'
       });
-      
+
       // Map cells to videos using selectedIndices for proper ordering
       const cellIndices = selectedFrame?.isCustom
         ? Array.from({ length: selectedFrame.rows }, (_, i) => i)
         : Array.from({ length: selectedFrame!.columns * selectedFrame!.rows }, (_, i) => i);
-      
+
       // Create a map of cellIdx -> videoElement to ensure correct video mapping
       const cellVideoMap = new Map<number, HTMLVideoElement>();
-      
+
       // Maximum duration to track the longest video
       let maxDuration = 0;
-      
+
       // Load all video elements based on selectedIndices, similar to generateHighQualityVideo
       for (const idx of cellIndices) {
         if (selectedIndices[idx] !== undefined) {
@@ -913,7 +913,7 @@ export default function Step8() {
             videoElement.src = videos[photoIndex];
             videoElement.muted = true;
             videoElement.playsInline = true;
-            
+
             // Wait for video to load metadata
             await new Promise<void>((resolve) => {
               videoElement.onloadedmetadata = () => resolve();
@@ -922,26 +922,26 @@ export default function Step8() {
                 resolve();
               };
             });
-            
+
             // Update max duration if this video is longer
             if (videoElement.duration && isFinite(videoElement.duration)) {
               maxDuration = Math.max(maxDuration, videoElement.duration);
             }
-            
+
             // Store the video element in our map
             cellVideoMap.set(idx, videoElement);
           }
         }
       }
-      
+
       // Ensure we have at least one video
       if (cellVideoMap.size === 0) {
         throw new Error("Không tìm thấy video hợp lệ để tạo GIF");
       }
-      
+
       // Log all loaded videos
       console.log(`Đã tải ${cellVideoMap.size} video để tạo GIF`);
-      
+
       // Pre-play all videos briefly to ensure durations are accurate
       try {
         const videoElements = Array.from(cellVideoMap.values());
@@ -954,24 +954,24 @@ export default function Step8() {
       } catch (e) {
         console.warn("Couldn't briefly play all videos:", e);
       }
-      
+
       // Validate max duration
       if (isNaN(maxDuration) || !isFinite(maxDuration) || maxDuration <= 0) {
         throw new Error("Không thể xác định thời lượng video hợp lệ");
       }
-      
+
       // Add logging to debug
       console.log("Max video duration:", maxDuration);
-      
+
       // Ensure we have a reasonable frame count and interval
       const frameCount = Math.min(15, Math.max(8, Math.floor(maxDuration * 3))); // Reduce frames for better performance
       const frameInterval = maxDuration / frameCount;
-      
+
       console.log("Frame count:", frameCount, "Frame interval:", frameInterval);
 
       // Create multiple temp canvases for each video frame
       const tempCanvases = new Map<number, HTMLCanvasElement>();
-      
+
       // Create a temporary canvas for each video
       for (const [idx, video] of cellVideoMap.entries()) {
         const canvas = document.createElement('canvas');
@@ -1006,24 +1006,24 @@ export default function Step8() {
       let overlayValid = false;
       if (selectedTemplate?.overlay) {
         overlayImg = document.createElement('img');
-        
+
         // Add crossOrigin attribute to handle CORS issues
         overlayImg.crossOrigin = "anonymous";
-        
+
         await new Promise<void>((resolve) => {
           overlayImg!.onload = () => {
             console.log("Overlay image loaded successfully for GIF");
             overlayValid = true;
             resolve();
           };
-          
+
           overlayImg!.onerror = (err) => {
             console.warn("Failed to load overlay image in GIF generation:", err);
             console.warn("Failed overlay URL:", selectedTemplate.overlay);
             overlayValid = false;
             resolve();
           };
-          
+
           // Set a timeout in case the image hangs
           const timeoutId = setTimeout(() => {
             console.warn("Overlay image load timeout in GIF generation");
@@ -1031,11 +1031,11 @@ export default function Step8() {
             overlayValid = false;
             resolve();
           }, 5000); // 5 second timeout
-          
+
           // Add cache-busting parameter to avoid caching issues
           const cacheBuster = `?v=${Date.now()}`;
           overlayImg!.src = `${selectedTemplate.overlay}${cacheBuster}`;
-          
+
           // If image is already complete when we assign src, the onload might not fire
           if (overlayImg!.complete) {
             clearTimeout(timeoutId);
@@ -1057,19 +1057,19 @@ export default function Step8() {
         try {
           // Calculate time and validate it's a finite number
           const seekTime = i * frameInterval;
-          
+
           // Ensure time is within valid range and is a finite number
           if (isNaN(seekTime) || !isFinite(seekTime) || seekTime < 0) {
             console.warn(`Invalid seek time: ${seekTime} at frame ${i}`);
             continue; // Skip this frame
           }
-          
+
           // Set all videos to the current time
           const seekPromises = Array.from(cellVideoMap.entries()).map(async ([idx, video]) => {
             try {
               // Ensure we don't exceed this video's duration
               const safeTime = Math.min(seekTime, video.duration - 0.1);
-              
+
               // Set video to specific time
               video.currentTime = safeTime;
 
@@ -1079,16 +1079,16 @@ export default function Step8() {
                   video.removeEventListener('seeked', seekHandler);
                   resolve();
                 };
-                
+
                 const errorHandler = () => {
                   console.warn(`Seek error at time: ${safeTime} for cell ${idx}`);
                   video.removeEventListener('error', errorHandler);
                   resolve();
                 };
-                
+
                 video.addEventListener('seeked', seekHandler);
                 video.addEventListener('error', errorHandler);
-                
+
                 // Add timeout to prevent hanging if seek never completes
                 setTimeout(() => {
                   video.removeEventListener('seeked', seekHandler);
@@ -1097,7 +1097,7 @@ export default function Step8() {
                   resolve();
                 }, 1000);
               });
-              
+
               // Draw the current video frame to its temporary canvas
               const canvas = tempCanvases.get(idx)!;
               const ctx = canvas.getContext('2d');
@@ -1108,7 +1108,7 @@ export default function Step8() {
               console.error(`Error seeking video for cell ${idx}:`, e);
             }
           });
-          
+
           // Wait for all videos to seek and draw to their canvases
           await Promise.all(seekPromises);
 
@@ -1167,7 +1167,7 @@ export default function Step8() {
             try {
               previewCtx.globalCompositeOperation = 'source-over';
               previewCtx.filter = "none";
-              
+
               // Additional check to prevent broken image errors
               if (overlayImg.naturalWidth > 0 && overlayImg.naturalHeight > 0) {
                 previewCtx.drawImage(
@@ -1264,7 +1264,7 @@ export default function Step8() {
           const gifUrl = URL.createObjectURL(blob);
           resolve(gifUrl);
         });
-        
+
         gif.on('abort', () => {
           reject(new Error("GIF rendering was aborted"));
         });
@@ -1296,7 +1296,7 @@ export default function Step8() {
       const rect = previewContent.getBoundingClientRect();
       // Improved scale factor calculation based on target dimensions
       const scaleFactor = Math.max(
-        desiredWidth / rect.width, 
+        desiredWidth / rect.width,
         desiredHeight / rect.height,
         3
       ); // Ensure at least 3x scaling for quality
@@ -1358,7 +1358,7 @@ export default function Step8() {
       }
 
       const html2canvas = (await import("html2canvas-pro")).default;
-      
+
       // Enhanced HTML2Canvas configuration for better quality
       const canvas = await html2canvas(previewContent, {
         allowTaint: true,
@@ -1371,8 +1371,8 @@ export default function Step8() {
         imageTimeout: 30000,
         removeContainer: true,
         foreignObjectRendering: false,
-        ignoreElements: (element) => 
-          element.tagName === "SCRIPT" || 
+        ignoreElements: (element) =>
+          element.tagName === "SCRIPT" ||
           element.classList?.contains("no-print"),
         onclone: (clonedDoc) => {
           const container = clonedDoc.querySelector("[data-preview]") as HTMLElement;
@@ -1414,7 +1414,7 @@ export default function Step8() {
             // Ensure high-quality rendering
             img.style.imageRendering = "crisp-edges";
             img.style.imageRendering = "-webkit-optimize-contrast";
-            
+
             // Apply color adjustments for print
             const imgStyle = img.style as ExtendedCSSStyleDeclaration;
             imgStyle.colorAdjust = "exact";
@@ -1440,7 +1440,7 @@ export default function Step8() {
                 })
                 .filter(Boolean)
                 .join(" ");
-                
+
               img.style.filter = filterValues;
             }
           });
@@ -1488,14 +1488,14 @@ export default function Step8() {
       const finalCanvas = document.createElement("canvas");
       finalCanvas.width = desiredWidth;
       finalCanvas.height = desiredHeight;
-      
+
       // Get canvas context with optimized settings for print quality
       const ctx = finalCanvas.getContext("2d", {
         alpha: true,
         willReadFrequently: false,
         desynchronized: false,
       });
-      
+
       if (!ctx) throw new Error("Cannot create 2D context");
 
       // Setup the final canvas with white background
@@ -1508,7 +1508,7 @@ export default function Step8() {
         // Custom frame: Render two identical images side by side for 6x4 layout
         const singleImageWidth = desiredWidth / 2;
         const singleImageHeight = desiredHeight;
-        
+
         // Draw first image (left)
         ctx.drawImage(
           canvas,
@@ -1608,7 +1608,7 @@ export default function Step8() {
           baseClass,
           !hasPhoto && emptyClass,
           hasPhoto && "cursor-pointer",
-          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? "ha aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]"
+          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? "ha aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 || selectedFrame?.isCircle ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]"
         )}
       // No click handler needed in step8
       >
@@ -1637,7 +1637,7 @@ export default function Step8() {
           alt="Frame Background"
           className="h-full w-full object-contain"
           fill
-          unoptimized 
+          unoptimized
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
       </div>
@@ -1651,7 +1651,7 @@ export default function Step8() {
           alt="Frame Overlay"
           className="h-full w-full object-contain"
           fill
-          unoptimized 
+          unoptimized
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
         />
       </div>
@@ -1668,7 +1668,8 @@ export default function Step8() {
             selectedFrame.isCustom ? "pb-[10%] pt-[10%]" : "pb-[10%] pt-[5%]",
             isSquare && selectedFrame.columns == 2 ? "pt-[10%]" : "",
             isSquare && selectedFrame.columns == 1 ? "pt-[20%]" : "",
-            isLandscape ? "px-[5%] pt-[5%]" : "px-[10%] pt-[10%]"
+            isLandscape ? "px-[5%] pt-[5%]" : "px-[10%] pt-[10%]",
+            selectedFrame?.isCircle && "px-[5%] pt-[20%]"
           )}
           style={{
             height: previewHeight,
@@ -1763,8 +1764,8 @@ export default function Step8() {
       <div className="grid grid-cols-2 gap-6 mx-32 z-30">
 
         <div className="lg:col-span-1 flex flex-col gap-6">
-               {renderPreview()}
-         </div>
+          {renderPreview()}
+        </div>
 
         <div className="lg:col-span-1">
           <div className=" bg-zinc-200 rounded-2xl p-2 border border-indigo-500/30  ">
@@ -1923,7 +1924,7 @@ export default function Step8() {
                               className="w-full h-full object-cover"
                               width={128}
                               height={128}
-                              unoptimized 
+                              unoptimized
                             />
 
                             {/* Indicator for template type */}
@@ -2000,7 +2001,7 @@ export default function Step8() {
           <span className="block text-xs mt-1 text-white">In ảnh</span>
         </button>
 
-        
+
       </div>
     </div>
   );
