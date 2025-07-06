@@ -3,13 +3,13 @@
 import HomeButton from "@/app/components/HomeButton";
 import LogoApp from "@/app/components/LogoApp";
 import { useBooth } from "@/lib/context/BoothContext";
+import { TIMEOUT_DURATION } from "@/lib/utils";
 import { Camera, CameraOff, Monitor } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const timeoutDuration = 10; // 2 seconds for countdown
-
+ 
 export default function Step6() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -207,7 +207,7 @@ export default function Step6() {
 
       // Chỉ đặt countdown mới nếu chưa đạt đủ số lượng ảnh
       if (newShotCount < maxShots) {
-        setCountdown(timeoutDuration);
+        setCountdown(TIMEOUT_DURATION);
 
         // Bắt đầu quay video cho lần tiếp theo
         startRecording();
@@ -233,7 +233,7 @@ export default function Step6() {
 
       // Bắt đầu quy trình
       setIsCapturing(true);
-      setCountdown(timeoutDuration);
+      setCountdown(TIMEOUT_DURATION);
 
       // Bắt đầu quay video đầu tiên
       startRecording();

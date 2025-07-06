@@ -123,6 +123,7 @@ export default function MediaSessionTempPage() {
             height={600}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             style={{ minHeight: '200px' }}
+            unoptimized
           />
         </div>
       );

@@ -4,7 +4,7 @@ import HomeButton from "@/app/components/HomeButton";
 import LogoApp from "@/app/components/LogoApp";
 import { useBooth } from "@/lib/context/BoothContext";
 import { FrameTemplate } from "@/lib/models/FrameTemplate";
-import { cn } from "@/lib/utils";
+import { cn, TIMEOUT_DURATION } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, ImageIcon, Printer, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -57,8 +57,7 @@ const skinFilters = [
   { id: "slimFace", name: "Mặt thon", className: "brightness-105 contrast-105 saturate-100 blur-[0.4px]", preview: "/anh/10.png", icon: "😊" }
 ]
 
-const VIDEO_SEGMENT_DURATION = 10; // Should match timeoutDuration from step6
-
+ 
 export default function Step8() {
   interface ExtendedCSSStyleDeclaration extends CSSStyleDeclaration {
     colorAdjust?: string;
@@ -892,7 +891,7 @@ export default function Step8() {
       // Stop recording after fixed duration
       setTimeout(() => {
         mediaRecorder.stop();
-      }, VIDEO_SEGMENT_DURATION * 1000);
+      }, TIMEOUT_DURATION * 1000);
 
       return processedVideoPromise;
 
@@ -920,8 +919,8 @@ export default function Step8() {
       const GIF = (await import('gif.js')).default;
 
       const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 800 : 600;  // Smaller size for GIF to keep file size reasonable
-      const desiredHeight = isLandscape ? 600 : 800;
+      const desiredWidth = isLandscape ? 2400 : 1600;  // Reduced from 3600/2400 to keep file size under limits
+      const desiredHeight = isLandscape ? 1600 : 2400; // Reduced from 2400/3600 to keep file size under limits
       const rect = previewContent.getBoundingClientRect();
 
       // Create output canvas for GIF
