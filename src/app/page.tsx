@@ -16,6 +16,16 @@ export default function Home() {
         router.push('/login');
         return;
       }
+      
+      // Redirect based on user role
+      if (user.role === 'ADMIN' || user.role === 'MANAGER' || user.role === 'KETOAN') {
+        router.push('/admin');
+        return;
+      } else if (user.role === 'STORE_OWNER') {
+        router.push('/store');
+        return;
+      }
+      // USER and MACHINE stay on main photobooth interface
     }
   }, [user, isAdmin, isLoading, router]);
 

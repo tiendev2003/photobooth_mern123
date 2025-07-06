@@ -123,7 +123,7 @@ export default function TemplatesManagement() {
       }
       
       // Include global templates for non-admin users
-      if (user?.role !== 'ADMIN') {
+      if (user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
         queryParams.append('includeGlobal', 'true');
       }
       
@@ -164,9 +164,9 @@ export default function TemplatesManagement() {
       console.log('Frame types data:', frameTypesData);
       setFrameTypes(frameTypesData.data || []);
       
-      // Fetch stores for dropdown (only if user is admin)
-      if (user?.role === 'ADMIN') {
-        console.log('User is admin, fetching stores...');
+      // Fetch stores for dropdown (only if user is admin or manager)
+      if (user?.role === 'ADMIN' || user?.role === 'MANAGER') {
+        console.log('User is admin or manager, fetching stores...');
         const storesResponse = await fetch('/api/stores', {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -333,7 +333,7 @@ export default function TemplatesManagement() {
       let finalIsGlobal = formData.isGlobal;
       let finalStoreId = formData.storeId;
       
-      if (user?.role === 'ADMIN') {
+      if (user?.role === 'ADMIN' || user?.role === 'MANAGER') {
         if (formData.isGlobal || !formData.storeId) {
           // If isGlobal is true OR if no store is selected, make it global
           finalIsGlobal = true;
@@ -343,18 +343,18 @@ export default function TemplatesManagement() {
           // For non-global templates with store selected
           console.log('Setting as store-specific template with storeId:', formData.storeId);
         }
-      } else if (user?.role === 'MANAGER') {
-        // For managers, always use their store ID
+      } else if (user?.role === 'STORE_OWNER') {
+        // For store owners, always use their store ID
         const userStoreId = (user as UserWithStore).storeId || formData.storeId;
         if (userStoreId) {
           finalStoreId = userStoreId;
           finalIsGlobal = false;
-          console.log('Manager: Setting as store-specific template with storeId:', userStoreId);
+          console.log('Store Owner: Setting as store-specific template with storeId:', userStoreId);
         } else {
           // If no storeId available, make it global
           finalIsGlobal = true;
           finalStoreId = '';
-          console.log('Manager: No storeId available, defaulting to global template');
+          console.log('Store Owner: No storeId available, defaulting to global template');
         }
       }
       
@@ -709,7 +709,7 @@ export default function TemplatesManagement() {
                 </select>
               </div>
               
-              {user?.role === 'ADMIN' && (
+              {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Template Type
@@ -746,7 +746,7 @@ export default function TemplatesManagement() {
                 </div>
               )}
               
-              {user?.role === 'ADMIN' && !formData.isGlobal && (
+              {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && !formData.isGlobal && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Store

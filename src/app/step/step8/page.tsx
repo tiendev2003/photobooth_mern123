@@ -555,8 +555,10 @@ export default function Step8() {
       }
 
       const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 1800 : 1200;
-      const desiredHeight = isLandscape ? 1200 : 1800;
+      const desiredWidth = isLandscape ? 2400 : 1600;  
+      const desiredHeight = isLandscape ? 1600 : 2400;
+
+      
       const rect = previewContent.getBoundingClientRect();
 
       // Create output canvas for video with optimized settings
@@ -630,7 +632,7 @@ export default function Step8() {
       // Load all video elements with proper settings for smooth playback
       for (const idx of cellIndices) {
         if (selectedIndices[idx] !== undefined) {
-          const photoIndex = selectedIndices[idx]!;
+          const photoIndex = selectedIndices[idx]!
           let videoUrl: string | undefined = undefined;
 
           if (photoToVideoMap.has(photoIndex)) {
@@ -661,6 +663,35 @@ export default function Step8() {
             cellVideoMap.set(idx, videoElement);
           }
         }
+      }
+
+      // Prepare background image if needed
+      let backgroundImg: HTMLImageElement | null = null;
+      let backgroundValid = false;
+      if (selectedTemplate?.background) {
+        backgroundImg = document.createElement('img');
+        backgroundImg.crossOrigin = "anonymous";
+
+        await new Promise<void>((resolve) => {
+          backgroundImg!.onload = () => {
+            backgroundValid = true;
+            resolve();
+          };
+          backgroundImg!.onerror = () => {
+            backgroundValid = false;
+            resolve();
+          };
+          setTimeout(() => {
+            backgroundValid = false;
+            resolve();
+          }, 5000);
+
+          backgroundImg!.src = `${selectedTemplate.background}?v=${Date.now()}`;
+          if (backgroundImg!.complete) {
+            backgroundValid = backgroundImg!.naturalWidth > 0 && backgroundImg!.naturalHeight > 0;
+            resolve();
+          }
+        });
       }
 
       // Prepare overlay if needed
@@ -741,6 +772,17 @@ export default function Step8() {
         previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
         outputCtx.fillStyle = "#FFFFFF";
         outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+        
+        // Draw background image first if available
+        if (backgroundImg && backgroundValid && backgroundImg.complete) {
+          try {
+            if (backgroundImg.naturalWidth > 0 && backgroundImg.naturalHeight > 0) {
+              previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
+            }
+          } catch (e) {
+            console.error("Error drawing background image in video:", e);
+          }
+        }
 
         const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
 
@@ -919,8 +961,8 @@ export default function Step8() {
       const GIF = (await import('gif.js')).default;
 
       const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 2400 : 1600;  // Reduced from 3600/2400 to keep file size under limits
-      const desiredHeight = isLandscape ? 1600 : 2400; // Reduced from 2400/3600 to keep file size under limits
+      const desiredWidth = isLandscape ? 2400 : 1600;  
+      const desiredHeight = isLandscape ? 1600 : 2400;
       const rect = previewContent.getBoundingClientRect();
 
       // Create output canvas for GIF
@@ -1008,6 +1050,35 @@ export default function Step8() {
         }
       }
 
+      // Prepare background image if needed
+      let backgroundImg: HTMLImageElement | null = null;
+      let backgroundValid = false;
+      if (selectedTemplate?.background) {
+        backgroundImg = document.createElement('img');
+        backgroundImg.crossOrigin = "anonymous";
+
+        await new Promise<void>((resolve) => {
+          backgroundImg!.onload = () => {
+            backgroundValid = true;
+            resolve();
+          };
+          backgroundImg!.onerror = () => {
+            backgroundValid = false;
+            resolve();
+          };
+          setTimeout(() => {
+            backgroundValid = false;
+            resolve();
+          }, 5000);
+
+          backgroundImg!.src = `${selectedTemplate.background}?v=${Date.now()}`;
+          if (backgroundImg!.complete) {
+            backgroundValid = backgroundImg!.naturalWidth > 0 && backgroundImg!.naturalHeight > 0;
+            resolve();
+          }
+        });
+      }
+
       // Prepare overlay if needed
       let overlayImg: HTMLImageElement | null = null;
       let overlayValid = false;
@@ -1055,10 +1126,14 @@ export default function Step8() {
       console.log("Starting GIF frame capture...");
 
       // Capture frames for GIF (shorter duration for smaller file)
-      const gifDuration = 3; // 3 seconds for GIF
+      // Reduce duration for custom frames to avoid the glitch at the end
+      const gifDuration = isCustomFrame ? 2 : 3; // 2 seconds for custom frames, 3 seconds for regular frames
       const frameRate = 8; // 8 FPS for reasonable file size
       const totalFrames = gifDuration * frameRate;
       const frameInterval = 1000 / frameRate;
+      
+      // Store first frame data for custom frames (to ensure we can restore it if needed)
+      let firstFrameData = null;
 
       for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
         // Clear canvases
@@ -1066,6 +1141,17 @@ export default function Step8() {
         previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
         outputCtx.fillStyle = "#FFFFFF";
         outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+        
+        // Draw background image first if available
+        if (backgroundImg && backgroundValid && backgroundImg.complete) {
+          try {
+            if (backgroundImg.naturalWidth > 0 && backgroundImg.naturalHeight > 0) {
+              previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
+            }
+          } catch (e) {
+            console.error("Error drawing background image in GIF:", e);
+          }
+        }
 
         const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
 
@@ -1088,6 +1174,10 @@ export default function Step8() {
                   const [prop, val] = cls.split("-");
                   if (["brightness", "contrast", "saturate"].includes(prop)) {
                     return `${prop}(${val}%)`;
+                  } else if (prop === "blur") {
+                    return `${prop}(${val})`;
+                  } else if (prop === "sepia") {
+                    return `${prop}(1)`;
                   }
                   return "";
                 })
@@ -1148,12 +1238,12 @@ export default function Step8() {
           }
         }
 
-        // Copy to output canvas
+        // Copy to output canvas with adjusted positioning
         if (isCustomFrame) {
-          const aspectRatio = previewCanvas.width / previewCanvas.height;
-          const targetAspectRatio = desiredWidth / desiredHeight;
           const singleImageWidth = desiredWidth / 2;
           const singleImageHeight = desiredHeight;
+          const aspectRatio = previewCanvas.width / previewCanvas.height;
+          const targetAspectRatio = singleImageWidth / singleImageHeight;
 
           let drawWidth = singleImageWidth;
           let drawHeight = singleImageHeight;
@@ -1168,8 +1258,14 @@ export default function Step8() {
             offsetX = (singleImageWidth - drawWidth) / 2;
           }
 
+          // Draw the same content twice side by side (left and right)
           outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, offsetX, offsetY, drawWidth, drawHeight);
           outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, singleImageWidth + offsetX, offsetY, drawWidth, drawHeight);
+          
+          // Save first frame for custom frames to use later if needed
+          if (frameIndex === 0) {
+            firstFrameData = outputCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
+          }
         } else {
           const aspectRatio = previewCanvas.width / previewCanvas.height;
           const targetAspectRatio = desiredWidth / desiredHeight;
@@ -1190,11 +1286,40 @@ export default function Step8() {
           outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, offsetX, offsetY, drawWidth, drawHeight);
         }
 
-        // Add frame to GIF
-        gif.addFrame(outputCanvas, { delay: frameInterval, copy: true });
+        // Add frame to GIF with proper delay
+        gif.addFrame(outputCanvas, { 
+          delay: frameInterval, 
+          copy: true,
+          // For custom frames, use shorter delay at the end to reduce glitching
+          dispose: isCustomFrame && frameIndex > totalFrames * 0.8 ? 1 : 2 
+        });
 
-        // Wait between frames
+        // Ensure we're showing progress throughout the GIF
+        if (frameIndex % Math.floor(totalFrames / 4) === 0) {
+          console.log(`GIF progress: ${Math.round((frameIndex / totalFrames) * 100)}%`);
+        }
+
+        // Wait between frames - IMPORTANT: Need to wait for any async operations
         await new Promise(resolve => setTimeout(resolve, frameInterval));
+      }
+
+      // For custom frames, add one final static frame that's a duplicate of an early frame
+      // This ensures a clean loop without the glitch at the end
+      if (isCustomFrame && firstFrameData) {
+        // Ensure our final frame is clear
+        outputCtx.fillStyle = "#FFFFFF";
+        outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+        
+        // Apply the first frame data to ensure a perfect duplicate
+        outputCtx.putImageData(firstFrameData, 0, 0);
+        
+        // Add this frame with a slightly longer duration to pause on this good frame
+        gif.addFrame(outputCanvas, { 
+          delay: frameInterval * 2,
+          copy: true
+        });
+        
+        console.log("Added clean final frame for custom frame GIF");
       }
 
       console.log("Rendering GIF...");
@@ -1857,7 +1982,7 @@ export default function Step8() {
               <Slider ref={frameTemplateSliderRef} {...slickSettings}>
                 {loading ? (
                   <div className="px-2">
-                    <div className="bg-gradient-to-br from-indigo-800/50 to-purple-800/50 rounded-2xl flex items-center justify-center border border-indigo-500/30 aspect-square">
+                    <div className="bg-gradient-to-br from-indigo800/50 to-purple-800/50 rounded-2xl flex items-center justify-center border border-indigo-500/30 aspect-square">
                       <div className="relative">
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-400"></div>
                         <div className="absolute inset-0 animate-ping rounded-full h-8 w-8 border border-indigo-400/30"></div>

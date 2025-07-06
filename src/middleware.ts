@@ -66,8 +66,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For admin routes or protected API routes
-  if (path.startsWith("/admin/") || path.startsWith("/api/")) {
+  // For admin routes, store routes, or protected API routes
+  if (path.startsWith("/admin/") || path.startsWith("/store/") || path.startsWith("/api/")) {
     try {
       // For API routes, get token from Authorization header
       if (path.startsWith("/api/")) {
@@ -117,7 +117,7 @@ export async function middleware(request: NextRequest) {
         });
       }
 
-      // For admin routes, redirect to login if no token in cookies or local storage
+      // For admin routes or store routes, redirect to login if no token in cookies or local storage
       // Client-side AuthGuard component will handle this, so we can just let it proceed
       return NextResponse.next();
     } catch (error) {
@@ -128,7 +128,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
-      // For admin routes, redirect to login
+      // For admin routes or store routes, redirect to login
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       url.searchParams.set("from", request.nextUrl.pathname);
@@ -143,9 +143,10 @@ export async function middleware(request: NextRequest) {
 // Configure which paths the middleware will run on
 export const config = {
   matcher: [
-    // Include API and admin paths
+    // Include API, admin and store paths
     "/api/:path*", 
     "/admin/:path*",
+    "/store/:path*",
     
     // Explicitly exclude static file paths
     "/((?!uploads|public|_next/static|_next/image|favicon.ico).*)"

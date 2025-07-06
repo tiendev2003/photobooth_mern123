@@ -21,6 +21,7 @@ interface Store {
   secondaryColor?: string;
   isActive: boolean;
   maxEmployees: number;
+  maxAccounts?: number;
   createdAt: string;
   manager: {
     id: string;
@@ -60,6 +61,7 @@ export default function StoresPage() {
     primaryColor: '#3B82F6',
     secondaryColor: '#10B981',
     maxEmployees: 10,
+    maxAccounts: 20,
     managerId: ''
   });
   const [uploading, setUploading] = useState(false);
@@ -87,7 +89,7 @@ export default function StoresPage() {
 
     const fetchManagers = async () => {
       try {
-        const response = await fetch('/api/users?role=MANAGER', {
+        const response = await fetch('/api/users?role=MANAGER,STORE_OWNER', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -277,6 +279,7 @@ export default function StoresPage() {
       primaryColor: '#3B82F6',
       secondaryColor: '#10B981',
       maxEmployees: 10,
+      maxAccounts: 20,
       managerId: ''
     });
   };
@@ -297,6 +300,7 @@ export default function StoresPage() {
       primaryColor: store.primaryColor || '#3B82F6',
       secondaryColor: store.secondaryColor || '#10B981',
       maxEmployees: store.maxEmployees,
+      maxAccounts: store.maxAccounts || 20,
       managerId: store.manager.id
     });
     setShowCreateForm(true);
@@ -378,6 +382,12 @@ export default function StoresPage() {
               <p className="text-sm text-gray-600 mb-2">
                 <span className="font-medium">Nhân viên:</span> {store._count.employees}/{store.maxEmployees}
               </p>
+              
+              {store.maxAccounts && (
+                <p className="text-sm text-gray-600 mb-2">
+                  <span className="font-medium">Tài khoản máy:</span> {store.maxAccounts}
+                </p>
+              )}
 
               {store.address && (
                 <p className="text-sm text-gray-600 mb-2">
@@ -604,6 +614,19 @@ export default function StoresPage() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Số tài khoản máy tối đa
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.maxAccounts}
+                    onChange={(e) => setFormData({ ...formData, maxAccounts: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
                 {user?.role === 'ADMIN' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -616,9 +639,9 @@ export default function StoresPage() {
                       required
                     >
                       <option value="">Chọn quản lý</option>
-                      {managers.filter(manager => manager.role === 'MANAGER').map((manager) => (
+                      {managers.filter(manager => manager.role === 'STORE_OWNER' || manager.role === 'MANAGER').map((manager) => (
                         <option key={manager.id} value={manager.id}>
-                          {manager.name}
+                          {manager.name} ({manager.role})
                         </option>
                       ))}
                     </select>

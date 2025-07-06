@@ -12,6 +12,9 @@ interface User {
   address: string | null;
   createdAt: string;
   isActive?: boolean;
+  machineCode?: string | null;
+  location?: string | null;
+  canDeleteManager?: boolean;
   store?: {
     id: string;
     name: string;
@@ -44,7 +47,9 @@ export default function UserManagement() {
     password: '',
     role: 'USER',
     phone: '',
-    address: ''
+    address: '',
+    machineCode: '',
+    location: ''
   });
   
   // Define fetchUsers with useCallback
@@ -112,7 +117,9 @@ export default function UserManagement() {
       password: '',
       role: 'USER',
       phone: '',
-      address: ''
+      address: '',
+      machineCode: '',
+      location: ''
     });
     setIsFormOpen(true);
   };
@@ -126,7 +133,9 @@ export default function UserManagement() {
       password: '', // Don't populate password for security
       role: user.role,
       phone: user.phone || '',
-      address: user.address || ''
+      address: user.address || '',
+      machineCode: user.machineCode || '',
+      location: user.location || ''
     });
     setIsFormOpen(true);
   };
@@ -290,6 +299,9 @@ export default function UserManagement() {
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 >
                   <option value="USER">User</option>
+                  <option value="STORE_OWNER">Store Owner</option>
+                  <option value="MACHINE">Machine</option>
+                  <option value="MANAGER">Manager</option>
                   <option value="ADMIN">Admin</option>
                   <option value="KETOAN">Kế toán</option>
                 </select>
@@ -318,6 +330,37 @@ export default function UserManagement() {
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
+              
+              {/* Machine Code field - only show for MACHINE role */}
+              {formData.role === 'MACHINE' && (
+                <>
+                  <div>
+                    <label htmlFor="machineCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Machine Code</label>
+                    <input
+                      type="text"
+                      id="machineCode"
+                      name="machineCode"
+                      value={formData.machineCode}
+                      onChange={handleInputChange}
+                      placeholder="Enter machine code (e.g., M001)"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
+                    <input
+                      type="text"
+                      id="location"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      placeholder="Enter machine location"
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+                </>
+              )}
               
               <div className="flex justify-end space-x-3 pt-3">
                 <button
@@ -364,12 +407,22 @@ export default function UserManagement() {
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         user.role === 'ADMIN'
                           ? 'bg-red-100 text-red-800'
+                          : user.role === 'MANAGER'
+                          ? 'bg-purple-100 text-purple-800'
+                          : user.role === 'STORE_OWNER'
+                          ? 'bg-blue-100 text-blue-800'
+                          : user.role === 'MACHINE'
+                          ? 'bg-orange-100 text-orange-800'
                           : user.role === 'KETOAN'
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-green-100 text-green-800'
                       }`}>
                         {user.role}
+                        {user.role === 'MACHINE' && user.machineCode && ` (${user.machineCode})`}
                       </span>
+                      {user.role === 'MACHINE' && user.location && (
+                        <div className="text-xs text-gray-400 mt-1">📍 {user.location}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                       {new Date(user.createdAt).toLocaleDateString()}

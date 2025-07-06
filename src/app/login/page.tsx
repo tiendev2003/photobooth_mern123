@@ -21,6 +21,7 @@ export default function Login() {
     try {
       const success = await login(email, password);
       if (success) {
+        // Redirect will be handled by the home page based on user role
         router.push('/');
       } else {
         setError('Invalid credentials');

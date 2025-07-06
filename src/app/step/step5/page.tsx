@@ -2,6 +2,7 @@
 
 import HomeButton from "@/app/components/HomeButton";
 import LogoApp from "@/app/components/LogoApp";
+import { useAuth } from "@/lib/context/AuthContext";
 import { useBooth } from "@/lib/context/BoothContext";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -11,6 +12,7 @@ import { ArrowLeft, Trash2 } from "react-feather";
 export default function Step5() {
   const router = useRouter();
   const { selectedTotalAmount, } = useBooth();
+  const { token } = useAuth();
 
 
   const handleBack = () => {
@@ -48,7 +50,7 @@ export default function Step5() {
     try {
       const res = await fetch("/api/coupons/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ code: paymentCode, totalAmount: selectedTotalAmount }),
       });
       const data = await res.json();

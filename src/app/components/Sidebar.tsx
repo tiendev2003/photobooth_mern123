@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
     Camera,
+    DollarSign,
     Grid,
     Home,
     Image,
@@ -33,9 +34,14 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     { href: '/admin/images', label: 'Images', icon: Camera },
   ];
 
-  // Thêm menu Stores chỉ cho ADMIN
-  if (user?.role === 'ADMIN') {
+  // Thêm menu Stores cho ADMIN và MANAGER
+  if (user?.role === 'ADMIN' || user?.role === 'MANAGER') {
     menuItems.splice(1, 0, { href: '/admin/stores', label: 'Stores', icon: Home });
+  }
+
+  // Thêm menu Revenues cho ADMIN, MANAGER, và STORE_OWNER
+  if (user?.role === 'ADMIN' || user?.role === 'MANAGER' || (user?.role as string) === 'STORE_OWNER') {
+    menuItems.push({ href: '/admin/revenues', label: 'Revenues', icon: DollarSign });
   }
 
   return (

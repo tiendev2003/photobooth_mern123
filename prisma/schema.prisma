@@ -7,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Model Store - Quản lý thông tin cửa hàng
 model Store {
   id            String          @id @default(uuid())
   name          String          // Tên cửa hàng
@@ -23,13 +22,15 @@ model Store {
   secondaryColor String?        // Màu phụ
   isActive      Boolean         @default(true) // Trạng thái hoạt động
   maxEmployees  Int             @default(10)   // Giới hạn số nhân viên
+  maxAccounts   Int             @default(20)   // Giới hạn số tài khoản máy
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   managerId     String          // ID của quản lý cửa hàng
   manager       User            @relation("StoreManager", fields: [managerId], references: [id])
-  employees     User[]          @relation("StoreEmployees") // Danh sách nhân viên
+  employees     User[]          @relation("StoreEmployees") // Danh sách nhân viên và tài khoản máy
   frameTemplates FrameTemplate[] // Templates riêng của cửa hàng
   coupons       Coupon[]        // Mã giảm giá của cửa hàng
+  revenues      Revenue[]       // Doanh thu của cửa hàng
 
   @@index([managerId])
 }
@@ -40,20 +41,26 @@ model User {
   name          String          // Tên người dùng
   email         String          @unique // Email đăng nhập
   password      String          // Mật khẩu
-  role          Role            @default(USER) // Vai trò: ADMIN, MANAGER, USER
+  role          Role            @default(USER) // Vai trò: ADMIN, MANAGER, STORE_OWNER, USER, MACHINE
   phone         String?         // Số điện thoại
   address       String?         // Địa chỉ
   avatar        String?         // Ảnh đại diện
   currentToken  String?         @db.Text // Token hiện tại
   isActive      Boolean         @default(true) // Trạng thái hoạt động
+  canDeleteManager Boolean      @default(false) // Quyền xóa/khóa quản lý (chỉ ADMIN)
+  machineCode   String?         // Mã máy (nếu là tài khoản máy)
+  location      String?         // Vị trí máy (nếu là tài khoản máy)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   storeId       String?         // ID cửa hàng (null nếu là ADMIN)
   store         Store?          @relation("StoreEmployees", fields: [storeId], references: [id])
   managedStores Store[]         @relation("StoreManager") // Cửa hàng mà user quản lý
   coupons       Coupon[]        // Mã giảm giá do user tạo
+  revenues      Revenue[]       // Doanh thu do user/máy tạo ra
+  couponUsages  CouponUsage[]   // Lịch sử sử dụng mã giảm giá
 
   @@index([storeId])
+  @@index([machineCode])
 }
 
 // Model FrameType - Loại frame dùng chung toàn hệ thống
@@ -83,6 +90,7 @@ model FrameTemplate {
   overlay     String    // Overlay image
   frameTypeId String    // ID loại frame
   storeId     String?   // ID cửa hàng sở hữu template (null nếu là global)
+  position    Int       @default(0) // Vị trí hiển thị trong danh sách
   isActive    Boolean   @default(true) // Trạng thái hoạt động
   isGlobal    Boolean   @default(false) // Template toàn cục
   createdAt   DateTime  @default(now())
@@ -92,6 +100,7 @@ model FrameTemplate {
 
   @@index([frameTypeId])
   @@index([storeId])
+  @@index([position])
 }
 
 // Model Image - Quản lý file ảnh/video
@@ -125,20 +134,63 @@ model Coupon {
   id           String   @id @default(uuid())
   code         String   @unique // Mã giảm giá
   discount     Float    // Mức giảm giá (%)
-  expiresAt    DateTime @map("expires_at") // Ngày hết hạn
+  expiresAt    DateTime @map("expires_at") // Ngày hết hạn (tự động 1 ngày)
   userId       String?  @map("user_id") // ID người dùng tạo (optional)
   storeId      String?  // ID cửa hàng (null nếu global)
   isActive     Boolean  @default(true) // Trạng thái hoạt động
   usageLimit   Int?     // Giới hạn sử dụng
   currentUsage Int      @default(0) // Số lần đã sử dụng
+  isStoreOnly  Boolean  @default(true) // Chỉ áp dụng cho tài khoản cửa hàng
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   user         User?    @relation(fields: [userId], references: [id])
   store        Store?   @relation(fields: [storeId], references: [id])
+  revenues     Revenue[] // Doanh thu sử dụng mã giảm giá
+  couponUsages CouponUsage[] // Lịch sử sử dụng mã giảm giá
 
   @@index([userId])
   @@index([storeId])
   @@index([code])
+  @@index([expiresAt])
+}
+
+// Model CouponUsage - Lịch sử sử dụng mã giảm giá
+model CouponUsage {
+  id          String   @id @default(uuid())
+  couponId    String   // ID mã giảm giá
+  userId      String   // ID user/máy sử dụng
+  revenueId   String   // ID doanh thu liên quan
+  usedAt      DateTime @default(now())
+  coupon      Coupon   @relation(fields: [couponId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+  revenue     Revenue  @relation(fields: [revenueId], references: [id])
+
+  @@index([couponId])
+  @@index([userId])
+  @@index([revenueId])
+}
+
+// Model Revenue - Quản lý doanh thu
+model Revenue {
+  id          String    @id @default(uuid())
+  amount      Float     // Số tiền
+  description String?   // Mô tả giao dịch
+  userId      String    // ID user/máy tạo doanh thu
+  storeId     String    // ID cửa hàng
+  couponId    String?   // ID mã giảm giá được sử dụng (optional)
+  originalAmount Float? // Số tiền gốc trước khi giảm giá
+  discountAmount Float? // Số tiền được giảm
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id])
+  store       Store     @relation(fields: [storeId], references: [id])
+  coupon      Coupon?   @relation(fields: [couponId], references: [id])
+  couponUsages CouponUsage[] // Lịch sử sử dụng mã giảm giá
+
+  @@index([userId])
+  @@index([storeId])
+  @@index([couponId])
+  @@index([createdAt])
 }
 
 // Enum FileType - Loại file media
@@ -150,8 +202,10 @@ enum FileType {
 
 // Enum Role - Vai trò người dùng
 enum Role {
-  ADMIN          // Admin cấp cao
-  MANAGER        // Quản lý cửa hàng
-  USER           // Nhân viên cửa hàng
+  ADMIN          // Admin cấp cao - toàn quyền hệ thống
+  MANAGER        // Quản lý cấp cao - nhân viên của admin
+  STORE_OWNER    // Chủ cửa hàng - quản lý cửa hàng riêng
+  USER           // Nhân viên cửa hàng - chỉ thao tác cơ bản
+  MACHINE        // Tài khoản máy chụp ảnh - chỉ tạo doanh thu
   KETOAN         // Kế toán (nếu cần)
 }

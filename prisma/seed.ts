@@ -8,6 +8,8 @@ async function main() {
 
   // Clear existing data
   console.log('🗑️  Clearing existing data...');
+  await prisma.couponUsage.deleteMany();
+  await prisma.revenue.deleteMany();
   await prisma.coupon.deleteMany();
   await prisma.image.deleteMany();
   await prisma.mediaSession.deleteMany();
@@ -35,123 +37,127 @@ async function main() {
     },
   });
 
-  // Create Managers
+  // Create Managers (5 managers)
   console.log('👥 Creating Managers...');
-  const manager1 = await prisma.user.create({
-    data: {
-      name: 'Nguyễn Văn Quản',
-      email: 'manager1@photobooth.com',
-      password: defaultPassword,
-      role: Role.MANAGER,
-      phone: '0987654321',
-      address: '123 Trần Duy Hưng, Hà Nội',
-      avatar: '/uploads/avatars/manager1.png',
-      isActive: true,
-    },
-  });
-
-  const manager2 = await prisma.user.create({
-    data: {
-      name: 'Trần Thị Lan',
-      email: 'manager2@photobooth.com',
-      password: defaultPassword,
-      role: Role.MANAGER,
-      phone: '0912345678',
-      address: '456 Nguyễn Văn Cừ, TP.HCM',
-      avatar: '/uploads/avatars/manager2.png',
-      isActive: true,
-    },
-  });
-
-  // Create Stores
-  console.log('🏪 Creating Stores...');
-  const store1 = await prisma.store.create({
-    data: {
-      name: 'PhotoBooth Hà Nội',
-      slogan: 'Chụp ảnh đẹp - Kỷ niệm vĩnh cửu',
-      logo: '/uploads/stores/logo_hanoi.png',
-      background: '/uploads/stores/background_hanoi.png',
-      description: 'Cửa hàng photobooth chuyên nghiệp tại Hà Nội',
-      address: '123 Trần Duy Hưng, Cầu Giấy, Hà Nội',
-      phone: '024-3456-7890',
-      email: 'hanoi@photobooth.com',
-      accountNumber: '1234567890',
-      primaryColor: '#FF6B6B',
-      secondaryColor: '#4ECDC4',
-      isActive: true,
-      maxEmployees: 15,
-      managerId: manager1.id,
-    },
-  });
-
-  const store2 = await prisma.store.create({
-    data: {
-      name: 'PhotoBooth Sài Gòn',
-      slogan: 'Nắng Sài Gòn - Ảnh đẹp mỗi ngày',
-      logo: '/uploads/stores/logo_saigon.png',
-      background: '/uploads/stores/background_saigon.png',
-      description: 'Cửa hàng photobooth hiện đại tại TP.HCM',
-      address: '456 Nguyễn Văn Cừ, Quận 5, TP.HCM',
-      phone: '028-3456-7890',
-      email: 'saigon@photobooth.com',
-      accountNumber: '0987654321',
-      primaryColor: '#FFD93D',
-      secondaryColor: '#FF6B6B',
-      isActive: true,
-      maxEmployees: 20,
-      managerId: manager2.id,
-    },
-  });
-
-  // Update managers with their store
-  await prisma.user.update({
-    where: { id: manager1.id },
-    data: { storeId: store1.id },
-  });
-
-  await prisma.user.update({
-    where: { id: manager2.id },
-    data: { storeId: store2.id },
-  });
-
-  // Create Users for Store 1
-  console.log('👨‍💼 Creating Users for Store 1...');
-  const store1Users = [];
-  for (let i = 1; i <= 10; i++) {
-    const user = await prisma.user.create({
+  const managers = [];
+  for (let i = 1; i <= 5; i++) {
+    const manager = await prisma.user.create({
       data: {
-        name: `Nhân viên HN ${i}`,
-        email: `user${i}@hanoi.photobooth.com`,
+        name: `Manager ${i}`,
+        email: `manager${i}@photobooth.com`,
         password: defaultPassword,
-        role: Role.USER,
-        phone: `091234567${i}`,
-        address: `Địa chỉ ${i}, Hà Nội`,
-        avatar: `/uploads/avatars/user_hn_${i}.png`,
+        role: Role.MANAGER,
+        phone: `098765432${i}`,
+        address: `123 Đường ${i}, Hà Nội`,
+        avatar: `/uploads/avatars/manager${i}.png`,
         isActive: true,
-        storeId: store1.id,
       },
     });
-    store1Users.push(user);
+    managers.push(manager);
   }
 
-  // Create Users for Store 2
-  console.log('👨‍💼 Creating Users for Store 2...');
-  const store2Users = [];
-  for (let i = 1; i <= 10; i++) {
-    const user = await prisma.user.create({
+  // Create Stores (5 stores)
+  console.log('🏪 Creating Stores...');
+  const stores = [];
+  const storeNames = ['Hà Nội', 'Sài Gòn', 'Đà Nẵng', 'Cần Thơ', 'Hải Phòng'];
+  const storeColors = [
+    { primary: '#FF6B6B', secondary: '#4ECDC4' },
+    { primary: '#FFD93D', secondary: '#FF6B6B' },
+    { primary: '#6BCF7F', secondary: '#4D96FF' },
+    { primary: '#9B59B6', secondary: '#F39C12' },
+    { primary: '#E74C3C', secondary: '#3498DB' },
+  ];
+
+  for (let i = 0; i < 5; i++) {
+    const store = await prisma.store.create({
       data: {
-        name: `Nhân viên SG ${i}`,
-        email: `user${i}@saigon.photobooth.com`,
-        password: defaultPassword,
-        role: Role.USER,
-        phone: `098765432${i}`,
-        address: `Địa chỉ ${i}, TP.HCM`,
-        avatar: `/uploads/avatars/user_sg_${i}.png`,
+        name: `PhotoBooth ${storeNames[i]}`,
+        slogan: `Chụp ảnh đẹp tại ${storeNames[i]}`,
+        logo: `/uploads/stores/logo_${storeNames[i].toLowerCase()}.png`,
+        background: `/uploads/stores/background_${storeNames[i].toLowerCase()}.png`,
+        description: `Cửa hàng photobooth chuyên nghiệp tại ${storeNames[i]}`,
+        address: `${123 + i} Đường ${storeNames[i]}, ${storeNames[i]}`,
+        phone: `024-345${i}-7890`,
+        email: `${storeNames[i].toLowerCase()}@photobooth.com`,
+        accountNumber: `12345678${i}0`,
+        primaryColor: storeColors[i].primary,
+        secondaryColor: storeColors[i].secondary,
         isActive: true,
-        storeId: store2.id,
+        maxEmployees: 15 + i * 5,
+        managerId: managers[i].id,
       },
     });
-    store2Users.push(user);
+    stores.push(store);
+
+    // Update manager with their store
+    await prisma.user.update({
+      where: { id: managers[i].id },
+      data: { storeId: store.id },
+    });
+  }
+
+  // Create Users for each Store (1 chủ + 5 nhân viên + 5 máy)
+  console.log('👨‍💼 Creating Users for all Stores...');
+  const allUsers = [];
+  
+  for (let storeIndex = 0; storeIndex < stores.length; storeIndex++) {
+    const store = stores[storeIndex];
+    const storeNames = ['HN', 'SG', 'DN', 'CT', 'HP'];
+    const storeCode = storeNames[storeIndex];
+    
+    // Create Store Owner
+    const storeOwner = await prisma.user.create({
+      data: {
+        name: `Chủ cửa hàng ${storeCode}`,
+        email: `owner${storeIndex + 1}@${storeCode.toLowerCase()}.photobooth.com`,
+        password: defaultPassword,
+        role: Role.STORE_OWNER,
+        phone: `090123456${storeIndex}`,
+        address: `Địa chỉ chủ, ${store.name}`,
+        avatar: `/uploads/avatars/owner_${storeCode.toLowerCase()}.png`,
+        isActive: true,
+        storeId: store.id,
+      },
+    });
+    allUsers.push(storeOwner);
+
+    // Create 5 Employees
+    for (let i = 1; i <= 5; i++) {
+      const employee = await prisma.user.create({
+        data: {
+          name: `Nhân viên ${storeCode} ${i}`,
+          email: `user${i}@${storeCode.toLowerCase()}.photobooth.com`,
+          password: defaultPassword,
+          role: Role.USER,
+          phone: `091234567${storeIndex}${i}`,
+          address: `Địa chỉ ${i}, ${store.name}`,
+          avatar: `/uploads/avatars/user_${storeCode.toLowerCase()}_${i}.png`,
+          isActive: true,
+          storeId: store.id,
+        },
+      });
+      allUsers.push(employee);
+    }
+
+    // Create 5 Machine accounts
+    for (let i = 1; i <= 5; i++) {
+      const machine = await prisma.user.create({
+        data: {
+          name: `Máy ${storeCode} ${i}`,
+          email: `machine${i}@${storeCode.toLowerCase()}.photobooth.com`,
+          password: defaultPassword,
+          role: Role.MACHINE,
+          phone: `092345678${storeIndex}${i}`,
+          address: `Vị trí máy ${i}, ${store.name}`,
+          avatar: `/uploads/avatars/machine_${storeCode.toLowerCase()}_${i}.png`,
+          isActive: true,
+          storeId: store.id,
+          machineCode: `${storeCode}_MACHINE_${i}`,
+          location: `Khu vực ${i}`,
+        },
+      });
+      allUsers.push(machine);
+    }
   }
 
   // Create Frame Types (Global)
@@ -263,141 +269,44 @@ async function main() {
     createdFrameTypes.push(created);
   }
 
-  // Create Global Frame Templates
-  console.log('🎨 Creating Global Frame Templates...');
-  const globalTemplates = [
-    {
-      name: 'Template Mặc Định 1x1',
-      filename: 'global_1x1_default.png',
-      background: '/templates/global/bg_1x1_default.png',
-      overlay: '/templates/global/overlay_1x1_default.png',
-      frameTypeId: createdFrameTypes[0].id, // 1x1 Vuông
-    },
-    {
-      name: 'Template Mặc Định 1x2',
-      filename: 'global_1x2_default.png',
-      background: '/templates/global/bg_1x2_default.png',
-      overlay: '/templates/global/overlay_1x2_default.png',
-      frameTypeId: createdFrameTypes[2].id, // 1x2 Dọc
-    },
-    {
-      name: 'Template Mặc Định 2x2',
-      filename: 'global_2x2_default.png',
-      background: '/templates/global/bg_2x2_default.png',
-      overlay: '/templates/global/overlay_2x2_default.png',
-      frameTypeId: createdFrameTypes[4].id, // 2x2 Vuông
-    },
-    {
-      name: 'Template Tròn Mặc Định',
-      filename: 'global_circle_default.png',
-      background: '/templates/global/bg_circle_default.png',
-      overlay: '/templates/global/overlay_circle_default.png',
-      frameTypeId: createdFrameTypes[1].id, // 1x1 Tròn
-    },
-  ];
-
-  for (const template of globalTemplates) {
-    await prisma.frameTemplate.create({
-      data: {
-        ...template,
-        isGlobal: true,
-        isActive: true,
-        storeId: null,
-      },
-    });
+  // Create Frame Templates (2 templates cho mỗi frame type)
+  console.log('🎨 Creating Frame Templates...');
+  
+  // Tạo 2 global templates cho mỗi frame type
+  for (let typeIndex = 0; typeIndex < createdFrameTypes.length; typeIndex++) {
+    const frameType = createdFrameTypes[typeIndex];
+    
+    for (let templateIndex = 1; templateIndex <= 2; templateIndex++) {
+      await prisma.frameTemplate.create({
+        data: {
+          name: `Template Global ${frameType.name} ${templateIndex}`,
+          filename: `global_${frameType.id}_template_${templateIndex}.png`,
+          background: `/templates/global/bg_${frameType.id}_${templateIndex}.png`,
+          overlay: `/templates/global/overlay_${frameType.id}_${templateIndex}.png`,
+          frameTypeId: frameType.id,
+          isGlobal: true,
+          isActive: true,
+          storeId: null,
+          position: typeIndex * 2 + templateIndex,
+        },
+      });
+    }
   }
 
-  // Create Store-specific Frame Templates for Store 1
-  console.log('🎨 Creating Store 1 Frame Templates...');
-  const store1Templates = [
-    {
-      name: 'Template Hà Nội - Mùa Xuân',
-      filename: 'hanoi_spring_1x1.png',
-      background: '/templates/store1/bg_spring_1x1.png',
-      overlay: '/templates/store1/overlay_spring_1x1.png',
-      frameTypeId: createdFrameTypes[0].id, // 1x1 Vuông
-    },
-    {
-      name: 'Template Hà Nội - Mùa Hạ',
-      filename: 'hanoi_summer_2x2.png',
-      background: '/templates/store1/bg_summer_2x2.png',
-      overlay: '/templates/store1/overlay_summer_2x2.png',
-      frameTypeId: createdFrameTypes[4].id, // 2x2 Vuông
-    },
-    {
-      name: 'Template Hà Nội - Thương Hiệu',
-      filename: 'hanoi_brand_1x2.png',
-      background: '/templates/store1/bg_brand_1x2.png',
-      overlay: '/templates/store1/overlay_brand_1x2.png',
-      frameTypeId: createdFrameTypes[2].id, // 1x2 Dọc
-    },
-  ];
-
-  for (const template of store1Templates) {
-    await prisma.frameTemplate.create({
-      data: {
-        ...template,
-        isGlobal: false,
-        isActive: true,
-        storeId: store1.id,
-      },
-    });
-  }
-
-  // Create Store-specific Frame Templates for Store 2
-  console.log('🎨 Creating Store 2 Frame Templates...');
-  const store2Templates = [
-    {
-      name: 'Template Sài Gòn - Năng Động',
-      filename: 'saigon_dynamic_1x1.png',
-      background: '/templates/store2/bg_dynamic_1x1.png',
-      overlay: '/templates/store2/overlay_dynamic_1x1.png',
-      frameTypeId: createdFrameTypes[0].id, // 1x1 Vuông
-    },
-    {
-      name: 'Template Sài Gòn - Hiện Đại',
-      filename: 'saigon_modern_2x2.png',
-      background: '/templates/store2/bg_modern_2x2.png',
-      overlay: '/templates/store2/overlay_modern_2x2.png',
-      frameTypeId: createdFrameTypes[4].id, // 2x2 Vuông
-    },
-    {
-      name: 'Template Sài Gòn - Sáng Tạo',
-      filename: 'saigon_creative_1x4.png',
-      background: '/uploads/images/1.png',
-      overlay: '',
-      frameTypeId: createdFrameTypes[5].id, // 1x4 Dọc
-    },
-  ];
-
-  for (const template of store2Templates) {
-    await prisma.frameTemplate.create({
-      data: {
-        ...template,
-        isGlobal: false,
-        isActive: true,
-        storeId: store2.id,
-      },
-    });
-  }
-
-  // Create Sample Media Sessions
+  // Create Sample Media Sessions (5 sessions)
   console.log('📸 Creating Sample Media Sessions...');
-  const session1 = await prisma.mediaSession.create({
-    data: {
-      sessionCode: 'DEMO001',
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
-    },
-  });
+  const sessions = [];
+  for (let i = 1; i <= 5; i++) {
+    const session = await prisma.mediaSession.create({
+      data: {
+        sessionCode: `DEMO00${i}`,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
+      },
+    });
+    sessions.push(session);
+  }
 
-  const session2 = await prisma.mediaSession.create({
-    data: {
-      sessionCode: 'DEMO002',
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
-    },
-  });
-
-  // Create Sample Images
+  // Create Sample Images (5 images)
   console.log('🖼️  Creating Sample Images...');
   const sampleImages = [
     {
@@ -405,21 +314,21 @@ async function main() {
       path: '/uploads/images/demo_image_1.jpg',
       fileType: FileType.IMAGE,
       size: 1024000,
-      sessionId: session1.id,
+      sessionId: sessions[0].id,
     },
     {
       filename: 'demo_image_2.jpg',
       path: '/uploads/images/demo_image_2.jpg',
       fileType: FileType.IMAGE,
       size: 1536000,
-      sessionId: session1.id,
+      sessionId: sessions[1].id,
     },
     {
       filename: 'demo_gif_1.gif',
       path: '/uploads/gifs/demo_gif_1.gif',
       fileType: FileType.GIF,
       size: 2048000,
-      sessionId: session2.id,
+      sessionId: sessions[2].id,
     },
     {
       filename: 'demo_video_1.mp4',
@@ -427,7 +336,14 @@ async function main() {
       fileType: FileType.VIDEO,
       size: 10240000,
       duration: 15,
-      sessionId: session2.id,
+      sessionId: sessions[3].id,
+    },
+    {
+      filename: 'demo_image_3.png',
+      path: '/uploads/images/demo_image_3.png',
+      fileType: FileType.IMAGE,
+      size: 2048000,
+      sessionId: sessions[4].id,
     },
   ];
 
@@ -437,10 +353,10 @@ async function main() {
     });
   }
 
-  // Create Sample Coupons
+  // Create Sample Coupons (5 coupons)
   console.log('🎫 Creating Sample Coupons...');
   
-  // Global coupons (not tied to any store)
+  // Global coupons
   await prisma.coupon.create({
     data: {
       code: 'GLOBAL70',
@@ -467,68 +383,62 @@ async function main() {
     },
   });
 
-  // Store 1 specific coupons
-  await prisma.coupon.create({
-    data: {
-      code: 'HANOI100',
-      discount: 100,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      usageLimit: 30,
-      isActive: true,
-      currentUsage: 0,
-      userId: null,
-      storeId: store1.id,
-    },
-  });
+  // Store specific coupons
+  for (let i = 0; i < 3; i++) {
+    await prisma.coupon.create({
+      data: {
+        code: `STORE${i + 1}_SALE`,
+        discount: 50 + i * 20,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        usageLimit: 30 + i * 10,
+        isActive: true,
+        currentUsage: 0,
+        userId: null,
+        storeId: stores[i].id,
+      },
+    });
+  }
 
-  // Store 2 specific coupons
-  await prisma.coupon.create({
-    data: {
-      code: 'SAIGON80',
-      discount: 80,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      usageLimit: 40,
-      isActive: true,
-      currentUsage: 0,
-      userId: null,
-      storeId: store2.id,
-    },
-  });
-
-  // User-specific coupons
-  await prisma.coupon.create({
-    data: {
-      code: 'USER50',
-      discount: 50,
-      expiresAt: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days from now
-      usageLimit: 1,
-      isActive: true,
-      currentUsage: 0,
-      userId: store1Users[0].id,
-      storeId: store1.id,
-    },
-  });
+  // Create Sample Revenues (5 revenues)
+  console.log('💰 Creating Sample Revenues...');
+  const revenues = [];
+  for (let i = 0; i < 5; i++) {
+    const revenue = await prisma.revenue.create({
+      data: {
+        amount: 50000 + i * 10000,
+        description: `Giao dịch mẫu ${i + 1}`,
+        userId: allUsers[i * 5].id, // Lấy một số user từ danh sách
+        storeId: stores[i].id,
+        originalAmount: 70000 + i * 10000,
+        discountAmount: 20000,
+        couponId: null,
+      },
+    });
+    revenues.push(revenue);
+  }
 
   console.log('✅ Seeding completed successfully!');
   console.log('');
   console.log('📊 Summary:');
   console.log('- 1 Admin user created');
-  console.log('- 2 Manager users created');
-  console.log('- 2 Stores created');
-  console.log('- 20 Employee users created (10 per store)');
-  console.log('- 8 Frame types created');
-  console.log('- 10 Frame templates created (4 global + 6 store-specific)');
-  console.log('- 2 Media sessions created');
-  console.log('- 4 Sample images/videos created');
+  console.log('- 5 Manager users created');
+  console.log('- 5 Stores created');
+  console.log('- 55 Total users created (1 Admin + 5 Managers + 5 Stores × (1 Owner + 5 Employees + 5 Machines))');
+  console.log('- 8 Frame types created (unchanged)');
+  console.log('- 16 Frame templates created (2 per frame type)');
+  console.log('- 5 Media sessions created');
+  console.log('- 5 Sample images/videos created');
   console.log('- 5 Sample coupons created');
+  console.log('- 5 Sample revenues created');
   console.log('');
   console.log('🔑 Login credentials:');
-  console.log('Admin: admin@photobooth.com / 123456');
+  console.log('Admin: admin@gmail.com / 123456');
   console.log('Manager 1: manager1@photobooth.com / 123456');
   console.log('Manager 2: manager2@photobooth.com / 123456');
-  console.log('Users: user1@hanoi.photobooth.com / 123456');
-  console.log('       user1@saigon.photobooth.com / 123456');
-  console.log('       ... (and so on)');
+  console.log('Store Owner 1: owner1@hn.photobooth.com / 123456');
+  console.log('Employee 1: user1@hn.photobooth.com / 123456');
+  console.log('Machine 1: machine1@hn.photobooth.com / 123456');
+  console.log('... (and so on for all stores)');
 }
 
 main()
