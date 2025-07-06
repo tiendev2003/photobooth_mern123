@@ -835,7 +835,7 @@ export default function Step8() {
               previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
             }
           } catch (e) {
-            // Continue without overlay
+           console.error("Error drawing overlay image:", e);
           }
         }
 
@@ -884,6 +884,7 @@ export default function Step8() {
         frameCount++;
         requestAnimationFrame(renderFrame);
       };
+      console.log("Starting video rendering...",frameCount);
 
       // Start rendering
       requestAnimationFrame(renderFrame);
