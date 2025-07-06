@@ -126,8 +126,7 @@ export default function Step9() {
         <div className="flex flex-wrap justify-center gap-8 w-full mb-8">
           {/* QR Code for All Media Session */}
           <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg">
-            <h3 className="text-2xl font-semibold mb-4 text-center">Tất cả media</h3>
-            {isCreatingSession ? (
+             {isCreatingSession ? (
               <div className="w-[250px] h-[250px] flex items-center justify-center bg-black/20 rounded-lg">
                 <div className="flex flex-col items-center">
                   <Loader2 className="w-16 h-16 text-pink-400 animate-spin mb-4" />

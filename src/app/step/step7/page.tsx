@@ -110,7 +110,8 @@ export default function Step7() {
           baseClass,
           !hasPhoto && emptyClass,
           hasPhoto && "cursor-pointer",
-          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? "ha aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 || selectedFrame?.isCircle ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]"
+          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? " aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 || selectedFrame?.isCircle ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]",
+          selectedFrame?.columns === 2 && selectedFrame?.rows === 3 ? "aspect-[13/12]" : "",
         )}
         onClick={() => hasPhoto && handleRemovePhoto(idx)}
       >
@@ -138,11 +139,11 @@ export default function Step7() {
         <div
           data-preview
           className={cn(
-            "flex flex-col gap-4 print-preview photo-booth-preview bg-white",
-            selectedFrame.isCustom ? "pb-[10%] pt-[10%]" : "pb-[10%] pt-[5%]",
-            isSquare && selectedFrame.columns == 2 ? "pt-[10%]" : "",
-            isSquare && selectedFrame.columns == 1 ? "pt-[20%]" : "",
-            isLandscape ? "px-[5%] pt-[5%]" : "px-[10%] pt-[10%]",
+            "flex flex-col gap-4 print-preview photo-booth-preview bg-white px-[5%] ",
+            selectedFrame.isCustom ? "pb-[10%] pt-[10%] px-[10%]" :
+              isSquare && (selectedFrame.columns == 2 || selectedFrame.columns == 1) && !selectedFrame.isCircle ? "pt-[5%]" :
+                selectedFrame.isCircle ? "pt-[20%]" :
+                  isLandscape ? "px-[5%] pt-[5%]" : "px-[5%] pt-[5%]",
             selectedFrame?.isCircle && "px-[5%] pt-[20%]"
           )}
           style={{
@@ -151,20 +152,20 @@ export default function Step7() {
           }}
         >
           {selectedFrame.isCustom ? (
-            <div className="relative z-10 grid grid-cols-1 gap-[5%]">
+            <div className="relative z-10 grid grid-cols-1 gap-[20px]">
               {Array.from({ length: selectedFrame.rows }, (_, idx) => renderCell(idx))}
             </div>
           ) : (
             <div
               className={cn(
-                "relative z-10 grid gap-[calc(2.5%*3/2)]"
+                "relative z-10 grid gap-[20px]"
               )}
               style={{
                 gridTemplateColumns: `repeat(${selectedFrame.columns}, 1fr)`
               }}
             >
               {Array.from({ length: selectedFrame.columns }, (_, colIdx) => (
-                <div key={colIdx} className="flex flex-col gap-1">
+                <div key={colIdx} className="flex flex-col gap-[20px]">
                   {Array.from({ length: selectedFrame.rows }, (_, rowIdx) => {
                     // Correctly calculate the index for each cell based on column and row
                     const cellIdx = colIdx + (rowIdx * selectedFrame.columns);

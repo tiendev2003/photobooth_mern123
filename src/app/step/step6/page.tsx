@@ -8,7 +8,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const timeoutDuration = 2; // 2 seconds for countdown
+const timeoutDuration = 10; // 2 seconds for countdown
 
 export default function Step6() {
   const router = useRouter();
@@ -63,8 +63,8 @@ export default function Step6() {
       mediaRecorder.onstop = () => {
         const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
         const videoUrl = URL.createObjectURL(blob);
-        setVideos(prev => [...prev, videoUrl]);
-
+        setVideos(prev => [videoUrl, ...prev]);
+        console.log("Video recorded and added to the beginning of videos array");
       };
 
       mediaRecorder.start();

@@ -58,6 +58,8 @@ const skinFilters = [
   { id: "slimFace", name: "Mặt thon", className: "brightness-105 contrast-105 saturate-100 blur-[0.4px]", preview: "/anh/10.png", icon: "😊" }
 ]
 
+const VIDEO_SEGMENT_DURATION = 10; // Should match timeoutDuration from step6
+
 export default function Step8() {
   interface ExtendedCSSStyleDeclaration extends CSSStyleDeclaration {
     colorAdjust?: string;
@@ -462,34 +464,32 @@ export default function Step8() {
         if (videos && videos.length > 0) {
           const videoTask = (async () => {
             try {
-              const videoUrl = await generateHighQualityVideo(isLandscape);
+              console.log("Starting video generation...");
+              console.log("Current selected indices:", selectedIndices);
+              console.log("Available videos:", videos ? videos.length : 0);
+
+              // Log which videos will be used for which cells
+              selectedIndices.forEach((photoIndex, idx) => {
+                if (photoIndex !== undefined && photoIndex < videos.length) {
+                  console.log(`Cell ${idx} will use photo ${photoIndex} which should map to a video`);
+                }
+              });
+
+              const videoUrl = await generateSmoothVideo(isLandscape);
               if (videoUrl) {
+                console.log("Video generated successfully, uploading to server...");
                 const serverUrl = await uploadVideo(videoUrl);
                 setVideoQrCode(serverUrl);
                 localStorage.setItem("videoQrCode", serverUrl);
                 console.log("Video processed and uploaded successfully");
+              } else {
+                console.error("Failed to generate video - no URL returned");
               }
             } catch (error) {
               console.error("Error processing video:", error);
             }
           })();
           processTasks.push(videoTask);
-
-          // Generate and upload GIF if videos are available
-          const gifTask = (async () => {
-            try {
-              const gifUrl = await generateHighQualityGif(isLandscape);
-              if (gifUrl) {
-                const serverUrl = await uploadGif(gifUrl);
-                setGifQrCode(serverUrl);
-                localStorage.setItem("gifQrCode", serverUrl);
-                console.log("GIF processed and uploaded successfully");
-              }
-            } catch (error) {
-              console.error("Error processing GIF:", error);
-            }
-          })();
-          processTasks.push(gifTask);
         }
 
         // Wait for all tasks to complete
@@ -521,7 +521,9 @@ export default function Step8() {
     });
     await Promise.all(promises);
   };
-  const generateHighQualityVideo = async (isLandscape: boolean): Promise<string | void> => {
+
+  // Optimized video generation with smooth playback
+  const generateSmoothVideo = async (isLandscape: boolean): Promise<string | void> => {
     try {
       const previewContent = printPreviewRef.current;
       if (!previewContent) {
@@ -539,21 +541,24 @@ export default function Step8() {
       const desiredHeight = isLandscape ? 1200 : 1800;
       const rect = previewContent.getBoundingClientRect();
 
-      // Create output canvas for video
+      // Create output canvas for video with optimized settings
       const outputCanvas = document.createElement('canvas');
       outputCanvas.width = desiredWidth;
       outputCanvas.height = desiredHeight;
-      const outputCtx = outputCanvas.getContext('2d');
+      const outputCtx = outputCanvas.getContext('2d', {
+        alpha: false, // Better performance for opaque content
+        desynchronized: true // Allow canvas to render frames out of sync
+      });
 
       if (!outputCtx) {
         throw new Error("Không thể tạo video canvas context");
       }
 
-      // Setup MediaRecorder with the output canvas stream
-      const stream = outputCanvas.captureStream(30); // 30fps
+      // Optimized MediaRecorder settings for smooth recording
+      const stream = outputCanvas.captureStream(24); // 24fps for cinematic feel and better performance
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp9',
-        videoBitsPerSecond: 8000000, // 8Mbps - high quality
+        mimeType: 'video/webm;codecs=vp8', // VP8 for better compatibility and performance
+        videoBitsPerSecond: 4000000, // 4Mbps - balanced quality/performance
       });
 
       const recordedChunks: Blob[] = [];
@@ -571,41 +576,68 @@ export default function Step8() {
         };
       });
 
-      // Create a temporary rendering canvas for the preview
+      // Create preview canvas with proper scaling
       const previewCanvas = document.createElement('canvas');
       previewCanvas.width = rect.width;
       previewCanvas.height = rect.height;
-      const previewCtx = previewCanvas.getContext('2d');
+      const previewCtx = previewCanvas.getContext('2d', {
+        alpha: false,
+        desynchronized: true
+      });
 
       if (!previewCtx) {
         throw new Error("Không thể tạo preview canvas context");
       }
 
-      // Load all video elements based on selectedIndices
+      // Load and prepare all videos
       const cellIndices = selectedFrame?.isCustom
         ? Array.from({ length: selectedFrame.rows }, (_, i) => i)
         : Array.from({ length: selectedFrame!.columns * selectedFrame!.rows }, (_, i) => i);
 
-      // Create a map of cellIdx -> videoElement to ensure correct video mapping
       const cellVideoMap = new Map<number, HTMLVideoElement>();
+      const photoToVideoMap = new Map<number, string>();
 
-      // Load video elements for each cell index based on selectedIndices
+      // Create video mapping
+      if (videos.length > 0) {
+        const selectedPhotoIndices = selectedIndices.filter(idx => idx !== undefined) as number[];
+
+        for (let i = 0; i < selectedPhotoIndices.length; i++) {
+          const photoIndex = selectedPhotoIndices[i];
+          if (photoIndex < videos.length) {
+            photoToVideoMap.set(photoIndex, videos[photoIndex]);
+          }
+        }
+      }
+
+      // Load all video elements with proper settings for smooth playback
       for (const idx of cellIndices) {
         if (selectedIndices[idx] !== undefined) {
           const photoIndex = selectedIndices[idx]!;
-          if (photoIndex < videos.length) {
+          let videoUrl: string | undefined = undefined;
+
+          if (photoToVideoMap.has(photoIndex)) {
+            videoUrl = photoToVideoMap.get(photoIndex);
+          } else if (photoIndex < videos.length) {
+            videoUrl = videos[photoIndex];
+          }
+
+          if (videoUrl) {
             const videoElement = document.createElement('video');
-            videoElement.src = videos[photoIndex];
+            videoElement.src = videoUrl;
             videoElement.muted = true;
             videoElement.playsInline = true;
+            videoElement.preload = 'auto'; // Preload for smoother playback
 
-            // Wait for video to load metadata
             await new Promise<void>((resolve) => {
-              videoElement.onloadedmetadata = () => resolve();
-              videoElement.onerror = () => {
-                console.error(`Lỗi khi tải video tại chỉ số ${photoIndex}`);
+              videoElement.onloadedmetadata = () => {
+                console.log(`Video ${photoIndex} loaded for smooth playback, duration: ${videoElement.duration}`);
                 resolve();
               };
+              videoElement.onerror = () => {
+                console.error(`Error loading video ${photoIndex}`);
+                resolve();
+              };
+              setTimeout(() => resolve(), 5000); // Timeout fallback
             });
 
             cellVideoMap.set(idx, videoElement);
@@ -613,61 +645,70 @@ export default function Step8() {
         }
       }
 
-      // Prepare overlay template if needed
+      // Prepare overlay if needed
       let overlayImg: HTMLImageElement | null = null;
       let overlayValid = false;
       if (selectedTemplate?.overlay) {
         overlayImg = document.createElement('img');
-
-        // Add crossOrigin attribute to handle CORS issues
         overlayImg.crossOrigin = "anonymous";
 
         await new Promise<void>((resolve) => {
           overlayImg!.onload = () => {
-            console.log("Overlay image loaded successfully for video");
             overlayValid = true;
             resolve();
           };
-
-          overlayImg!.onerror = (err) => {
-            console.warn("Failed to load overlay image in video generation:", err);
-            console.warn("Failed overlay URL:", selectedTemplate.overlay);
+          overlayImg!.onerror = () => {
             overlayValid = false;
             resolve();
           };
-
-          // Set a timeout in case the image hangs
-          const timeoutId = setTimeout(() => {
-            console.warn("Overlay image load timeout in video generation");
-            console.warn("Timed out overlay URL:", selectedTemplate.overlay);
+          setTimeout(() => {
             overlayValid = false;
             resolve();
-          }, 5000); // 5 second timeout
+          }, 5000);
 
-          // Add cache-busting parameter to avoid caching issues
-          const cacheBuster = `?v=${Date.now()}`;
-          overlayImg!.src = `${selectedTemplate.overlay}${cacheBuster}`;
-
-          // If image is already complete when we assign src, the onload might not fire
+          overlayImg!.src = `${selectedTemplate.overlay}?v=${Date.now()}`;
           if (overlayImg!.complete) {
-            clearTimeout(timeoutId);
-            // Even if complete, naturalWidth/Height will be 0 for broken images
             overlayValid = overlayImg!.naturalWidth > 0 && overlayImg!.naturalHeight > 0;
-            if (overlayValid) {
-              console.log("Overlay image was already loaded in cache for video");
-            } else {
-              console.warn("Overlay image complete but invalid dimensions for video");
-            }
             resolve();
           }
         });
       }
 
-      // Start all videos and recording
-      Array.from(cellVideoMap.values()).forEach(video => video.play());
+      // Start all videos and wait for them to be ready
+      console.log("Starting videos for smooth recording...");
+      const videoStartPromises = Array.from(cellVideoMap.values()).map(async (video) => {
+        try {
+          await video.play();
+          return true;
+        } catch (e) {
+          console.error("Error starting video:", e);
+          return false;
+        }
+      });
+
+      await Promise.all(videoStartPromises);
+      await new Promise(resolve => setTimeout(resolve, 300)); // Buffer time
+
+      // Start recording
+      console.log("Starting optimized video recording...");
       mediaRecorder.start();
 
-      const renderVideoFrame = () => {
+      // Optimized rendering with consistent timing
+      let frameCount = 0;
+      const targetFPS = 24;
+      const frameInterval = 1000 / targetFPS;
+      let lastTime = performance.now();
+
+      const renderFrame = () => {
+        const now = performance.now();
+
+        // Throttle frame rate for consistency
+        if (now - lastTime < frameInterval) {
+          requestAnimationFrame(renderFrame);
+          return;
+        }
+        lastTime = now;
+
         const anyPlaying = Array.from(cellVideoMap.values()).some(
           (video) => !video.ended && !video.paused
         );
@@ -677,17 +718,15 @@ export default function Step8() {
           return;
         }
 
-        // Clear canvases
+        // Clear canvases efficiently
         previewCtx.fillStyle = "#FFFFFF";
         previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
         outputCtx.fillStyle = "#FFFFFF";
         outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-        // Get cell elements similar to renderCell function
         const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
 
         cells.forEach((cell, idx) => {
-          // Skip cells that don't have a corresponding video
           if (!cellVideoMap.has(idx)) return;
 
           const cellRect = cell.getBoundingClientRect();
@@ -695,71 +734,96 @@ export default function Step8() {
           const relativeTop = cellRect.top - rect.top;
           const videoElement = cellVideoMap.get(idx)!;
 
-          // Apply filter
-          if (selectedFilter?.className) {
-            const filterString = selectedFilter.className
-              .split(" ")
-              .filter((cls) => cls.includes("-"))
-              .map((cls) => {
-                const [prop, val] = cls.split("-");
-                if (["brightness", "contrast", "saturate"].includes(prop)) {
-                  return `${prop}(${val}%)`;
-                } else if (prop === "hue-rotate") {
-                  return `${prop}(${val})`;
-                } else if (prop === "blur") {
-                  return `${prop}(${val})`;
-                } else if (prop === "sepia") {
-                  return `${prop}(1)`;
-                }
-                return "";
-              })
-              .filter(Boolean)
-              .join(" ");
+          // Only render ready frames to avoid stuttering
+          if (videoElement.readyState >= 2) {
+            // Apply filter optimally
+            if (selectedFilter?.className) {
+              const filterString = selectedFilter.className
+                .split(" ")
+                .filter((cls) => cls.includes("-"))
+                .map((cls) => {
+                  const [prop, val] = cls.split("-");
+                  if (["brightness", "contrast", "saturate"].includes(prop)) {
+                    return `${prop}(${val}%)`;
+                  }
+                  return "";
+                })
+                .filter(Boolean)
+                .join(" ");
 
-            previewCtx.filter = filterString;
-          } else {
-            previewCtx.filter = "none";
+              previewCtx.filter = filterString;
+            } else {
+              previewCtx.filter = "none";
+            }
+
+            // Calculate proper aspect ratio for video (like object-fit: cover)
+            const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight;
+            const cellAspectRatio = cellRect.width / cellRect.height;
+
+            let drawWidth = cellRect.width;
+            let drawHeight = cellRect.height;
+            let offsetX = relativeLeft;
+            let offsetY = relativeTop;
+
+            if (videoAspectRatio > cellAspectRatio) {
+              // Video is wider than cell - fit height and crop width
+              drawHeight = cellRect.height;
+              drawWidth = drawHeight * videoAspectRatio;
+              offsetX = relativeLeft - (drawWidth - cellRect.width) / 2;
+            } else {
+              // Video is taller than cell - fit width and crop height
+              drawWidth = cellRect.width;
+              drawHeight = drawWidth / videoAspectRatio;
+              offsetY = relativeTop - (drawHeight - cellRect.height) / 2;
+            }
+
+            // Save context for clipping
+            previewCtx.save();
+
+            // Create clipping path for the cell area - handle circle frame
+            if (selectedFrame?.isCircle) {
+              // For circle frame, create circular clipping path
+              const centerX = relativeLeft + cellRect.width / 2;
+              const centerY = relativeTop + cellRect.height / 2;
+              const radius = Math.min(cellRect.width, cellRect.height) / 2;
+
+              previewCtx.beginPath();
+              previewCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+              previewCtx.clip();
+            } else {
+              // Regular rectangular clipping
+              previewCtx.beginPath();
+              previewCtx.rect(relativeLeft, relativeTop, cellRect.width, cellRect.height);
+              previewCtx.clip();
+            }
+
+            previewCtx.drawImage(
+              videoElement,
+              offsetX,
+              offsetY,
+              drawWidth,
+              drawHeight
+            );
+
+            previewCtx.restore(); // Restore context (removes clipping and filter)
           }
-
-          // Draw video frame into each cell position
-          previewCtx.drawImage(
-            videoElement,
-            relativeLeft,
-            relativeTop,
-            cellRect.width,
-            cellRect.height
-          );
         });
 
-        // Draw the overlay if available and valid
+        // Draw overlay if available
         if (overlayImg && overlayValid && overlayImg.complete) {
           try {
-            previewCtx.globalCompositeOperation = 'source-over';
-            previewCtx.filter = "none";
-
-            // Additional check to prevent broken image errors
             if (overlayImg.naturalWidth > 0 && overlayImg.naturalHeight > 0) {
-              previewCtx.drawImage(
-                overlayImg,
-                0,
-                0,
-                previewCanvas.width,
-                previewCanvas.height
-              );
-            } else {
-              console.warn("Skipped drawing overlay: image dimensions are invalid");
+              previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
             }
-          } catch (overlayError) {
-            console.error("Error drawing overlay in video:", overlayError);
+          } catch (e) {
             // Continue without overlay
           }
         }
 
+        // Copy to output canvas
         if (isCustomFrame) {
-          // Custom frame: Render two identical images side by side
           const singleImageWidth = desiredWidth / 2;
           const singleImageHeight = desiredHeight;
-
           const aspectRatio = previewCanvas.width / previewCanvas.height;
           const targetAspectRatio = singleImageWidth / singleImageHeight;
 
@@ -776,33 +840,9 @@ export default function Step8() {
             offsetX = (singleImageWidth - drawWidth) / 2;
           }
 
-          // Draw first copy (left)
-          outputCtx.drawImage(
-            previewCanvas,
-            0,
-            0,
-            previewCanvas.width,
-            previewCanvas.height,
-            offsetX,
-            offsetY,
-            drawWidth,
-            drawHeight
-          );
-
-          // Draw second copy (right)
-          outputCtx.drawImage(
-            previewCanvas,
-            0,
-            0,
-            previewCanvas.width,
-            previewCanvas.height,
-            singleImageWidth + offsetX,
-            offsetY,
-            drawWidth,
-            drawHeight
-          );
+          outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, offsetX, offsetY, drawWidth, drawHeight);
+          outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, singleImageWidth + offsetX, offsetY, drawWidth, drawHeight);
         } else {
-          // Regular frame: Single image
           const aspectRatio = previewCanvas.width / previewCanvas.height;
           const targetAspectRatio = desiredWidth / desiredHeight;
 
@@ -819,462 +859,26 @@ export default function Step8() {
             offsetX = (desiredWidth - drawWidth) / 2;
           }
 
-          outputCtx.drawImage(
-            previewCanvas,
-            0,
-            0,
-            previewCanvas.width,
-            previewCanvas.height,
-            offsetX,
-            offsetY,
-            drawWidth,
-            drawHeight
-          );
+          outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, offsetX, offsetY, drawWidth, drawHeight);
         }
 
-        // Request next frame
-        requestAnimationFrame(renderVideoFrame);
+        frameCount++;
+        requestAnimationFrame(renderFrame);
       };
 
-      // Start the rendering loop
-      renderVideoFrame();
+      // Start rendering
+      requestAnimationFrame(renderFrame);
 
-      // Wait for all videos to finish
-      await Promise.all(
-        Array.from(cellVideoMap.values()).map(
-          (video: HTMLVideoElement) =>
-            new Promise<void>((resolve) => {
-              video.onended = () => resolve();
-            })
-        )
-      );
-
-      // Add a small delay to ensure the last frame is captured
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      mediaRecorder.stop();
+      // Stop recording after fixed duration
+      setTimeout(() => {
+        mediaRecorder.stop();
+      }, VIDEO_SEGMENT_DURATION * 1000);
 
       return processedVideoPromise;
+
     } catch (error) {
       console.error("Lỗi khi tạo video chất lượng cao:", error);
       alert("❌ Có lỗi xảy ra khi tạo video. Vui lòng thử lại.");
-    }
-  };
-
-  const generateHighQualityGif = async (isLandscape: boolean): Promise<string | void> => {
-    try {
-      // Get the preview content just like in generateHighQualityImage
-      const previewContent = printPreviewRef.current;
-      if (!previewContent) {
-        alert('Không tìm thấy nội dung để tạo GIF');
-        return;
-      }
-
-      if (!videos || videos.length === 0) {
-        alert("Không có video để tạo GIF.");
-        return;
-      }
-
-      // Get configuration similar to generateHighQualityImage
-      const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 1200 : 800;  // Smaller for GIF to keep file size manageable
-      const desiredHeight = isLandscape ? 800 : 1200;
-      const rect = previewContent.getBoundingClientRect();
-
-      // Dynamically import required libraries
-      const { default: GIF } = await import('gif.js');
-
-      // Create a new GIF with final dimensions
-      const gif = new GIF({
-        workers: 2,
-        quality: 10, // Lower is better
-        workerScript: '/gif.worker.js',
-        width: desiredWidth,
-        height: desiredHeight,
-        background: '#ffffff'
-      });
-
-      // Map cells to videos using selectedIndices for proper ordering
-      const cellIndices = selectedFrame?.isCustom
-        ? Array.from({ length: selectedFrame.rows }, (_, i) => i)
-        : Array.from({ length: selectedFrame!.columns * selectedFrame!.rows }, (_, i) => i);
-
-      // Create a map of cellIdx -> videoElement to ensure correct video mapping
-      const cellVideoMap = new Map<number, HTMLVideoElement>();
-
-      // Maximum duration to track the longest video
-      let maxDuration = 0;
-
-      // Load all video elements based on selectedIndices, similar to generateHighQualityVideo
-      for (const idx of cellIndices) {
-        if (selectedIndices[idx] !== undefined) {
-          const photoIndex = selectedIndices[idx]!;
-          if (photoIndex < videos.length) {
-            const videoElement = document.createElement('video');
-            videoElement.src = videos[photoIndex];
-            videoElement.muted = true;
-            videoElement.playsInline = true;
-
-            // Wait for video to load metadata
-            await new Promise<void>((resolve) => {
-              videoElement.onloadedmetadata = () => resolve();
-              videoElement.onerror = () => {
-                console.error(`Lỗi khi tải video tại chỉ số ${photoIndex}`);
-                resolve();
-              };
-            });
-
-            // Update max duration if this video is longer
-            if (videoElement.duration && isFinite(videoElement.duration)) {
-              maxDuration = Math.max(maxDuration, videoElement.duration);
-            }
-
-            // Store the video element in our map
-            cellVideoMap.set(idx, videoElement);
-          }
-        }
-      }
-
-      // Ensure we have at least one video
-      if (cellVideoMap.size === 0) {
-        throw new Error("Không tìm thấy video hợp lệ để tạo GIF");
-      }
-
-      // Log all loaded videos
-      console.log(`Đã tải ${cellVideoMap.size} video để tạo GIF`);
-
-      // Pre-play all videos briefly to ensure durations are accurate
-      try {
-        const videoElements = Array.from(cellVideoMap.values());
-        await Promise.all(videoElements.map(async (video) => {
-          await video.play();
-          await new Promise(resolve => setTimeout(resolve, 100));
-          video.pause();
-          video.currentTime = 0; // Reset to beginning
-        }));
-      } catch (e) {
-        console.warn("Couldn't briefly play all videos:", e);
-      }
-
-      // Validate max duration
-      if (isNaN(maxDuration) || !isFinite(maxDuration) || maxDuration <= 0) {
-        throw new Error("Không thể xác định thời lượng video hợp lệ");
-      }
-
-      // Add logging to debug
-      console.log("Max video duration:", maxDuration);
-
-      // Ensure we have a reasonable frame count and interval
-      const frameCount = Math.min(15, Math.max(8, Math.floor(maxDuration * 3))); // Reduce frames for better performance
-      const frameInterval = maxDuration / frameCount;
-
-      console.log("Frame count:", frameCount, "Frame interval:", frameInterval);
-
-      // Create multiple temp canvases for each video frame
-      const tempCanvases = new Map<number, HTMLCanvasElement>();
-
-      // Create a temporary canvas for each video
-      for (const [idx, video] of cellVideoMap.entries()) {
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        tempCanvases.set(idx, canvas);
-      }
-
-      // Create output canvas for final GIF frames
-      const outputCanvas = document.createElement('canvas');
-      outputCanvas.width = desiredWidth;
-      outputCanvas.height = desiredHeight;
-      const outputCtx = outputCanvas.getContext('2d');
-
-      if (!outputCtx) {
-        console.error("Không thể tạo output canvas context");
-        throw new Error("Không thể tạo output canvas context");
-      }
-
-      // Create a preview canvas for rendering the layout
-      const previewCanvas = document.createElement('canvas');
-      previewCanvas.width = rect.width;
-      previewCanvas.height = rect.height;
-      const previewCtx = previewCanvas.getContext('2d');
-
-      if (!previewCtx) {
-        throw new Error("Không thể tạo preview canvas context");
-      }
-
-      // Prepare overlay template if needed
-      let overlayImg: HTMLImageElement | null = null;
-      let overlayValid = false;
-      if (selectedTemplate?.overlay) {
-        overlayImg = document.createElement('img');
-
-        // Add crossOrigin attribute to handle CORS issues
-        overlayImg.crossOrigin = "anonymous";
-
-        await new Promise<void>((resolve) => {
-          overlayImg!.onload = () => {
-            console.log("Overlay image loaded successfully for GIF");
-            overlayValid = true;
-            resolve();
-          };
-
-          overlayImg!.onerror = (err) => {
-            console.warn("Failed to load overlay image in GIF generation:", err);
-            console.warn("Failed overlay URL:", selectedTemplate.overlay);
-            overlayValid = false;
-            resolve();
-          };
-
-          // Set a timeout in case the image hangs
-          const timeoutId = setTimeout(() => {
-            console.warn("Overlay image load timeout in GIF generation");
-            console.warn("Timed out overlay URL:", selectedTemplate.overlay);
-            overlayValid = false;
-            resolve();
-          }, 5000); // 5 second timeout
-
-          // Add cache-busting parameter to avoid caching issues
-          const cacheBuster = `?v=${Date.now()}`;
-          overlayImg!.src = `${selectedTemplate.overlay}${cacheBuster}`;
-
-          // If image is already complete when we assign src, the onload might not fire
-          if (overlayImg!.complete) {
-            clearTimeout(timeoutId);
-            // Even if complete, naturalWidth/Height will be 0 for broken images
-            overlayValid = overlayImg!.naturalWidth > 0 && overlayImg!.naturalHeight > 0;
-            if (overlayValid) {
-              console.log("Overlay image was already loaded in cache for GIF");
-            } else {
-              console.warn("Overlay image complete but invalid dimensions for GIF");
-            }
-            resolve();
-          }
-        });
-      }
-
-      const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
-
-      for (let i = 0; i < frameCount; i++) {
-        try {
-          // Calculate time and validate it's a finite number
-          const seekTime = i * frameInterval;
-
-          // Ensure time is within valid range and is a finite number
-          if (isNaN(seekTime) || !isFinite(seekTime) || seekTime < 0) {
-            console.warn(`Invalid seek time: ${seekTime} at frame ${i}`);
-            continue; // Skip this frame
-          }
-
-          // Set all videos to the current time
-          const seekPromises = Array.from(cellVideoMap.entries()).map(async ([idx, video]) => {
-            try {
-              // Ensure we don't exceed this video's duration
-              const safeTime = Math.min(seekTime, video.duration - 0.1);
-
-              // Set video to specific time
-              video.currentTime = safeTime;
-
-              // Wait for the video to seek to that position
-              await new Promise<void>(resolve => {
-                const seekHandler = () => {
-                  video.removeEventListener('seeked', seekHandler);
-                  resolve();
-                };
-
-                const errorHandler = () => {
-                  console.warn(`Seek error at time: ${safeTime} for cell ${idx}`);
-                  video.removeEventListener('error', errorHandler);
-                  resolve();
-                };
-
-                video.addEventListener('seeked', seekHandler);
-                video.addEventListener('error', errorHandler);
-
-                // Add timeout to prevent hanging if seek never completes
-                setTimeout(() => {
-                  video.removeEventListener('seeked', seekHandler);
-                  video.removeEventListener('error', errorHandler);
-                  console.warn(`Seek timeout at time: ${safeTime} for cell ${idx}`);
-                  resolve();
-                }, 1000);
-              });
-
-              // Draw the current video frame to its temporary canvas
-              const canvas = tempCanvases.get(idx)!;
-              const ctx = canvas.getContext('2d');
-              if (ctx) {
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-              }
-            } catch (e) {
-              console.error(`Error seeking video for cell ${idx}:`, e);
-            }
-          });
-
-          // Wait for all videos to seek and draw to their canvases
-          await Promise.all(seekPromises);
-
-          // Clear the preview canvas
-          previewCtx.fillStyle = "#FFFFFF";
-          previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
-
-          // Render each cell with its corresponding video frame
-          cells.forEach((cell, idx) => {
-            // Only draw cells that have a corresponding video
-            if (tempCanvases.has(idx) && cellVideoMap.has(idx)) {
-              const cellRect = cell.getBoundingClientRect();
-              const relativeLeft = cellRect.left - rect.left;
-              const relativeTop = cellRect.top - rect.top;
-              const cellWidth = cellRect.width;
-              const cellHeight = cellRect.height;
-
-              // Apply filter
-              if (selectedFilter?.className) {
-                const filterString = selectedFilter.className
-                  .split(" ")
-                  .filter((cls) => cls.includes("-"))
-                  .map((cls) => {
-                    const [prop, val] = cls.split("-");
-                    if (["brightness", "contrast", "saturate"].includes(prop)) {
-                      return `${prop}(${val}%)`;
-                    } else if (prop === "hue-rotate") {
-                      return `${prop}(${val})`;
-                    } else if (prop === "blur") {
-                      return `${prop}(${val})`;
-                    } else if (prop === "sepia") {
-                      return `${prop}(1)`;
-                    }
-                    return "";
-                  })
-                  .filter(Boolean)
-                  .join(" ");
-
-                previewCtx.filter = filterString;
-              } else {
-                previewCtx.filter = "none";
-              }
-
-              // Draw the appropriate video frame for this cell
-              const tempCanvas = tempCanvases.get(idx)!;
-              previewCtx.drawImage(
-                tempCanvas,
-                relativeLeft, relativeTop,
-                cellWidth, cellHeight
-              );
-            }
-          });
-
-          // Draw the overlay if available and valid
-          if (overlayImg && overlayValid && overlayImg.complete) {
-            try {
-              previewCtx.globalCompositeOperation = 'source-over';
-              previewCtx.filter = "none";
-
-              // Additional check to prevent broken image errors
-              if (overlayImg.naturalWidth > 0 && overlayImg.naturalHeight > 0) {
-                previewCtx.drawImage(
-                  overlayImg,
-                  0, 0,
-                  previewCanvas.width, previewCanvas.height
-                );
-              } else {
-                console.warn("Skipped drawing overlay in GIF: image dimensions are invalid");
-              }
-            } catch (overlayError) {
-              console.error("Error drawing overlay in GIF:", overlayError);
-              // Continue without overlay
-            }
-          }
-
-          // Clear the output canvas
-          outputCtx.fillStyle = "#FFFFFF";
-          outputCtx.fillRect(0, 0, desiredWidth, desiredHeight);
-
-          // Now render the preview into the output canvas for GIF
-          if (isCustomFrame) {
-            // Custom frame: Render two identical images side by side
-            const singleImageWidth = desiredWidth / 2;
-            const singleImageHeight = desiredHeight;
-
-            const aspectRatio = previewCanvas.width / previewCanvas.height;
-            const targetAspectRatio = singleImageWidth / singleImageHeight;
-
-            let drawWidth = singleImageWidth;
-            let drawHeight = singleImageHeight;
-            let offsetX = 0;
-            let offsetY = 0;
-
-            if (aspectRatio > targetAspectRatio) {
-              drawHeight = singleImageWidth / aspectRatio;
-              offsetY = (singleImageHeight - drawHeight) / 2;
-            } else {
-              drawWidth = singleImageHeight * aspectRatio;
-              offsetX = (singleImageWidth - drawWidth) / 2;
-            }
-
-            // Draw first copy (left)
-            outputCtx.drawImage(
-              previewCanvas,
-              0, 0, previewCanvas.width, previewCanvas.height,
-              offsetX, offsetY, drawWidth, drawHeight
-            );
-
-            // Draw second copy (right)
-            outputCtx.drawImage(
-              previewCanvas,
-              0, 0, previewCanvas.width, previewCanvas.height,
-              singleImageWidth + offsetX, offsetY, drawWidth, drawHeight
-            );
-          } else {
-            // Regular frame: Single image
-            const aspectRatio = previewCanvas.width / previewCanvas.height;
-            const targetAspectRatio = desiredWidth / desiredHeight;
-
-            let drawWidth = desiredWidth;
-            let drawHeight = desiredHeight;
-            let offsetX = 0;
-            let offsetY = 0;
-
-            if (aspectRatio > targetAspectRatio) {
-              drawHeight = desiredWidth / aspectRatio;
-              offsetY = (desiredHeight - drawHeight) / 2;
-            } else {
-              drawWidth = desiredHeight * aspectRatio;
-              offsetX = (desiredWidth - drawWidth) / 2;
-            }
-
-            outputCtx.drawImage(
-              previewCanvas,
-              0, 0, previewCanvas.width, previewCanvas.height,
-              offsetX, offsetY, drawWidth, drawHeight
-            );
-          }
-
-          // Add the frame to the GIF
-          const frameDelay = Math.min(200, Math.max(100, 500 / frameCount));
-          gif.addFrame(outputCanvas, { copy: true, delay: frameDelay });
-        } catch (frameError) {
-          console.error(`Error processing frame: ${frameError}`);
-          // Continue with the next frame
-        }
-      }
-
-      // Render the GIF
-      return new Promise<string>((resolve, reject) => {
-        gif.on('finished', (blob: Blob) => {
-          console.log("GIF rendered successfully, size:", Math.round(blob.size / 1024), "KB");
-          const gifUrl = URL.createObjectURL(blob);
-          resolve(gifUrl);
-        });
-
-        gif.on('abort', () => {
-          reject(new Error("GIF rendering was aborted"));
-        });
-
-        gif.render();
-      });
-    } catch (error) {
-      console.error("Lỗi khi tạo GIF chất lượng cao:", error);
-      alert("❌ Có lỗi xảy ra khi tạo GIF. Vui lòng thử lại.");
-      throw error;
     }
   };
 
@@ -1313,9 +917,8 @@ export default function Step8() {
         console.log('Creating QR code for URL:', sessionUrl);
         qrCodeElement = document.createElement('div');
         qrCodeElement.style.position = 'absolute';
-        const paddingPercent = 5;
-        qrCodeElement.style.bottom = `${paddingPercent}%`;
-        qrCodeElement.style.left = `${paddingPercent}%`;
+        qrCodeElement.style.bottom = '5%';
+        qrCodeElement.style.left = isCustomFrame ? '10%' : '5%';
         qrCodeElement.style.width = '55px';
         qrCodeElement.style.height = '55px';
         qrCodeElement.style.zIndex = '30';
@@ -1384,20 +987,37 @@ export default function Step8() {
             container.style.position = "relative";
             container.style.overflow = "hidden";
 
-            // Adjust padding based on frame type and orientation
+            // Apply identical padding as in renderPreview function
             if (isCustomFrame) {
+              container.style.paddingBottom = "10%";
               container.style.paddingTop = "10%";
-              container.style.paddingBottom = "10%";
+              container.style.paddingLeft = "10%";
+              container.style.paddingRight = "10%";
+            } else if (selectedFrame?.isCircle) {
+              container.style.paddingTop = "20%";
+              container.style.paddingLeft = "5%";
+              container.style.paddingRight = "5%";
+            } else if (isSquare && (selectedFrame?.columns === 2 || selectedFrame?.columns === 1) && !selectedFrame?.isCircle) {
+              container.style.paddingTop = "5%";
+              container.style.paddingLeft = "5%";
+              container.style.paddingRight = "5%";
             } else {
-              container.style.paddingTop = isSquare && selectedFrame?.columns === 1 ? "20%" :
-                isSquare && selectedFrame?.columns === 2 ? "10%" : "5%";
-              container.style.paddingBottom = "10%";
+              container.style.paddingTop = "5%";
+              container.style.paddingLeft = isLandscape ? "5%" : "10%";
+              container.style.paddingRight = isLandscape ? "5%" : "10%";
             }
-
-            // Adjust horizontal padding based on orientation
-            container.style.paddingLeft = isLandscape ? "5%" : "10%";
-            container.style.paddingRight = isLandscape ? "5%" : "10%";
-
+            if (selectedFrame?.columns === 2 && selectedFrame?.rows === 3) {
+              container.style.paddingRight = "5%";
+              container.style.paddingLeft = "5%";
+            }
+            if (selectedFrame?.columns === 3 && selectedFrame?.rows === 2) {
+              container.style.paddingRight = "5%";
+              container.style.paddingLeft = "5%";
+            }
+            if (selectedFrame?.columns === 1 && selectedFrame?.rows === 1 && !selectedFrame?.isCircle) {
+              container.style.paddingRight = "5%";
+              container.style.paddingLeft = "5%";
+            }
             // Set correct aspect ratio for different frame types
             if (isCustomFrame) {
               container.style.aspectRatio = "1/3";
@@ -1465,12 +1085,12 @@ export default function Step8() {
           if (isCustomFrame) {
             const gridElement = clonedDoc.querySelector(".grid");
             if (gridElement) {
-              gridElement.className = "relative z-10 grid grid-cols-1 gap-[5%]";
+              gridElement.className = "relative z-10 grid grid-cols-1 gap-[20px]";
             }
           } else {
             const gridElement = clonedDoc.querySelector(".grid");
             if (gridElement && selectedFrame) {
-              gridElement.className = "relative z-10 grid gap-[calc(2.5%*3/2)]";
+              gridElement.className = "relative z-10 grid gap-[20px]";
               (gridElement as HTMLElement).style.gridTemplateColumns = `repeat(${selectedFrame.columns}, 1fr)`;
             }
           }
@@ -1561,6 +1181,7 @@ export default function Step8() {
     }
   };
 
+
   const handleFilterSelect = (filter: typeof skinFilters[0]) => {
     const convertedFilter = {
       id: filter.id,
@@ -1572,6 +1193,7 @@ export default function Step8() {
 
   const renderCell = (idx: number) => {
     const photoIndex = selectedIndices[idx];
+    console.log(`Rendering cell ${idx} with photo index:`, selectedIndices);
 
     const cellContent = photoIndex !== undefined ? (
       <Image
@@ -1608,11 +1230,12 @@ export default function Step8() {
           baseClass,
           !hasPhoto && emptyClass,
           hasPhoto && "cursor-pointer",
-          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? "ha aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 || selectedFrame?.isCircle ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]"
-        )}
+          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? " aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 || selectedFrame?.isCircle ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]",
+          selectedFrame?.columns === 2 && selectedFrame?.rows === 3 ? "aspect-[13/12]" : "",)}
       // No click handler needed in step8
       >
         {cellContent}
+        <div className="z-100 text-5xl">{photoIndex}</div>
       </div>
     );
   };
@@ -1664,11 +1287,11 @@ export default function Step8() {
           data-preview
           id="photobooth-print-preview"
           className={cn(
-            "flex flex-col gap-4 print-preview photo-booth-preview bg-white",
-            selectedFrame.isCustom ? "pb-[10%] pt-[10%]" : "pb-[10%] pt-[5%]",
-            isSquare && selectedFrame.columns == 2 ? "pt-[10%]" : "",
-            isSquare && selectedFrame.columns == 1 ? "pt-[20%]" : "",
-            isLandscape ? "px-[5%] pt-[5%]" : "px-[10%] pt-[10%]",
+            "flex flex-col gap-4 print-preview photo-booth-preview bg-white px-[5%] ",
+            selectedFrame.isCustom ? "pb-[10%] pt-[10%] px-[10%]" :
+              isSquare && (selectedFrame.columns == 2 || selectedFrame.columns == 1) && !selectedFrame.isCircle ? "pt-[5%]" :
+                selectedFrame.isCircle ? "pt-[20%]" :
+                  isLandscape ? "px-[5%] pt-[5%]" : "px-[5%] pt-[5%]",
             selectedFrame?.isCircle && "px-[5%] pt-[20%]"
           )}
           style={{
@@ -1678,20 +1301,20 @@ export default function Step8() {
         >
           {frameBackground}
           {selectedFrame.isCustom ? (
-            <div className="relative z-10 grid grid-cols-1 gap-[5%]">
+            <div className="relative z-10 grid grid-cols-1 gap-[20px]">
               {Array.from({ length: selectedFrame.rows }, (_, idx) => renderCell(idx))}
             </div>
           ) : (
             <div
               className={cn(
-                "relative z-10 grid gap-[calc(2.5%*3/2)]"
+                "relative z-10 grid gap-[20px]"
               )}
               style={{
                 gridTemplateColumns: `repeat(${selectedFrame.columns}, 1fr)`
               }}
             >
               {Array.from({ length: selectedFrame.columns }, (_, colIdx) => (
-                <div key={colIdx} className="flex flex-col gap-1">
+                <div key={colIdx} className="flex flex-col gap-[20px]">
                   {Array.from({ length: selectedFrame.rows }, (_, rowIdx) => {
                     // Correctly calculate the index for each cell based on column and row
                     const cellIdx = colIdx + (rowIdx * selectedFrame.columns);
