@@ -118,6 +118,7 @@ export async function DELETE(
 ) {
   try {
     const id = (await params).id;
+    console.log('Deleting coupon with ID:', id);
 
     // Check if coupon exists
     const existingCoupon = await prisma.coupon.findUnique({

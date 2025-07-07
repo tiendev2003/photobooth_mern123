@@ -24,6 +24,7 @@ const publicPaths = [
   "/api/cron/cleanup-check",
   "/",
   "/api/upload/store-images",
+  "/api/pricing/default",
   "/api/print",
   "/api/videos",
   "/api/gifs",

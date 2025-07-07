@@ -99,9 +99,10 @@ export default function Step5() {
 
       {/* Main content - camera view and capture UI */}
       <main className="flex flex-col items-center justify-center flex-grow z-10 w-full   px-8">
-        <h2 className="text-6xl font-bold mb-8 text-center">
+        <h2 className="text-6xl font-bold mb-4 text-center">
           Mã thanh toán sẽ được cấp tại quầy thanh toán
         </h2>
+
         <div className="w-full max-w-5xl   h-[150px] border-4 border-purple-400 rounded-full flex items-center justify-center mb-8 md:mb-12 neon-glow-purple bg-black/20 backdrop-blur-sm">
           <span className="text-white 50 text-7xl font-mono tracking-widest">{paymentCode || ""}</span>
           <span className="text-white/50 text-7xl font-mono ml-2 animate-pulse">

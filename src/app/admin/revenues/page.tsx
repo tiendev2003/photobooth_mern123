@@ -113,13 +113,7 @@ export default function RevenueManagement() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', { 
-      style: 'currency', 
-      currency: 'VND' 
-    }).format(amount);
-  };
-
+  
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString('vi-VN');
   };
@@ -151,7 +145,7 @@ export default function RevenueManagement() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Tổng doanh thu</h3>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.totalRevenue)}</p>
+            <p className="text-2xl font-bold text-green-600">{(stats.totalRevenue)}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Số giao dịch</h3>
@@ -159,11 +153,11 @@ export default function RevenueManagement() {
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Trung bình/giao dịch</h3>
-            <p className="text-2xl font-bold text-purple-600">{formatCurrency(stats.averageTransaction)}</p>
+            <p className="text-2xl font-bold text-purple-600">{(stats.averageTransaction)}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Tổng giảm giá</h3>
-            <p className="text-2xl font-bold text-orange-600">{formatCurrency(stats.totalDiscount)}</p>
+            <p className="text-2xl font-bold text-orange-600">{(stats.totalDiscount)}</p>
           </div>
         </div>
       )}
@@ -252,12 +246,12 @@ export default function RevenueManagement() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       <div>
-                        <div className="font-medium text-green-600">{formatCurrency(revenue.amount)}</div>
+                        <div className="font-medium text-green-600">{(revenue.amount)}</div>
                         {revenue.originalAmount && revenue.originalAmount !== revenue.amount && (
                           <div className="text-xs text-gray-500">
-                            Gốc: {formatCurrency(revenue.originalAmount)}
+                            Gốc: {(revenue.originalAmount)}
                             {revenue.discountAmount && (
-                              <span className="text-red-500"> (-{formatCurrency(revenue.discountAmount)})</span>
+                              <span className="text-red-500"> (-{(revenue.discountAmount)})</span>
                             )}
                           </div>
                         )}
@@ -278,7 +272,7 @@ export default function RevenueManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {revenue.coupon ? (
                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                          {revenue.coupon.code} (-{revenue.coupon.discount}%)
+                          {revenue.coupon.code} (-{revenue.coupon.discount})
                         </span>
                       ) : (
                         <span className="text-gray-400">-</span>

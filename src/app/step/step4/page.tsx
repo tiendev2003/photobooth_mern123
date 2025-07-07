@@ -3,22 +3,59 @@
 import HomeButton from "@/app/components/HomeButton";
 import LogoApp from "@/app/components/LogoApp";
 import { useBooth } from "@/lib/context/BoothContext";
+import { Pricing } from "@/lib/models";
 import { Minus, Plus } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Step4() {
   const router = useRouter();
   const [quantity, setQuantity] = useState(1)
   const { setSelectedTotalAmount } = useBooth();
+  const [pricing, setPricing] = useState<Pricing | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const response = await fetch('/api/pricing/default');
+        if (response.ok) {
+          const data = await response.json();
+          setPricing(data);
+        }
+      } catch (error) {
+        console.error('Error fetching pricing:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPricing();
+  }, []);
+
+  const getPriceForQuantity = (qty: number) => {
+    if (!pricing) return 0;
+    
+    switch (qty) {
+      case 1:
+        return pricing.priceOnePhoto;
+      case 2:
+        return pricing.priceTwoPhoto;
+      case 3:
+        return pricing.priceThreePhoto;
+      default:
+        return pricing.priceThreePhoto;
+    }
+  };
 
   const handleBack = () => {
     router.push("/step/step3");
   };
 
   const handleNext = () => {
-    setSelectedTotalAmount(quantity == 1 ? 70 : quantity == 2 ? 120 : quantity == 3 ? 150 : 0);
+    const price = getPriceForQuantity(quantity);
+    setSelectedTotalAmount(price);
     router.push("/step/step5");
   };
 
@@ -90,8 +127,8 @@ export default function Step4() {
 
         {/* Confirm Button */}
         <button className="w-[400px] h-[100px] border-4 border-pink-500 rounded-full flex items-center justify-center text-white text-xl md:text-4xl font-semibold  transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
-          {
-            quantity == 1 ? "70 xu" : quantity == 2 ? "120 xu" : quantity == 3 ? "150 xu" : null
+          {loading ? "..." : 
+            pricing ? `${getPriceForQuantity(quantity)} xu` : "Chưa có giá"
           }
         </button>
       </div>

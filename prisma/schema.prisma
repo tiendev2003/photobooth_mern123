@@ -129,6 +129,22 @@ model MediaSession {
   expiresAt   DateTime // Thời gian hết hạn phiên
 }
 
+// Model Pricing - Quản lý bảng giá chung toàn hệ thống
+model Pricing {
+  id              String   @id @default(uuid())
+  name            String   @unique // Tên bảng giá (VD: "Bảng giá mặc định")
+  priceOnePhoto   Float    // Giá 1 tấm ảnh
+  priceTwoPhoto   Float    // Giá 2 tấm ảnh  
+  priceThreePhoto Float    // Giá 3 tấm ảnh
+  isActive        Boolean  @default(true) // Trạng thái hoạt động
+  isDefault       Boolean  @default(false) // Bảng giá mặc định
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([isDefault])
+}
+
 // Model Coupon - Quản lý mã giảm giá
 model Coupon {
   id           String   @id @default(uuid())

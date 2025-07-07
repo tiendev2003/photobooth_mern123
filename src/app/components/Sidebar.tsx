@@ -11,6 +11,7 @@ import {
     Image,
     Layers,
     LogOut,
+    Package,
     Tag,
     Users,
     X
@@ -37,6 +38,11 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   // Thêm menu Stores cho ADMIN và MANAGER
   if (user?.role === 'ADMIN' || user?.role === 'MANAGER') {
     menuItems.splice(1, 0, { href: '/admin/stores', label: 'Stores', icon: Home });
+  }
+
+  // Thêm menu Pricing cho ADMIN
+  if (user?.role === 'ADMIN') {
+    menuItems.push({ href: '/admin/pricing', label: 'Pricing', icon: Package });
   }
 
   // Thêm menu Revenues cho ADMIN, MANAGER, và STORE_OWNER

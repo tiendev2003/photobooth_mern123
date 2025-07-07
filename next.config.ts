@@ -109,11 +109,9 @@ const withPWA = require('next-pwa')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Enable standalone output for improved Docker support
-  output: 'standalone',
+   output: 'standalone',
   
-  // Configure images for Next.js Image component
-  images: {
+   images: {
     domains: ['localhost'],
     remotePatterns: [
       {

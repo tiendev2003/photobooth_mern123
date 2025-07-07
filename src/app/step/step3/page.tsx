@@ -3,14 +3,34 @@
 import HomeButton from "@/app/components/HomeButton";
 import LogoApp from "@/app/components/LogoApp";
 import { useBooth } from "@/lib/context/BoothContext";
-import { FrameType } from "@/lib/models";
+import { FrameType, Pricing } from "@/lib/models";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Step3() {
   const router = useRouter();
   const { selectedFrame, setSelectedFrame } = useBooth();
+  const [pricing, setPricing] = useState<Pricing | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPricing = async () => {
+      try {
+        const response = await fetch('/api/pricing/default');
+        if (response.ok) {
+          const data = await response.json();
+          setPricing(data);
+        }
+      } catch (error) {
+        console.error('Error fetching pricing:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPricing();
+  }, []);
   const [frameTypes] = useState<FrameType[]>([
     {
       id: "1",
@@ -198,7 +218,9 @@ export default function Step3() {
           </div>
         </button>
         <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-white rounded-full flex items-center justify-center text-pink-400 text-5xl font-semibold hover:bg-pink-500/20 transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
-          70 xu
+          {loading ? "..." : 
+            pricing ? `${pricing.priceOnePhoto} xu` : "Chưa có giá"
+          }
         </button>
         <button
           onClick={handleNext}

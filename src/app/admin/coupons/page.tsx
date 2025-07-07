@@ -13,7 +13,7 @@ interface Coupon {
   id: string;
   code: string;
   discount: number;
-  expires_at: string;
+  expiresAt: string;
   user_id: string | null;
   user: User | null;
   createdAt: string;
@@ -22,10 +22,21 @@ interface Coupon {
   isActive?: boolean;
 }
 
+interface Pricing {
+  id: string;
+  name: string;
+  priceOnePhoto: number;
+  priceTwoPhoto: number;
+  priceThreePhoto: number;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
 export default function CouponsManagement() {
   const { token } = useAuth();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [defaultPricing, setDefaultPricing] = useState<Pricing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +58,7 @@ export default function CouponsManagement() {
     id: '',
     code: '',
     discount: 0,
-    expires_at: '',
+    expiresAt: '',
     user_id: '',
     usageLimit: '',
     isActive: true
@@ -96,6 +107,13 @@ export default function CouponsManagement() {
 
       const usersData = await usersResponse.json();
       setUsers(usersData.users); // Extract users from the paginated response
+
+      // Fetch default pricing
+      const pricingResponse = await fetch('/api/pricing/default');
+      if (pricingResponse.ok) {
+        const pricingData = await pricingResponse.json();
+        setDefaultPricing(pricingData);
+      }
 
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -150,7 +168,7 @@ export default function CouponsManagement() {
       id: '',
       code: generateCouponCode(),
       discount: discount,
-      expires_at: nextMonth.toISOString().split('T')[0],
+      expiresAt: nextMonth.toISOString().split('T')[0],
       user_id: '',
       usageLimit: '',
       isActive: true
@@ -217,8 +235,9 @@ export default function CouponsManagement() {
   };
 
   const handleCreateCoupon = () => {
-    // Sử dụng hàm chung với mức giảm giá mặc định là 10,000đ
-    createCouponWithDiscount(10000);
+    // Sử dụng pricing default nếu có, ngược lại dùng giá mặc định
+    const defaultDiscount = defaultPricing ? defaultPricing.priceOnePhoto : 10000;
+    createCouponWithDiscount(defaultDiscount);
   };
 
   const handleEditCoupon = (coupon: Coupon) => {
@@ -227,7 +246,7 @@ export default function CouponsManagement() {
       id: coupon.id,
       code: coupon.code,
       discount: coupon.discount,
-      expires_at: new Date(coupon.expires_at).toISOString().split('T')[0],
+      expiresAt: new Date(coupon.expiresAt).toISOString().split('T')[0],
       user_id: coupon.user_id || '',
       usageLimit: coupon.usageLimit !== undefined && coupon.usageLimit !== null ? String(coupon.usageLimit) : '',
       isActive: coupon.isActive !== undefined ? coupon.isActive : true
@@ -322,9 +341,9 @@ export default function CouponsManagement() {
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Coupons Management</h1>
         <div className="flex space-x-2">
           <button
-            onClick={() => createAndSaveCouponDirectly(70)}
+            onClick={() => createAndSaveCouponDirectly(defaultPricing ? defaultPricing.priceOnePhoto : 70)}
             className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm flex items-center gap-1"
-            title="Tạo mã giảm giá 70.000đ"
+            title={`Tạo mã giảm giá ${defaultPricing ? defaultPricing.priceOnePhoto : 70} xu `}
             disabled={loading}
           >
             {loading ? (
@@ -333,12 +352,12 @@ export default function CouponsManagement() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             ) : null}
-            <span>Tạo mã 70 xu</span>
+            <span>Tạo mã {defaultPricing ? defaultPricing.priceOnePhoto : 70} xu</span>
           </button>
           <button
-            onClick={() => createAndSaveCouponDirectly(120)}
+            onClick={() => createAndSaveCouponDirectly(defaultPricing ? defaultPricing.priceTwoPhoto : 120)}
             className="px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm flex items-center gap-1"
-            title="Tạo mã giảm giá 120.000đ"
+            title={`Tạo mã giảm giá ${defaultPricing ? defaultPricing.priceTwoPhoto : 120} xu `}
             disabled={loading}
           >
             {loading ? (
@@ -347,12 +366,12 @@ export default function CouponsManagement() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             ) : null}
-            <span>Tạo mã 120 xu</span>
+            <span>Tạo mã {defaultPricing ? defaultPricing.priceTwoPhoto : 120} xu  </span>
           </button>
           <button
-            onClick={() => createAndSaveCouponDirectly(150)}
+            onClick={() => createAndSaveCouponDirectly(defaultPricing ? defaultPricing.priceThreePhoto : 150)}
             className="px-3 py-1.5 bg-pink-600 text-white rounded-md hover:bg-pink-700 text-sm flex items-center gap-1"
-            title="Tạo mã giảm giá 150.000đ"
+            title={`Tạo mã giảm giá ${defaultPricing ? defaultPricing.priceThreePhoto : 150} xu`}
             disabled={loading}
           >
             {loading ? (
@@ -361,7 +380,7 @@ export default function CouponsManagement() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             ) : null}
-            <span>Tạo mã 150 xu</span>
+            <span>Tạo mã {defaultPricing ? defaultPricing.priceThreePhoto : 150} xu </span>
           </button>
           <button
             onClick={handleCreateCoupon}
@@ -477,7 +496,7 @@ export default function CouponsManagement() {
                   type="date"
                   id="expires_at"
                   name="expires_at"
-                  value={formData.expires_at}
+                  value={formData.expiresAt}
                   onChange={handleInputChange}
                   required
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -579,7 +598,7 @@ export default function CouponsManagement() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {coupons.length > 0 ? (
                 coupons.map((coupon) => {
-                  const isExpired = new Date(coupon.expires_at) < new Date();
+                  const isExpired = new Date(coupon.expiresAt) < new Date();
 
                   return (
                     <tr key={coupon.id}>
@@ -587,14 +606,14 @@ export default function CouponsManagement() {
                         {coupon.code}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {coupon.discount?.toLocaleString('vi-VN')} xu
+                        {coupon.discount} xu
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isExpired
                           ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                           : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                           }`}>
-                          {new Date(coupon.expires_at).toLocaleDateString()}
+                          {new Date(coupon.expiresAt).toLocaleDateString()}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">

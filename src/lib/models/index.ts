@@ -3,5 +3,6 @@ export * from './Coupon';
 export * from './FrameTemplate';
 export * from './FrameType';
 export * from './Image';
+export * from './Pricing';
 export * from './User';
 

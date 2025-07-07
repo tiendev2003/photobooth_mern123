@@ -15,6 +15,7 @@ async function main() {
   await prisma.mediaSession.deleteMany();
   await prisma.frameTemplate.deleteMany();
   await prisma.frameType.deleteMany();
+  await prisma.pricing.deleteMany();
   await prisma.store.deleteMany();
   await prisma.user.deleteMany();
 
@@ -439,6 +440,57 @@ async function main() {
   console.log('Employee 1: user1@hn.photobooth.com / 123456');
   console.log('Machine 1: machine1@hn.photobooth.com / 123456');
   console.log('... (and so on for all stores)');
+
+  // Create Default Pricing
+  console.log('💰 Creating default pricing...');
+  await prisma.pricing.create({
+    data: {
+      name: 'Bảng giá mặc định',
+      priceOnePhoto: 10000,    // 10,000 VND
+      priceTwoPhoto: 18000,    // 18,000 VND
+      priceThreePhoto: 25000,  // 25,000 VND
+      isActive: true,
+      isDefault: true,
+    },
+  });
+
+  // Create Additional Pricing Options
+  await prisma.pricing.create({
+    data: {
+      name: 'Bảng giá cao cấp',
+      priceOnePhoto: 15000,    // 15,000 VND
+      priceTwoPhoto: 25000,    // 25,000 VND
+      priceThreePhoto: 35000,  // 35,000 VND
+      isActive: true,
+      isDefault: false,
+    },
+  });
+
+  await prisma.pricing.create({
+    data: {
+      name: 'Bảng giá khuyến mãi',
+      priceOnePhoto: 8000,     // 8,000 VND
+      priceTwoPhoto: 15000,    // 15,000 VND
+      priceThreePhoto: 20000,  // 20,000 VND
+      isActive: false,
+      isDefault: false,
+    },
+  });
+
+  console.log('✅ Seeding completed successfully!');
+  console.log('');
+  console.log('📋 Default accounts created:');
+  console.log('Admin: admin@gmail.com / 123456');
+  console.log('Manager 1: manager1@photobooth.com / 123456');
+  console.log('Store Owner 1: owner1@hn.photobooth.com / 123456');
+  console.log('User 1: user1@hn.photobooth.com / 123456');
+  console.log('Machine 1: machine1@hn.photobooth.com / 123456');
+  console.log('... (and so on for all stores)');
+  console.log('');
+  console.log('💰 Default pricing created:');
+  console.log('- Bảng giá mặc định: 10k/18k/25k VND (1/2/3 tấm)');
+  console.log('- Bảng giá cao cấp: 15k/25k/35k VND (1/2/3 tấm)');
+  console.log('- Bảng giá khuyến mãi: 8k/15k/20k VND (1/2/3 tấm) - Inactive');
 }
 
 main()
