@@ -78,6 +78,20 @@ export default function AdminDashboard() {
       fetchDashboardStats();
     }
   }, [token]);
+  if (!user) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-gray-500">Please log in to view the dashboard.</p>
+      </div>
+    );
+  }
+  if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-red-500">You do not have permission to view this page.</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

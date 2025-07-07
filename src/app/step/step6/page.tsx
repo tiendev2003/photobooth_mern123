@@ -9,7 +9,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
- 
+
 export default function Step6() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -20,20 +20,17 @@ export default function Step6() {
   const [shotCount, setShotCount] = useState<number>(0);
   const [isCameraLoading, setIsCameraLoading] = useState<boolean>(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [isCompleted, setIsCompleted] = useState<boolean>(false); // Trạng thái hoàn thành chụp ảnh
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
 
-  // Camera selection states
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [showCameraSelector, setShowCameraSelector] = useState<boolean>(false);
 
   const maxShots: number = (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) >= 4 ? (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) + 4 : (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) + 3;
 
-  // Refs cho việc quay video
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
-  // Đảm bảo chỉ đặt isCameraLoading = false sau 3s kể từ khi render giao diện
   useEffect(() => {
     const timeout = setTimeout(() => {
       setIsCameraLoading(false);
@@ -42,7 +39,6 @@ export default function Step6() {
     return () => clearTimeout(timeout);
   }, []);
 
-  // Hàm bắt đầu quay video
   const startRecording = useCallback(() => {
     if (!streamRef.current) return;
 
@@ -73,7 +69,6 @@ export default function Step6() {
     }
   }, [setVideos]);
 
-  // Hàm dừng quay video
   const stopRecording = useCallback(() => {
     if (
       mediaRecorderRef.current &&
@@ -83,14 +78,12 @@ export default function Step6() {
     }
   }, []);
 
-  // Enumerate available cameras
   const enumerateCameras = useCallback(async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === 'videoinput');
       setAvailableCameras(videoDevices);
 
-      // Set default camera if none selected
       if (!selectedCameraId && videoDevices.length > 0) {
         setSelectedCameraId(videoDevices[0].deviceId);
       }
@@ -99,7 +92,6 @@ export default function Step6() {
     }
   }, [selectedCameraId]);
 
-  // Khởi tạo camera với device ID
   const initializeCamera = useCallback(async (deviceId?: string) => {
     try {
       setCameraError(null);
@@ -107,13 +99,12 @@ export default function Step6() {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
 
-      // Tăng độ phân giải lên tối đa có thể để có chất lượng ảnh tốt nhất
       const constraints = {
         video: {
-          width: { ideal: 3840, min: 1280 }, // 4K resolution ideal, 1280 minimum
-          height: { ideal: 2160, min: 720 }, // 4K resolution ideal, 720 minimum
+          width: { ideal: 3840, min: 1280 },
+          height: { ideal: 2160, min: 720 },
           deviceId: deviceId ? { exact: deviceId } : undefined,
-          facingMode: "user" // Ưu tiên camera trước
+          facingMode: "user"
         }
       };
 
@@ -124,20 +115,16 @@ export default function Step6() {
         streamRef.current = stream;
       }
 
-      // Không đặt isCameraLoading = false tại đây
     } catch (error) {
       console.error("Error accessing camera:", error);
       setCameraError("Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.");
-      // Cũng không đặt isCameraLoading = false tại đây
     }
   }, []);
 
-  // Initialize cameras list
   useEffect(() => {
     enumerateCameras();
   }, [enumerateCameras]);
 
-  // Initialize camera on component mount
   useEffect(() => {
     if (selectedCameraId) {
       initializeCamera(selectedCameraId);
@@ -150,44 +137,35 @@ export default function Step6() {
     };
   }, [selectedCameraId, initializeCamera]);
 
-  // Chụp ảnh với chất lượng tối đa
   const capturePhoto = useCallback((): void => {
     if (!videoRef.current) return;
 
     const canvas = document.createElement("canvas");
-    // Giữ nguyên độ phân giải gốc của video để có chất lượng tốt nhất
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext("2d", {
       alpha: false,
       desynchronized: false,
-      colorSpace: "display-p3", // Không gian màu rộng hơn nếu trình duyệt hỗ trợ
+      colorSpace: "display-p3",
       willReadFrequently: false
     });
 
     if (ctx) {
-      // Đảm bảo rendering chất lượng cao
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // Lật ngang để phản chiếu hình ảnh
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-      // Sử dụng định dạng JPEG với chất lượng tối đa (1.0)
       const imageData = canvas.toDataURL("image/jpeg", 1.0);
       const timestamp = new Date().toLocaleString();
       setPhotos([{ image: imageData, timestamp }, ...photos]);
 
-      // Lưu thêm phiên bản PNG nếu cần chất lượng không mất dữ liệu
-      // const pngImageData = canvas.toDataURL("image/png");
-      // Có thể lưu thêm pngImageData nếu muốn
     }
   }, [setPhotos, photos]);
 
-  // Xử lý quy trình chụp ảnh và quay video
   useEffect(() => {
     let timer: NodeJS.Timeout | undefined;
 
@@ -195,27 +173,21 @@ export default function Step6() {
       timer = setTimeout(() => setCountdown(countdown - 1), 1000);
     }
     else if (isCapturing && countdown === 0 && shotCount < maxShots) {
-      // Dừng quay video trước khi chụp ảnh
       stopRecording();
 
-      // Chụp ảnh
       capturePhoto();
 
-      // Tăng số lần đã chụp
       const newShotCount = shotCount + 1;
       setShotCount(newShotCount);
 
-      // Chỉ đặt countdown mới nếu chưa đạt đủ số lượng ảnh
       if (newShotCount < maxShots) {
         setCountdown(TIMEOUT_DURATION);
 
-        // Bắt đầu quay video cho lần tiếp theo
         startRecording();
       } else {
-        // Đã chụp đủ số lượng ảnh, kết thúc
         setIsCapturing(false);
         setCountdown(null);
-        setIsCompleted(true); // Đánh dấu đã hoàn thành quá trình chụp
+        setIsCompleted(true);
         setTimeout(() => router.push("/step/step7"), 1500);
       }
     }
@@ -223,24 +195,19 @@ export default function Step6() {
     return () => clearTimeout(timer);
   }, [countdown, isCapturing, shotCount, maxShots, router, capturePhoto, stopRecording, startRecording]);
 
-  // Bắt đầu quá trình chụp
   const startCapture = (): void => {
     if (!isCapturing && !isCameraLoading && !cameraError && !isCompleted) {
-      // Reset dữ liệu cũ
       setPhotos([]);
       setVideos([]);
       setShotCount(0);
 
-      // Bắt đầu quy trình
       setIsCapturing(true);
       setCountdown(TIMEOUT_DURATION);
 
-      // Bắt đầu quay video đầu tiên
       startRecording();
     }
   };
 
-  // Handle camera selection
   const handleCameraChange = useCallback((deviceId: string) => {
     if (!isCapturing) {
       setSelectedCameraId(deviceId);
@@ -357,7 +324,6 @@ export default function Step6() {
         </div>
 
         <div className="w-full md:w-1/5 h-full flex flex-col gap-4">
-          {/* Controls */}
           <div className="bg-black bg-opacity-70 rounded-xl border border-purple-500 shadow-md p-6 flex flex-col items-center gap-4">
             <h2 className="text-3xl font-semibold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600">
               Bảng điều khiển

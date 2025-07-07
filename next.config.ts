@@ -108,10 +108,11 @@ const withPWA = require('next-pwa')({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: process.env.NODE_ENV === 'development',
    output: 'standalone',
   
    images: {
+    unoptimized: true,  
     domains: ['localhost'],
     remotePatterns: [
       {
