@@ -21,7 +21,9 @@ export default function Login() {
     try {
       const success = await login(email, password);
       if (success) {
-        // Redirect will be handled by the home page based on user role
+         // reload the page to ensure the user is authenticated
+        router.refresh();
+        // redirect to the home page after successful login
         router.push('/');
       } else {
         setError('Invalid credentials');
@@ -43,7 +45,7 @@ export default function Login() {
           layout="fill"
           objectFit="cover"
           className="opacity-30"
-        
+
           priority
         />
       </div>

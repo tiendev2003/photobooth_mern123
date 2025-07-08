@@ -166,10 +166,12 @@ export default function StoreDashboard() {
         // Fetch default pricing
         try {
           const pricingResponse = await fetch('/api/pricing/default');
-          if (pricingResponse.ok) {
-            const pricingData = await pricingResponse.json();
-            setDefaultPricing(pricingData.pricing);
+           if (!pricingResponse.ok) {
+            const errorData = await pricingResponse.json();
+            console.error('API Error:', errorData);
+            throw new Error(errorData.error || 'Failed to fetch default pricing');
           }
+          setDefaultPricing(await pricingResponse.json());
         } catch (err) {
           console.error('Error fetching default pricing:', err);
         }
