@@ -14,6 +14,7 @@ import OverviewTab from './components/OverviewTab';
 import RevenuesTab from './components/RevenuesTab';
 import SettingsTab from './components/SettingsTab';
 import StoreSidebar from './components/StoreSidebar';
+import TemplatesTab from './components/TemplatesTab';
 import Toast from './components/Toast';
 
 // Utils
@@ -109,7 +110,7 @@ export default function StoreDashboard() {
   const [defaultPricing, setDefaultPricing] = useState<Pricing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'revenues' | 'machine-revenues' | 'coupons' | 'settings' | 'edit'>('revenues');
+  const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'revenues' | 'machine-revenues' | 'coupons' | 'settings' | 'edit' | 'templates'>('revenues');
   const [selectedMachine, setSelectedMachine] = useState<string | null>(null);
   const [machineRevenues, setMachineRevenues] = useState<MachineRevenue[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -588,7 +589,7 @@ export default function StoreDashboard() {
   };
 
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab as 'overview' | 'employees' | 'revenues' | 'machine-revenues' | 'coupons' | 'settings' | 'edit');
+    setActiveTab(tab as 'overview' | 'employees' | 'revenues' | 'machine-revenues' | 'coupons' | 'settings' | 'edit' | 'templates');
     setSelectedMachine(null);
     
     // Load data when switching to specific tabs
@@ -699,6 +700,12 @@ export default function StoreDashboard() {
               onBackgroundDragOver={handleBackgroundDragOver}
               onUpdateStore={handleUpdateStore}
               onCancelEdit={handleCancelEdit}
+            />
+          )}
+
+          {activeTab === 'templates' && (
+            <TemplatesTab 
+              storeId={store.id}
             />
           )}
         </div>

@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
     const pageParam = searchParams.get('page');
     const limitParam = searchParams.get('limit');
     const search = searchParams.get('search') || '';
+    const sortBy = searchParams.get('sortBy') || 'position';
     
     // Set pagination options
     const page = pageParam ? parseInt(pageParam) : 1;
@@ -151,10 +152,28 @@ export async function GET(request: NextRequest) {
           }
         }
       },
-      orderBy: [
-        { isGlobal: "asc" },  // Templates của store trước
-        { createdAt: "desc" }
-      ],
+      orderBy: (() => {
+        // Xác định thứ tự sắp xếp dựa trên sortBy
+        switch (sortBy) {
+          case 'name':
+            return [
+              { isGlobal: "asc" },  // Templates của store trước
+              { name: "asc" }       // Sắp xếp theo tên A-Z
+            ];
+          case 'date':
+            return [
+              { isGlobal: "asc" },  // Templates của store trước
+              { createdAt: "desc" } // Sắp xếp theo ngày tạo mới nhất
+            ];
+          case 'position':
+          default:
+            return [
+              { isGlobal: "asc" },  // Templates của store trước
+              { position: "asc" },  // Sắp xếp theo position
+              { createdAt: "desc" } // Nếu position bằng nhau thì sắp xếp theo ngày tạo
+            ];
+        }
+      })(),
       skip,
       take: limit
     });
@@ -179,7 +198,8 @@ export async function GET(request: NextRequest) {
         storeId,
         includeGlobal,
         frameTypeId,
-        search
+        search,
+        sortBy
       }
     });
   } catch (error) {
@@ -199,15 +219,19 @@ export async function POST(request: NextRequest) {
     const frameTypeId = formData.get('frameTypeId') as string;
     const storeId = formData.get('storeId') as string;
     const isGlobalValue = formData.get('isGlobal') as string;
+    const positionValue = formData.get('position') as string;
     let isGlobal = isGlobalValue === 'true';
     const backgroundFile = formData.get('backgroundFile') as File;
     const overlayFile = formData.get('overlayFile') as File;
+    // Parse position value to number or use default value 0
+    const position = positionValue ? parseInt(positionValue) : 0;
 
     console.log('Frame template creation data:', {
       name,
       frameTypeId,
       storeId,
       isGlobal,
+      position,
       isGlobalValue,
       backgroundFile: backgroundFile ? backgroundFile.name : 'null',
       overlayFile: overlayFile ? overlayFile.name : 'null'
@@ -287,6 +311,28 @@ export async function POST(request: NextRequest) {
       overlayPath = overlayUpload.path;
     }
 
+    // Check for duplicate positions if this is a store template (not global)
+    if (!isGlobal && storeId && position !== undefined) {
+      // Check if there is already a template with this position for this store and frame type
+      const existingTemplateWithSamePosition = await prisma.frameTemplate.findFirst({
+        where: {
+          position: position,
+          storeId: storeId,
+          frameTypeId: frameTypeId
+        }
+      });
+      
+      if (existingTemplateWithSamePosition) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Vị trí ${position} đã được sử dụng cho template ${existingTemplateWithSamePosition.name}. Vui lòng chọn vị trí khác.`
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Generate unique filename
     const filename = `${uuidv4()}_${name.replace(/\s+/g, '_')}`;
 
@@ -300,6 +346,7 @@ export async function POST(request: NextRequest) {
         frameTypeId,
         storeId: isGlobal ? null : (storeId && storeId.trim() !== '' ? storeId : null),
         isGlobal,
+        position,
         isActive: true
       },
       include: {

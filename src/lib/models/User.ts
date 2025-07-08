@@ -48,14 +48,12 @@ export async function generateToken(user: User): Promise<string> {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    // .setExpirationTime("24h") // Removed expiration - token never expires
     .sign(secretKey);
 }
 
 export function sanitizeUser(user: User): UserWithoutPassword {
-  // Tạo một bản sao của user và loại bỏ password
-  const { password , ...sanitizedUser } = user;
-  console.log("Sanitized User:", password);
+  const { password, ...sanitizedUser } = user;
+  console.log("Sanitized user:", password);
   return sanitizedUser;
 }
 
@@ -138,11 +136,8 @@ export async function authenticate(
     return null;
   }
 
-  // Generate a new token for this login session
   const token = await generateToken(user);
-  
-  // Update the user's currentToken in the database
-  // This will invalidate any previous tokens from other devices
+
   await prisma.user.update({
     where: { id: user.id },
     data: { currentToken: token },

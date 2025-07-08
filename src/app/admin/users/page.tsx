@@ -70,7 +70,7 @@ export default function UserManagement() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to fetch users');
+        throw new Error('Không thể tải danh sách người dùng');
       }
       
       const data = await response.json();
@@ -82,7 +82,7 @@ export default function UserManagement() {
       }
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError('Failed to load users');
+      setError('Không thể tải danh sách người dùng');
     } finally {
       setLoading(false);
     }
@@ -163,7 +163,7 @@ export default function UserManagement() {
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to ${isEditing ? 'update' : 'create'} user`);
+        throw new Error(`Không thể ${isEditing ? 'cập nhật' : 'tạo'} người dùng`);
       }
       
       setIsFormOpen(false);
@@ -171,7 +171,7 @@ export default function UserManagement() {
       
     } catch (err) {
       console.error('Error submitting form:', err);
-      setError(`Failed to ${isEditing ? 'update' : 'create'} user`);
+      setError(`Không thể ${isEditing ? 'cập nhật' : 'tạo'} người dùng`);
     }
   };
   
@@ -187,14 +187,14 @@ export default function UserManagement() {
       });
       
       if (!response.ok) {
-        throw new Error('Failed to delete user');
+        throw new Error('Không thể xóa người dùng');
       }
       
       fetchUsers(); // Refresh user list
       
     } catch (err) {
       console.error('Error deleting user:', err);
-      setError('Failed to delete user');
+      setError('Không thể xóa người dùng');
     }
   };
   
@@ -217,7 +217,7 @@ export default function UserManagement() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">User Management</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Quản lý người dùng</h1>
         <button
           onClick={handleCreateUser}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
@@ -225,7 +225,7 @@ export default function UserManagement() {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          <span>Create User</span>
+          <span>Tạo người dùng</span>
         </button>
       </div>
       
@@ -249,7 +249,7 @@ export default function UserManagement() {
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tên</label>
                 <input
                   type="text"
                   id="name"
@@ -276,7 +276,7 @@ export default function UserManagement() {
               
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {isEditing ? 'Password (leave empty to keep current)' : 'Password'}
+                  {isEditing ? 'Mật khẩu (để trống để giữ nguyên)' : 'Mật khẩu'}
                 </label>
                 <input
                   type="password"
@@ -290,7 +290,7 @@ export default function UserManagement() {
               </div>
               
               <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Vai trò</label>
                 <select
                   id="role"
                   name="role"
@@ -308,7 +308,7 @@ export default function UserManagement() {
               </div>
               
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone (optional)</label>
+                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Điện thoại (tùy chọn)</label>
                 <input
                   type="text"
                   id="phone"
@@ -320,7 +320,7 @@ export default function UserManagement() {
               </div>
               
               <div>
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Address (optional)</label>
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Địa chỉ (tùy chọn)</label>
                 <input
                   type="text"
                   id="address"
@@ -335,7 +335,7 @@ export default function UserManagement() {
               {formData.role === 'MACHINE' && (
                 <>
                   <div>
-                    <label htmlFor="machineCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Machine Code</label>
+                    <label htmlFor="machineCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mã máy</label>
                     <input
                       type="text"
                       id="machineCode"
@@ -348,7 +348,7 @@ export default function UserManagement() {
                   </div>
                   
                   <div>
-                    <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Location</label>
+                    <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Vị trí</label>
                     <input
                       type="text"
                       id="location"
@@ -368,13 +368,13 @@ export default function UserManagement() {
                   onClick={() => setIsFormOpen(false)}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
-                  Cancel
+                  Hủy
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
-                  {isEditing ? 'Update' : 'Create'}
+                  {isEditing ? 'Cập nhật' : 'Tạo'}
                 </button>
               </div>
             </form>
@@ -388,10 +388,10 @@ export default function UserManagement() {
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tên</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Role</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Created</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Vai trò</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ngày tạo</th>
                 <th scope="col" className="relative px-6 py-3">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -431,7 +431,7 @@ export default function UserManagement() {
                       <button
                         onClick={() => handleEditUser(user)}
                         className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 p-1 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900"
-                        title="Edit user"
+                        title="Chỉnh sửa người dùng"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -440,7 +440,7 @@ export default function UserManagement() {
                       <button
                         onClick={() => handleDeleteUser(user.id)}
                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900"
-                        title="Delete user"
+                        title="Xóa người dùng"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -452,7 +452,7 @@ export default function UserManagement() {
               ) : (
                 <tr>
                   <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-300">
-                    No users found
+                    Không tìm thấy người dùng
                   </td>
                 </tr>
               )}
@@ -464,7 +464,7 @@ export default function UserManagement() {
         {pagination.totalPages > 1 && (
           <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
             <div className="text-sm text-gray-500 dark:text-gray-400">
-              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} users
+              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} người dùng
             </div>
             <div className="flex space-x-2">
               <button
@@ -479,10 +479,10 @@ export default function UserManagement() {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                Previous
+                Trước
               </button>
               <span className="px-3 py-1">
-                Page {pagination.page} of {pagination.totalPages}
+                Trang {pagination.page} / {pagination.totalPages}
               </span>
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
@@ -493,7 +493,7 @@ export default function UserManagement() {
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
                 }`}
               >
-                Next
+                Tiếp
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>

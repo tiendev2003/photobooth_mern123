@@ -1,11 +1,12 @@
 "use client";
 
-import HomeButton from "@/app/components/HomeButton";
-import LogoApp from "@/app/components/LogoApp";
+import StoreBackground from "@/app/components/StoreBackground";
+import StoreHeader from "@/app/components/StoreHeader";
+import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useBooth } from "@/lib/context/BoothContext";
 import { FrameTemplate } from "@/lib/models/FrameTemplate";
 import { cn, TIMEOUT_DURATION } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, ImageIcon, Printer, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageIcon, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -81,7 +82,7 @@ export default function Step8() {
     gifQrCode,
     setGifQrCode,
     videos,
-
+    currentStore
   } = useBooth();
   console.log("Step 8 - Current selected frame:", videoQrCode, gifQrCode, imageQrCode, selectedTemplate);
 
@@ -1823,29 +1824,11 @@ export default function Step8() {
   }, []);
 
   return (
-    <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
-      {/* Background graphics */}
-      <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
-      <div className="absolute top-0 left-0 right-0 w-full h-full">
-        <Image
-          src="/anh/bg.png"
-          alt="Background"
-          layout="fill"
-          objectFit="cover"
-          className="opacity-30"
-          priority
-        />
-      </div>
-
-      <header className="flex justify-between items-center w-full px-6 pt-10 z-10">
-        <div className="flex items-center">
-          <LogoApp />
-        </div>
-        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
-          CHỈNH SỬA FILTER
-        </h1>
-        <HomeButton />
-      </header>
+    <StoreBackground currentStore={currentStore}>
+      <StoreHeader 
+        currentStore={currentStore}
+        title="CHỈNH SỬA FILTER"
+      />
 
       <div className="grid grid-cols-2 gap-6 mx-32 z-30">
 
@@ -2069,26 +2052,19 @@ export default function Step8() {
         </div>
       </div>
 
-      <div className="flex justify-end w-full px-16 pb-20 z-10 gap-6">
-        {/* Print button */}
-        <button
-          onClick={handlePrint}
-          className={`rounded-full p-6 bg-transparent border-2 border-white glow-button ${isPrinting ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-          disabled={isPrinting}
-        >
-          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
-            {isPrinting ? (
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500"></div>
-            ) : (
-              <Printer size={36} />
-            )}
+      <StoreNavigationButtons 
+        currentStore={currentStore}
+        nextLabel="In ảnh"
+        onNext={handlePrint}
+        nextDisabled={isPrinting}
+      >
+        {isPrinting && (
+          <div className="flex items-center justify-center text-white">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500 mr-2"></div>
+            Đang in...
           </div>
-          <span className="block text-xs mt-1 text-white">In ảnh</span>
-        </button>
-
-
-      </div>
-    </div>
+        )}
+      </StoreNavigationButtons>
+    </StoreBackground>
   );
 }

@@ -1,12 +1,11 @@
 import { PrismaClient } from "@prisma/client";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
 
 // GET - Lấy bảng giá mặc định (không cần auth)
-export async function GET(request: NextRequest) {
-  console.log("Fetching default pricing...", await request.json());
-  try {
+export async function GET( ) {
+   try {
     const pricing = await prisma.pricing.findFirst({
       where: {
         isActive: true,

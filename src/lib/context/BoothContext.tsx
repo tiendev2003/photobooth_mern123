@@ -1,7 +1,9 @@
 "use client";
 
+import { useStore } from "@/lib/hooks/useStore";
 import { FrameTemplate } from "@/lib/models/FrameTemplate";
 import { FrameType } from "@/lib/models/FrameType";
+import { Store } from "@/lib/models/Store";
 import { createContext, ReactNode, useContext, useState } from "react";
 
 export interface Photo {
@@ -37,6 +39,13 @@ interface BoothContextType {
   setVideoQrCode: (url: string) => void;
   gifQrCode: string; // URL for the GIF QR code
   setGifQrCode: (url: string) => void;
+  // Store information
+  currentStore: Store | null;
+  setCurrentStore: (store: Store | null) => void;
+  storeLoading: boolean;
+  storeError: string | null;
+  loadStoreInfo: (storeId?: string) => Promise<void>;
+  clearStore: () => void;
 }
 
 // Default filter options
@@ -64,6 +73,9 @@ export const BoothProvider = ({ children }: { children: ReactNode }) => {
   const [imageQrCode, setImageQrCode] = useState<string>("");
   const [videoQrCode, setVideoQrCode] = useState<string>("");
   const [gifQrCode, setGifQrCode] = useState<string>("");
+  
+  // Use the custom store hook
+  const { currentStore, storeLoading, storeError, loadStoreInfo, clearStore, setCurrentStore } = useStore();
 
   return (
     <BoothContext.Provider value={{
@@ -83,6 +95,9 @@ export const BoothProvider = ({ children }: { children: ReactNode }) => {
       imageQrCode, setImageQrCode,
       videoQrCode, setVideoQrCode,
       gifQrCode, setGifQrCode,
+      currentStore, setCurrentStore,
+      storeLoading, storeError,
+      loadStoreInfo, clearStore,
     }}>
       {children}
     </BoothContext.Provider>
@@ -107,8 +122,6 @@ export const useBooth = () => {
     context.setImageQrCode("");
     context.setVideoQrCode("");
     context.setGifQrCode("");
-    
-    // Clear any localStorage items related to the booth
     localStorage.removeItem("imageQrCode");
     localStorage.removeItem("videoQrCode");
     localStorage.removeItem("gifQrCode");

@@ -1,17 +1,17 @@
 "use client";
 
-import HomeButton from "@/app/components/HomeButton";
-import LogoApp from "@/app/components/LogoApp";
+import StoreBackground from "@/app/components/StoreBackground";
+import StoreHeader from "@/app/components/StoreHeader";
 import { useBooth } from "@/lib/context/BoothContext";
+import { getStorePrimaryColor } from "@/lib/storeUtils";
 import { Loader2 } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useState } from "react";
 
 export default function Step9() {
   const router = useRouter();
-  const { imageQrCode, videoQrCode, gifQrCode, clearAllBoothData } = useBooth();
+  const { imageQrCode, videoQrCode, gifQrCode, clearAllBoothData, currentStore } = useBooth();
 
   // State for media session
   const [sessionCode, setSessionCode] = useState<string | null>(null);
@@ -93,29 +93,11 @@ export default function Step9() {
   }, [router, clearAllBoothData]);
 
   return (
-    <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
-      {/* Background graphics */}
-      <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
-      <div className="absolute top-0 left-0 right-0 w-full h-full">
-        <Image
-          src="/anh/bg.png"
-          alt="Background"
-          layout="fill"
-          objectFit="cover"
-          className="opacity-30"
-          priority
-        />
-      </div>
-
-      <header className="flex justify-between items-center w-full px-6 pt-10 z-10">
-        <div className="flex items-center">
-          <LogoApp />
-        </div>
-        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
-          ẢNH CỦA BẠN ĐÃ SẴN SÀNG!
-        </h1>
-        <HomeButton />
-      </header>
+    <StoreBackground currentStore={currentStore}>
+      <StoreHeader 
+        currentStore={currentStore}
+        title="ẢNH CỦA BẠN ĐÃ SẴN SÀNG!"
+      />
 
       {/* Main content */}
       <main className="flex flex-col items-center justify-center flex-grow z-10 w-full max-w-6xl px-8">
@@ -159,12 +141,16 @@ export default function Step9() {
       </main>
 
       <div className="flex justify-center w-full px-16 pb-20 z-10">
-
-        <h1 className="text-white text-2xl md:text-3xl lg:text-4xl font-bold text-center tracking-wide">
-          Cảm ơn quý khách đã ghé thăm S Photobooth
+        <h1 
+          className="text-white text-2xl md:text-3xl lg:text-4xl font-bold text-center tracking-wide"
+          style={{ color: getStorePrimaryColor(currentStore) }}
+        >
+          {currentStore?.name ? 
+            `Cảm ơn quý khách đã ghé thăm ${currentStore.name}` : 
+            "Cảm ơn quý khách đã ghé thăm S Photobooth"
+          }
         </h1>
-
       </div>
-    </div>
+    </StoreBackground>
   );
 }

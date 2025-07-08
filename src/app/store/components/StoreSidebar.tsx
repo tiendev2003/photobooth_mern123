@@ -21,6 +21,7 @@ export default function StoreSidebar({ store, activeTab, onTabChange }: StoreSid
     { key: 'revenues', label: 'Doanh thu máy', icon: '💰', roles: ['STORE_OWNER', 'USER', 'MACHINE'] },
     { key: 'machine-revenues', label: 'Chi tiết máy', icon: '🎰', roles: ['STORE_OWNER', 'USER', 'MACHINE'] },
     { key: 'coupons', label: 'Mã giảm giá', icon: '🎫', roles: ['STORE_OWNER', 'USER'] },
+    { key: 'templates', label: 'Mẫu khung ảnh', icon: '🖼️', roles: ['STORE_OWNER'] },
     { key: 'employees', label: 'Nhân viên', icon: '👥', roles: ['STORE_OWNER'] },
     { key: 'settings', label: 'Thông tin cửa hàng', icon: '📋', roles: ['STORE_OWNER'] },
     { key: 'edit', label: 'Chỉnh sửa cửa hàng', icon: '✏️', roles: ['STORE_OWNER'] },

@@ -1,32 +1,38 @@
 "use client";
 
-import HomeButton from "@/app/components/HomeButton";
-import LogoApp from "@/app/components/LogoApp";
+import StoreBackground from "@/app/components/StoreBackground";
+import StoreHeader from "@/app/components/StoreHeader";
+import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useBooth } from "@/lib/context/BoothContext";
 import { TIMEOUT_DURATION } from "@/lib/utils";
+import { getStoreTheme } from "@/lib/utils/storeTheme";
 import { Camera, CameraOff, Monitor } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-
 export default function Step6() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { photos, setPhotos, setVideos, selectedFrame } = useBooth();
+  const { photos, setPhotos, setVideos, selectedFrame, currentStore, storeLoading, storeError } = useBooth();
+  const storeTheme = getStoreTheme(currentStore);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [shotCount, setShotCount] = useState<number>(0);
   const [isCameraLoading, setIsCameraLoading] = useState<boolean>(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [permissionStatus, setPermissionStatus] = useState<string | null>(null); // Thêm state để theo dõi trạng thái quyền
 
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [showCameraSelector, setShowCameraSelector] = useState<boolean>(false);
 
-  const maxShots: number = (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) >= 4 ? (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) + 4 : (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) + 3;
+  const maxShots: number =
+    (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) >= 4
+      ? (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) + 4
+      : (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) + 3;
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
@@ -59,7 +65,7 @@ export default function Step6() {
       mediaRecorder.onstop = () => {
         const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
         const videoUrl = URL.createObjectURL(blob);
-        setVideos(prev => [videoUrl, ...prev]);
+        setVideos((prev) => [videoUrl, ...prev]);
         console.log("Video recorded and added to the beginning of videos array");
       };
 
@@ -70,10 +76,7 @@ export default function Step6() {
   }, [setVideos]);
 
   const stopRecording = useCallback(() => {
-    if (
-      mediaRecorderRef.current &&
-      mediaRecorderRef.current.state !== "inactive"
-    ) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
     }
   }, []);
@@ -81,7 +84,7 @@ export default function Step6() {
   const enumerateCameras = useCallback(async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
+      const videoDevices = devices.filter((device) => device.kind === "videoinput");
       setAvailableCameras(videoDevices);
 
       if (!selectedCameraId && videoDevices.length > 0) {
@@ -96,7 +99,7 @@ export default function Step6() {
     try {
       setCameraError(null);
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
 
       const constraints = {
@@ -104,8 +107,8 @@ export default function Step6() {
           width: { ideal: 3840, min: 1280 },
           height: { ideal: 2160, min: 720 },
           deviceId: deviceId ? { exact: deviceId } : undefined,
-          facingMode: "user"
-        }
+          facingMode: "user",
+        },
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -114,30 +117,26 @@ export default function Step6() {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
       }
-
     } catch (error) {
-      console.error("Error accessing camera:", error);
-      setCameraError("Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.");
+      console.error("Error initializing camera:", error);
+
     }
   }, []);
 
-  useEffect(() => {
-    enumerateCameras();
-  }, [enumerateCameras]);
 
   useEffect(() => {
-    if (selectedCameraId) {
+    if (selectedCameraId && permissionStatus === "granted") {
       initializeCamera(selectedCameraId);
     }
 
     return () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [selectedCameraId, initializeCamera]);
+  }, [selectedCameraId, initializeCamera, permissionStatus]);
 
-  const capturePhoto = useCallback((): void => {
+  const capturePhoto = useCallback(() => {
     if (!videoRef.current) return;
 
     const canvas = document.createElement("canvas");
@@ -147,22 +146,21 @@ export default function Step6() {
       alpha: false,
       desynchronized: false,
       colorSpace: "display-p3",
-      willReadFrequently: false
+      willReadFrequently: false,
     });
 
     if (ctx) {
       ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
+      ctx.imageSmoothingQuality = "high";
 
       ctx.translate(canvas.width, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-      const imageData = canvas.toDataURL("image/jpeg", 1.0);
+      const imageData = canvas.toDataURL("image/png");
       const timestamp = new Date().toLocaleString();
       setPhotos([{ image: imageData, timestamp }, ...photos]);
-
     }
   }, [setPhotos, photos]);
 
@@ -171,10 +169,8 @@ export default function Step6() {
 
     if (isCapturing && countdown !== null && countdown > 0) {
       timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    }
-    else if (isCapturing && countdown === 0 && shotCount < maxShots) {
+    } else if (isCapturing && countdown === 0 && shotCount < maxShots) {
       stopRecording();
-
       capturePhoto();
 
       const newShotCount = shotCount + 1;
@@ -182,7 +178,6 @@ export default function Step6() {
 
       if (newShotCount < maxShots) {
         setCountdown(TIMEOUT_DURATION);
-
         startRecording();
       } else {
         setIsCapturing(false);
@@ -196,11 +191,11 @@ export default function Step6() {
   }, [countdown, isCapturing, shotCount, maxShots, router, capturePhoto, stopRecording, startRecording]);
 
   const startCapture = (): void => {
-    if (!isCapturing && !isCameraLoading && !cameraError && !isCompleted) {
+    if (!isCapturing && !isCameraLoading && !cameraError && !isCompleted && permissionStatus === "granted") {
       setPhotos([]);
       setVideos([]);
       setShotCount(0);
-
+      setShowCameraSelector(false);
       setIsCapturing(true);
       setCountdown(TIMEOUT_DURATION);
 
@@ -208,12 +203,15 @@ export default function Step6() {
     }
   };
 
-  const handleCameraChange = useCallback((deviceId: string) => {
-    if (!isCapturing) {
-      setSelectedCameraId(deviceId);
-      setShowCameraSelector(false);
-    }
-  }, [isCapturing]);
+  const handleCameraChange = useCallback(
+    (deviceId: string) => {
+      if (!isCapturing) {
+        setSelectedCameraId(deviceId);
+        setShowCameraSelector(false);
+      }
+    },
+    [isCapturing]
+  );
 
   const handleBack = () => {
     if (!isCapturing && !isCameraLoading) {
@@ -227,61 +225,105 @@ export default function Step6() {
     }
   };
 
+  // Hàm yêu cầu quyền truy cập máy ảnh
+  const requestCameraPermission = async () => {
+    try {
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      setPermissionStatus("granted");
+      enumerateCameras();
+    } catch (error) {
+      console.error("Error requesting camera permission:", error);
+      setPermissionStatus("denied");
+      setCameraError("Quyền truy cập máy ảnh bị từ chối. Vui lòng cấp quyền để tiếp tục.");
+    }
+  };
+  useEffect(() => {
+    // Kiểm tra quyền truy cập máy ảnh khi component mount
+    const checkCameraPermission = async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        setPermissionStatus("granted");
+         
+      } catch (error) {
+        console.error("Error checking camera permission:", error);
+        setPermissionStatus("denied");
+      }
+    };
+
+    checkCameraPermission();
+  }, []);
+
   return (
-    <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
-      <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
-      <div className="absolute top-0 left-0 right-0 w-full h-full">
-        <Image
-          src="/anh/bg.png"
-          alt="Background"
-          layout="fill"
-          objectFit="cover"
-          className="opacity-30"
-          priority
-        />
-      </div>
-
-      <header className="flex justify-between items-center w-full px-6 pt-10 z-10">
-        <div className="flex items-center">
-          <LogoApp />
-
+    <StoreBackground currentStore={currentStore}>
+      {storeLoading && (
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="flex flex-col items-center text-white">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
+            <p className="text-lg">Đang tải thông tin cửa hàng...</p>
+          </div>
         </div>
-        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
-          Chế độ chụp hình
-        </h1>
-        <HomeButton />
-      </header>
+      )}
+
+      {storeError && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-500 bg-opacity-90 text-white px-4 py-2 rounded-lg z-50">
+          {storeError}
+        </div>
+      )}
+
+      <StoreHeader 
+        currentStore={currentStore}
+        title="Chế độ chụp hình"
+      />
 
       {/* Main content */}
-      <main className="flex flex-col md:flex-row items-center justify-center flex-grow z-10 w-full  px-4 gap-6">
-        <div className="aspect-[4/3] bg-black bg-opacity-70 rounded-2xl border border-purple-500 shadow-lg shadow-purple-500/30 overflow-hidden relative">
+      <main className="flex flex-col md:flex-row items-center justify-center flex-grow z-10 w-full px-4 gap-6">
+        <div className="aspect-[4/3] bg-black bg-opacity-70 rounded-2xl border store-branded-border shadow-lg overflow-hidden relative"
+          style={storeTheme.glowStyle}
+        >
           {/* Camera selector button */}
-          {availableCameras.length > 1 && (
+          {availableCameras.length > 1 && permissionStatus === "granted" && (
             <div className="absolute top-4 right-4 z-20">
               <button
                 onClick={() => setShowCameraSelector(!showCameraSelector)}
                 disabled={isCapturing}
-                className={`p-3 rounded-full bg-black bg-opacity-70 border border-purple-500 text-white hover:bg-opacity-90 transition-all ${isCapturing ? 'opacity-50 cursor-not-allowed' : ''
+                className={`p-3 rounded-full bg-black bg-opacity-70 border text-white hover:bg-opacity-90 transition-all ${isCapturing ? "opacity-50 cursor-not-allowed" : ""
                   }`}
+                style={{ borderColor: storeTheme.borderColor }}
                 title="Chọn camera"
               >
                 <Monitor size={20} />
               </button>
 
               {showCameraSelector && (
-                <div className="absolute top-full right-0 mt-2 bg-black bg-opacity-90 rounded-lg border border-purple-500 shadow-lg min-w-48">
+                <div 
+                  className="absolute top-full right-0 mt-2 bg-black bg-opacity-90 rounded-lg border shadow-lg min-w-48"
+                  style={{ borderColor: storeTheme.borderColor }}
+                >
                   {availableCameras.map((camera, index) => (
                     <button
                       key={camera.deviceId}
                       onClick={() => handleCameraChange(camera.deviceId)}
-                      className={`block w-full px-4 py-3 text-left hover:bg-purple-600 hover:bg-opacity-50 transition-colors ${selectedCameraId === camera.deviceId ? 'bg-purple-600 bg-opacity-70' : ''
-                        } ${index === 0 ? 'rounded-t-lg' : ''} ${index === availableCameras.length - 1 ? 'rounded-b-lg' : ''}`}
+                      className={`block w-full px-4 py-3 text-left hover:bg-opacity-50 transition-colors ${index === 0 ? "rounded-t-lg" : ""} ${index === availableCameras.length - 1 ? "rounded-b-lg" : ""
+                        }`}
+                      style={{
+                        backgroundColor: selectedCameraId === camera.deviceId 
+                          ? `${storeTheme.primaryColor}70` 
+                          : 'transparent'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedCameraId !== camera.deviceId) {
+                          e.currentTarget.style.backgroundColor = `${storeTheme.primaryColor}50`;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedCameraId !== camera.deviceId) {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                        }
+                      }}
                     >
                       <div className="flex items-center gap-2">
                         <Camera size={16} />
-                        <span className="text-sm">
-                          {camera.label || `Camera ${index + 1}`}
-                        </span>
+                        <span className="text-sm">{camera.label || `Camera ${index + 1}`}</span>
                       </div>
                     </button>
                   ))}
@@ -295,12 +337,20 @@ export default function Step6() {
               <div className="flex flex-col items-center text-red-500">
                 <CameraOff size={40} className="mb-2" />
                 <p className="text-xl font-semibold text-center">{cameraError}</p>
-                <button
-                  onClick={() => initializeCamera(selectedCameraId)}
-                  className="mt-4 px-4 py-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  Thử lại
-                </button>
+                {permissionStatus === "prompt" && (
+                  <button
+                    onClick={requestCameraPermission}
+                    className="mt-4 px-4 py-2 rounded-lg hover:opacity-90 transition-colors text-white"
+                    style={{ backgroundColor: storeTheme.primaryColor }}
+                  >
+                    Yêu cầu quyền truy cập
+                  </button>
+                )}
+                {permissionStatus === "denied" && (
+                  <p className="mt-2 text-sm text-gray-300">
+                    Vui lòng cấp quyền trong cài đặt trình duyệt và thử lại.
+                  </p>
+                )}
               </div>
             </div>
           ) : (
@@ -317,15 +367,25 @@ export default function Step6() {
                 ref={videoRef}
                 autoPlay
                 className="w-full h-full object-cover"
-                style={{ transform: 'scaleX(-1)' }}
+                style={{ transform: "scaleX(-1)" }}
               />
             </>
           )}
         </div>
 
         <div className="w-full md:w-1/5 h-full flex flex-col gap-4">
-          <div className="bg-black bg-opacity-70 rounded-xl border border-purple-500 shadow-md p-6 flex flex-col items-center gap-4">
-            <h2 className="text-3xl font-semibold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600">
+          <div 
+            className="bg-black bg-opacity-70 rounded-xl border store-branded-border shadow-md p-6 flex flex-col items-center gap-4"
+            style={storeTheme.glowStyle}
+          >
+            <h2 
+              className="text-3xl font-semibold mb-2 store-branded-text"
+              style={{
+                background: storeTheme.textGradient,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
               Bảng điều khiển
             </h2>
             <div className="text-center">
@@ -336,12 +396,16 @@ export default function Step6() {
 
             <button
               onClick={startCapture}
-              disabled={isCapturing || isCameraLoading || cameraError !== null || isCompleted}
-              className={`mt-2 px-8 py-3 rounded-full font-semibold text-white flex items-center gap-2 transition-all
-                ${isCapturing || isCameraLoading || cameraError || isCompleted
-                  ? "bg-gray-600 cursor-not-allowed"
-                  : "bg-gradient-to-r from-pink-600 to-purple-600 shadow-lg hover:shadow-xl"
+              disabled={isCapturing || isCameraLoading || cameraError !== null || isCompleted || permissionStatus !== "granted"}
+              className={`mt-2 px-8 py-3 rounded-full font-semibold text-white flex items-center gap-2 transition-all store-branded-button ${isCapturing || isCameraLoading || cameraError || isCompleted || permissionStatus !== "granted"
+                ? "bg-gray-600 cursor-not-allowed"
+                : "shadow-lg hover:shadow-xl"
                 }`}
+              style={
+                !(isCapturing || isCameraLoading || cameraError || isCompleted || permissionStatus !== "granted")
+                  ? storeTheme.buttonStyle
+                  : undefined
+              }
             >
               <Camera size={20} />
               {isCapturing
@@ -352,13 +416,26 @@ export default function Step6() {
             </button>
           </div>
 
-          <h1 className="text-9xl font-bold text-center text-white">
+          <h1 
+            className="text-9xl font-bold text-center"
+            style={{ color: storeTheme.primaryColor }}
+          >
             {isCapturing && `${countdown}s`}
           </h1>
 
           {/* Photo gallery */}
-          <div className="flex-1 bg-black bg-opacity-70 rounded-xl border border-purple-500 shadow-md p-4 overflow-hidden flex flex-col">
-            <h2 className="text-xl font-semibold mb-3 text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-600">
+          <div 
+            className="flex-1 bg-black bg-opacity-70 rounded-xl border store-branded-border shadow-md p-4 overflow-hidden flex flex-col"
+            style={storeTheme.glowStyle}
+          >
+            <h2 
+              className="text-xl font-semibold mb-3 store-branded-text"
+              style={{
+                background: storeTheme.textGradient,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }}
+            >
               Ảnh đã chụp ({photos.length})
             </h2>
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
@@ -369,11 +446,11 @@ export default function Step6() {
                 </div>
               ) : (
                 <div className="grid grid-cols-4 gap-3">
-                  {photos.map((photo, index) => (
-                    <div
-                      key={index}
-                      className="relative border border-purple-700 rounded-lg overflow-hidden group transition-all duration-300"
-                    >
+                  {photos.map((photo, index) => (                  <div
+                    key={index}
+                    className="relative border rounded-lg overflow-hidden group transition-all duration-300"
+                    style={{ borderColor: `${storeTheme.primaryColor}70` }}
+                  >
                       <Image
                         src={photo.image}
                         alt={`Photo ${index + 1}`}
@@ -393,25 +470,12 @@ export default function Step6() {
         </div>
       </main>
 
-      <div className="flex justify-between w-full px-16 pb-20 z-10">
-        <button
-          onClick={handleBack}
-          className="rounded-full p-6 bg-transparent border-2 border-white   glow-button"
-        >
-          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
-            &#8592;
-          </div>
-        </button>
-
-        <button
-          onClick={handleNext}
-          className="rounded-full p-6 bg-transparent border-2 border-white   glow-button"
-        >
-          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
-            &#8594;
-          </div>
-        </button>
-      </div>
-    </div>
+      <StoreNavigationButtons 
+        onBack={handleBack}
+        onNext={handleNext}
+        nextDisabled={photos.length < maxShots || isCapturing || isCameraLoading}
+        currentStore={currentStore}
+      />
+    </StoreBackground>
   );
 }

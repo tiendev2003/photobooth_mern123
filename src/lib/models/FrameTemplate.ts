@@ -39,6 +39,7 @@ export interface CreateFrameTemplateInput {
   storeId?: string | null;
   isActive?: boolean;
   isGlobal?: boolean;
+  position?: number;
 }
 
 export interface UpdateFrameTemplateInput {
@@ -50,6 +51,7 @@ export interface UpdateFrameTemplateInput {
   storeId?: string | null;
   isActive?: boolean;
   isGlobal?: boolean;
+  position?: number;
 }
 
 // Add pagination function for FrameTemplate

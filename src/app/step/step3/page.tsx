@@ -1,7 +1,8 @@
 "use client";
 
-import HomeButton from "@/app/components/HomeButton";
-import LogoApp from "@/app/components/LogoApp";
+import StoreBackground from "@/app/components/StoreBackground";
+import StoreHeader from "@/app/components/StoreHeader";
+import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useBooth } from "@/lib/context/BoothContext";
 import { FrameType, Pricing } from "@/lib/models";
 import Image from "next/image";
@@ -10,7 +11,7 @@ import { useEffect, useState } from "react";
 
 export default function Step3() {
   const router = useRouter();
-  const { selectedFrame, setSelectedFrame } = useBooth();
+  const { selectedFrame, setSelectedFrame, currentStore } = useBooth();
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -156,39 +157,23 @@ export default function Step3() {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
-      {/* Background graphics */}
-      <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
-      <div className="absolute top-0 left-0 right-0 w-full h-full">
-        <Image
-          src="/anh/bg.png"
-          alt="Background"
-          layout="fill"
-          objectFit="cover"
-          className="opacity-30"
-          priority
-        />
-      </div>
-
-      <header className="flex justify-between items-center w-full px-6 pt-10 z-10">
-        <div className="flex items-center">
-          <LogoApp />
-
-        </div>
-        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center     tracking-wide">
-          Chọn khung hình muốn chụp
-        </h1>
-        <HomeButton />
-      </header>
-
-
+    <StoreBackground currentStore={currentStore}>
+      <StoreHeader
+        currentStore={currentStore}
+        title="Chọn khung hình muốn chụp"
+      />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-8 w-full px-36">
         {frameTypes.length > 0 ? (
           frameTypes.map((frame) => (
             <div
               key={frame.id}
-              className={`relative cursor-pointer transition-transform transform  aspect-[4/3] ${selectedFrame && selectedFrame.id === frame.id ? "ring-4 ring-pink-500  scale-105" : ""
+              className={`relative cursor-pointer transition-transform transform aspect-[4/3] ${selectedFrame && selectedFrame.id === frame.id ? "ring-4 scale-105" : ""
                 }`}
+              style={{
+                borderColor: selectedFrame && selectedFrame.id === frame.id
+                  ? currentStore?.primaryColor || '#ec4899'
+                  : 'transparent'
+              }}
               onClick={() => setSelectedFrame(frame)}
             >
               <div className="w-full h-full relative">
@@ -208,32 +193,26 @@ export default function Step3() {
           </div>
         )}
       </div>
-      <div className="flex justify-between w-full px-16 pb-20 z-10">
+
+
+      <StoreNavigationButtons
+        onBack={handleBack}
+        onNext={handleNext}
+        nextDisabled={!selectedFrame}
+        currentStore={currentStore}
+      >
         <button
-          onClick={handleBack}
-          className="rounded-full p-6 bg-transparent border-2 border-white   transition glow-button"
+          className="w-80 md:w-96 h-16 md:h-20 border-4 rounded-full flex items-center justify-center text-5xl font-semibold hover:bg-pink-500/20 transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm"
+          style={{
+            borderColor: currentStore?.primaryColor || '#ffffff',
+            color: currentStore?.primaryColor || '#ec4899'
+          }}
         >
-          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
-            &#8592;
-          </div>
-        </button>
-        <button className="w-80 md:w-96 h-16 md:h-20 border-4 border-white rounded-full flex items-center justify-center text-pink-400 text-5xl font-semibold hover:bg-pink-500/20 transition-all duration-300 neon-glow-pink bg-black/20 backdrop-blur-sm">
-          {loading ? "..." : 
+          {loading ? "..." :
             pricing ? `${pricing.priceOnePhoto} xu` : "Chưa có giá"
           }
         </button>
-        <button
-          onClick={handleNext}
-          className={`rounded-full p-6 bg-transparent border-2 border-white  transition glow-button ${!selectedFrame ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-          disabled={!selectedFrame}
-        >
-          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl glow-text-small">
-            &#8594;
-          </div>
-        </button>
-      </div>
-
-    </div >
+      </StoreNavigationButtons>
+    </StoreBackground>
   );
 }

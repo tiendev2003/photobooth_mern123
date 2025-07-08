@@ -25,9 +25,17 @@ export async function GET(req: NextRequest) {
           { name: { contains: searchQuery } },
           { email: { contains: searchQuery } }
         ]
-      }),
-      ...(roleFilter && { role: roleFilter as Role }) // Add role filter
+      })
     };
+    if (roleFilter) {
+      // Support multiple roles separated by comma
+      const roles = roleFilter.split(',').map(r => r.trim()).filter(Boolean);
+      if (roles.length > 1) {
+        where.role = { in: roles as Role[] };
+      } else {
+        where.role = roles[0] as Role;
+      }
+    }
     
     // Get total count for pagination metadata
     const totalUsers = await prisma.user.count({ where });

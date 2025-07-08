@@ -1,17 +1,18 @@
 "use client";
 
-import HomeButton from "@/app/components/HomeButton";
-import LogoApp from "@/app/components/LogoApp";
+import StoreBackground from "@/app/components/StoreBackground";
+import StoreHeader from "@/app/components/StoreHeader";
+import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useBooth } from "@/lib/context/BoothContext";
-import Image from "next/image";
+import { getStoreAccentColor, getStoreBorderColor, getStorePrimaryColor } from "@/lib/storeUtils";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowLeft, Trash2 } from "react-feather";
 
 export default function Step5() {
   const router = useRouter();
-  const { selectedTotalAmount, } = useBooth();
+  const { selectedTotalAmount, currentStore } = useBooth();
   const { token } = useAuth();
 
 
@@ -71,31 +72,11 @@ export default function Step5() {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
-      <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
-      <div className="absolute top-0 left-0 right-0 w-full h-full">
-        <Image
-          src="/anh/bg.png"
-          alt="Background"
-          layout="fill"
-          objectFit="cover"
-          className="opacity-30"
-          priority
-        />
-      </div>
-
-      <header className="flex justify-between items-center w-full px-6 pt-10 z-10">
-        <div className="flex items-center">
-          <LogoApp />
-
-        </div>
-        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
-          NHẬP MÃ THANH TOÁN
-        </h1>
-
-        <HomeButton />
-
-      </header>
+    <StoreBackground currentStore={currentStore}>
+      <StoreHeader 
+        currentStore={currentStore}
+        title="NHẬP MÃ THANH TOÁN"
+      />
 
       {/* Main content - camera view and capture UI */}
       <main className="flex flex-col items-center justify-center flex-grow z-10 w-full   px-8">
@@ -103,8 +84,16 @@ export default function Step5() {
           Mã thanh toán sẽ được cấp tại quầy thanh toán
         </h2>
 
-        <div className="w-full max-w-5xl   h-[150px] border-4 border-purple-400 rounded-full flex items-center justify-center mb-8 md:mb-12 neon-glow-purple bg-black/20 backdrop-blur-sm">
-          <span className="text-white 50 text-7xl font-mono tracking-widest">{paymentCode || ""}</span>
+        <div 
+          className="w-full max-w-5xl h-[150px] border-4 rounded-full flex items-center justify-center mb-8 md:mb-12 neon-glow-purple bg-black/20 backdrop-blur-sm"
+          style={{ borderColor: getStoreBorderColor(currentStore) }}
+        >
+          <span 
+            className="text-white 50 text-7xl font-mono tracking-widest"
+            style={{ color: getStorePrimaryColor(currentStore) }}
+          >
+            {paymentCode || ""}
+          </span>
           <span className="text-white/50 text-7xl font-mono ml-2 animate-pulse">
             {paymentCode.length < 4 ? "|" : ""}
           </span>
@@ -118,25 +107,37 @@ export default function Step5() {
                 <button
                   key={number}
                   onClick={() => handleNumberClick(number)}
-                  className="w-[150px] h-[150px]  rounded-full border-4 border-pink-400 flex items-center justify-center text-pink-400 text-2xl md:text-3xl font-bold   transition-all duration-300 group neon-glow-pink bg-black/20 backdrop-blur-sm"
+                  className="w-[150px] h-[150px] rounded-full border-4 flex items-center justify-center text-2xl md:text-3xl font-bold transition-all duration-300 group neon-glow-pink bg-black/20 backdrop-blur-sm"
+                  style={{ 
+                    borderColor: getStoreAccentColor(currentStore),
+                    color: getStoreAccentColor(currentStore)
+                  }}
                 >
-                  <span className=" transition-transform text-5xl">{number}</span>
+                  <span className="transition-transform text-5xl">{number}</span>
                 </button>
               ))}
               {rowIndex === 0 && (
                 <button
                   onClick={handleDelete}
-                  className="w-[150px] h-[150px]  rounded-full border-4 border-cyan-400 flex items-center justify-center text-cyan-400  transition-all duration-300 group neon-glow-blue bg-black/20 backdrop-blur-sm"
+                  className="w-[150px] h-[150px] rounded-full border-4 flex items-center justify-center transition-all duration-300 group neon-glow-blue bg-black/20 backdrop-blur-sm"
+                  style={{ 
+                    borderColor: getStoreBorderColor(currentStore),
+                    color: getStoreBorderColor(currentStore)
+                  }}
                 >
-                  <ArrowLeft className="w-8 h-8 md:w-10 md:h-10  " />
+                  <ArrowLeft className="w-8 h-8 md:w-10 md:h-10" />
                 </button>
               )}
               {rowIndex === 1 && (
                 <button
                   onClick={handleClear}
-                  className="w-[150px] h-[150px]  rounded-full border-4 border-cyan-400 flex items-center justify-center text-cyan-400  transition-all duration-300 group neon-glow-blue bg-black/20 backdrop-blur-sm"
+                  className="w-[150px] h-[150px] rounded-full border-4 flex items-center justify-center transition-all duration-300 group neon-glow-blue bg-black/20 backdrop-blur-sm"
+                  style={{ 
+                    borderColor: getStoreBorderColor(currentStore),
+                    color: getStoreBorderColor(currentStore)
+                  }}
                 >
-                  <Trash2 className="w-8 h-8 md:w-10 md:h-10  " />
+                  <Trash2 className="w-8 h-8 md:w-10 md:h-10" />
                 </button>
               )}
             </div>
@@ -144,30 +145,13 @@ export default function Step5() {
         </div>
       </main>
 
-      <div className="flex justify-between w-full px-16 pb-20 z-10">
-        <button
-          onClick={handleBack}
-          className="rounded-full p-6 bg-transparent border-2 border-white   glow-button"
-        >
-          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
-            &#8592;
-          </div>
-        </button>
-
-        <button
-          onClick={isVerifying ? undefined : handleNext}
-          className="rounded-full p-6 bg-transparent border-2 border-white   glow-button"
-          disabled={isVerifying}
-        >
-          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
-            {isVerifying ? (
-              <span className="animate-pulse text-base">Đang kiểm tra...</span>
-            ) : (
-              <>&#8594;</>
-            )}
-          </div>
-        </button>
-      </div>
-    </div>
+      <StoreNavigationButtons 
+        onBack={handleBack}
+        onNext={isVerifying ? undefined : handleNext}
+        nextDisabled={isVerifying}
+        nextLabel={isVerifying ? "Đang kiểm tra..." : undefined}
+        currentStore={currentStore}
+      />
+    </StoreBackground>
   );
 }

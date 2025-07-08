@@ -16,13 +16,6 @@ interface FrameType {
   isCustom: boolean;
 }
 
-interface Store {
-  id: string;
-  name: string;
-  primaryColor?: string;
-  secondaryColor?: string;
-}
-
 interface FrameTemplate {
   id: string;
   name: string;
@@ -32,26 +25,20 @@ interface FrameTemplate {
   frameTypeId: string;
   frameType: FrameType;
   storeId?: string | null;
-  store?: Store | null;
   isGlobal: boolean;
   isActive: boolean;
   position: number;
   createdAt: string;
 }
 
-interface UserWithStore {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  storeId?: string;
+interface TemplatesTabProps {
+  storeId: string;
 }
 
-export default function TemplatesManagement() {
-  const { user, token } = useAuth();
+export default function TemplatesTab({ storeId }: TemplatesTabProps) {
+  const { token } = useAuth();
   const [templates, setTemplates] = useState<FrameTemplate[]>([]);
   const [frameTypes, setFrameTypes] = useState<FrameType[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
@@ -69,9 +56,7 @@ export default function TemplatesManagement() {
   // Filter states
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFrameType, setFilterFrameType] = useState('');
-  const [filterStore, setFilterStore] = useState('');
-  const [filterGlobal, setFilterGlobal] = useState('');
-  const [sortOrder, setSortOrder] = useState('position'); // 'position', 'name', 'date'
+  const [sortOrder, setSortOrder] = useState('position');
   
   // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -83,8 +68,6 @@ export default function TemplatesManagement() {
     background: '',
     overlay: '',
     frameTypeId: '',
-    storeId: '',
-    isGlobal: false,
     isActive: true,
     position: 0
   });
@@ -94,28 +77,25 @@ export default function TemplatesManagement() {
   const [backgroundPreview, setBackgroundPreview] = useState<string | null>(null);
   const [overlayPreview, setOverlayPreview] = useState<string | null>(null);
   
-  // Define fetchData with useCallback
+  // Fetch data function
   const fetchData = useCallback(async (
     page = 1, 
     limit = 10, 
     search = '', 
-    frameTypeId = '', 
-    storeId = '', 
-    isGlobal = '',
+    frameTypeId = '',
     sortBy = 'position'
   ) => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('User data:', user);
-      console.log('User role:', user?.role);
-      
-      // Build query string with pagination, search, and filter parameters
+      // Build query string
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        sortBy: sortBy
+        sortBy: sortBy,
+        storeId: storeId,
+        includeGlobal: 'false' // Chỉ hiển thị template của cửa hàng này, không hiển thị template global
       });
       
       if (search) {
@@ -124,19 +104,6 @@ export default function TemplatesManagement() {
       
       if (frameTypeId) {
         queryParams.append('frameTypeId', frameTypeId);
-      }
-      
-      if (storeId) {
-        queryParams.append('storeId', storeId);
-      }
-      
-      if (isGlobal) {
-        queryParams.append('isGlobal', isGlobal);
-      }
-      
-      // Include global templates for non-admin users
-      if (user?.role !== 'ADMIN' && user?.role !== 'MANAGER') {
-        queryParams.append('includeGlobal', 'true');
       }
       
       // Fetch templates
@@ -173,31 +140,7 @@ export default function TemplatesManagement() {
       }
       
       const frameTypesData = await frameTypesResponse.json();
-      console.log('Frame types data:', frameTypesData);
       setFrameTypes(frameTypesData.data || []);
-      
-      // Fetch stores for dropdown (only if user is admin or manager)
-      if (user?.role === 'ADMIN' || user?.role === 'MANAGER') {
-        console.log('User is admin or manager, fetching stores...');
-        const storesResponse = await fetch('/api/stores', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        
-        console.log('Stores response status:', storesResponse.status);
-        
-        if (!storesResponse.ok) {
-          console.error('Failed to fetch stores:', storesResponse.status, storesResponse.statusText);
-          throw new Error('Failed to fetch stores');
-        }
-        
-        const storesData = await storesResponse.json();
-        console.log('Stores data:', storesData);
-        setStores(storesData.stores || []);
-      } else {
-        console.log('User is not admin, role:', user?.role);
-      }
       
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -205,15 +148,14 @@ export default function TemplatesManagement() {
     } finally {
       setLoading(false);
     }
-  }, [token, user]);
+  }, [token, storeId]);
   
   // Fetch templates and frame types when component mounts or filters change
   useEffect(() => {
     if (token) {
-      fetchData(pagination.page, pagination.limit, searchQuery, filterFrameType, filterStore, filterGlobal, sortOrder);
+      fetchData(pagination.page, pagination.limit, searchQuery, filterFrameType, sortOrder);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, pagination.page, pagination.limit, filterFrameType, filterStore, filterGlobal, sortOrder, fetchData]);
+  }, [token, pagination.page, pagination.limit, filterFrameType, sortOrder, fetchData, searchQuery]);
   
   // Handle page change
   const handlePageChange = (newPage: number) => {
@@ -233,11 +175,8 @@ export default function TemplatesManagement() {
       case 'frameType':
         setFilterFrameType(value);
         break;
-      case 'store':
-        setFilterStore(value);
-        break;
-      case 'global':
-        setFilterGlobal(value);
+      case 'sortOrder':
+        setSortOrder(value);
         break;
     }
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 when changing filter
@@ -246,7 +185,7 @@ export default function TemplatesManagement() {
   // Handle search submission
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchData(1, pagination.limit, searchQuery, filterFrameType, filterStore, filterGlobal, sortOrder);
+    fetchData(1, pagination.limit, searchQuery, filterFrameType, sortOrder);
     setPagination(prev => ({ ...prev, page: 1 }));  
   };
   
@@ -256,6 +195,8 @@ export default function TemplatesManagement() {
     if (type === 'checkbox') {
       const target = e.target as HTMLInputElement;
       setFormData(prev => ({ ...prev, [name]: target.checked }));
+    } else if (name === 'position') {
+      setFormData(prev => ({ ...prev, [name]: parseInt(value) || 0 }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -295,96 +236,23 @@ export default function TemplatesManagement() {
       return;
     }
     
-    // Validate store selection for admin users
-    if (user?.role === 'ADMIN' && !formData.isGlobal && !formData.storeId) {
-      const shouldProceed = confirm('Chưa chọn cửa hàng. Mẫu này sẽ được tạo thành mẫu toàn hệ thống. Bạn có muốn tiếp tục?');
-      if (!shouldProceed) {
-        return;
-      }
-    }
-    
     try {
       setUploadStatus('Đang tải lên...');
-      
-      console.log('Form data before submission:', {
-        name: formData.name,
-        frameTypeId: formData.frameTypeId,
-        storeId: formData.storeId,
-        isGlobal: formData.isGlobal,
-        backgroundFile: backgroundFile ? backgroundFile.name : 'null',
-        overlayFile: overlayFile ? overlayFile.name : 'null',
-        userRole: user?.role
-      });
       
       const formDataToSubmit = new FormData();
       formDataToSubmit.append('name', formData.name);
       formDataToSubmit.append('frameTypeId', formData.frameTypeId);
       formDataToSubmit.append('isActive', formData.isActive.toString());
       formDataToSubmit.append('position', formData.position.toString());
+      formDataToSubmit.append('storeId', storeId);
+      formDataToSubmit.append('isGlobal', 'false'); // Template của store không phải là global
       
-      // Append the actual file objects, not just the names
+      // Append files
       if (backgroundFile) {
         formDataToSubmit.append('backgroundFile', backgroundFile);
       }
       if (overlayFile) {
         formDataToSubmit.append('overlayFile', overlayFile);
-      }
-      
-      // Debug: Log what we're about to submit
-      console.log('About to submit form data:', {
-        name: formData.name,
-        frameTypeId: formData.frameTypeId,
-        isActive: formData.isActive,
-        isGlobal: formData.isGlobal,
-        storeId: formData.storeId,
-        userRole: user?.role,
-        backgroundFile: backgroundFile ? backgroundFile.name : 'none',
-        overlayFile: overlayFile ? overlayFile.name : 'none'
-      });
-      
-      // Handle store vs global template
-      let finalIsGlobal = formData.isGlobal;
-      let finalStoreId = formData.storeId;
-      
-      if (user?.role === 'ADMIN' || user?.role === 'MANAGER') {
-        if (formData.isGlobal || !formData.storeId) {
-          // If isGlobal is true OR if no store is selected, make it global
-          finalIsGlobal = true;
-          finalStoreId = '';
-          console.log('Setting as global template');
-        } else {
-          // For non-global templates with store selected
-          console.log('Setting as store-specific template with storeId:', formData.storeId);
-        }
-      } else if (user?.role === 'STORE_OWNER') {
-        // For store owners, always use their store ID
-        const userStoreId = (user as UserWithStore).storeId || formData.storeId;
-        if (userStoreId) {
-          finalStoreId = userStoreId;
-          finalIsGlobal = false;
-          console.log('Store Owner: Setting as store-specific template with storeId:', userStoreId);
-        } else {
-          // If no storeId available, make it global
-          finalIsGlobal = true;
-          finalStoreId = '';
-          console.log('Store Owner: No storeId available, defaulting to global template');
-        }
-      }
-      
-      // Append the final values to formData
-      formDataToSubmit.append('isGlobal', finalIsGlobal.toString());
-      if (finalStoreId) {
-        formDataToSubmit.append('storeId', finalStoreId);
-      }
-      
-      // Debug: Log all FormData entries
-      console.log('FormData entries:');
-      for (const [key, value] of formDataToSubmit.entries()) {
-        if (value instanceof File) {
-          console.log(`${key}:`, value.name, value.size, 'bytes');
-        } else {
-          console.log(`${key}:`, value);
-        }
       }
       
       const url = isEditing ? `/api/frame-templates/${formData.id}` : '/api/frame-templates';
@@ -398,32 +266,35 @@ export default function TemplatesManagement() {
         body: formDataToSubmit,
       });
       
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-      
       if (!response.ok) {
         const errorData = await response.json();
-        console.log('Error response:', errorData);
+        // Hiển thị lỗi cụ thể từ server (bao gồm cả lỗi trùng vị trí)
         throw new Error(errorData.error || errorData.message || 'Failed to save template');
       }
       
       setUploadStatus('Thành công!');
       setIsFormOpen(false);
       resetForm();
-      fetchData(pagination.page, pagination.limit, searchQuery, filterFrameType, filterStore, filterGlobal, sortOrder);
+      fetchData(pagination.page, pagination.limit, searchQuery, filterFrameType, sortOrder);
       
     } catch (err) {
       console.error('Error saving template:', err);
       setError(err instanceof Error ? err.message : 'Failed to save template');
+      setUploadStatus(null); // Reset upload status when error occurs
     } finally {
-      setUploadStatus(null);
+      // Only set uploadStatus to null when successful, otherwise keep error message
+      if (!error) {
+        setUploadStatus(null);
+      }
     }
   };
   
   const handleEdit = (template: FrameTemplate) => {
-    // Make sure to properly handle the storeId field for templates
-    // If it's global, storeId should be empty string
-    const storeId = template.isGlobal ? '' : (template.storeId || '');
+    // Chỉ cho phép sửa template của store này
+    if (template.storeId !== storeId) {
+      alert('Bạn không có quyền sửa mẫu khung này');
+      return;
+    }
     
     setFormData({
       id: template.id,
@@ -432,8 +303,6 @@ export default function TemplatesManagement() {
       background: template.background,
       overlay: template.overlay,
       frameTypeId: template.frameTypeId,
-      storeId: storeId,
-      isGlobal: template.isGlobal,
       isActive: template.isActive,
       position: template.position || 0
     });
@@ -449,6 +318,16 @@ export default function TemplatesManagement() {
   };
   
   const handleDelete = async (templateId: string) => {
+    // Tìm template trong danh sách
+    const template = templates.find(t => t.id === templateId);
+    if (!template) return;
+    
+    // Chỉ cho phép xóa template của store này
+    if (template.storeId !== storeId) {
+      alert('Bạn không có quyền xóa mẫu khung này');
+      return;
+    }
+    
     if (!confirm('Bạn có chắc chắn muốn xóa mẫu này không?')) return;
     
     try {
@@ -463,14 +342,13 @@ export default function TemplatesManagement() {
         throw new Error('Failed to delete template');
       }
       
-      fetchData(pagination.page, pagination.limit, searchQuery, filterFrameType, filterStore, filterGlobal, sortOrder);
+      fetchData(pagination.page, pagination.limit, searchQuery, filterFrameType, sortOrder);
     } catch (err) {
       console.error('Error deleting template:', err);
       setError('Failed to delete template');
     }
   };
   
-  // Xử lý thay đổi vị trí hiển thị của template
   const handleChangePosition = async (templateId: string, newPosition: number) => {
     try {
       if (newPosition < 0) return; // Không cho phép vị trí âm
@@ -479,27 +357,42 @@ export default function TemplatesManagement() {
       const template = templates.find(t => t.id === templateId);
       if (!template) return;
       
-      // Gửi yêu cầu cập nhật vị trí
+      // Chỉ cho phép thay đổi vị trí template của store này
+      if (template.storeId !== storeId) {
+        alert('Bạn không có quyền thay đổi thứ tự của mẫu khung này');
+        return;
+      }
+      
+      // Gửi yêu cầu cập nhật vị trí với FormData để đảm bảo dữ liệu được giữ nguyên
+      const formData = new FormData();
+      formData.append('position', newPosition.toString());
+      formData.append('storeId', storeId); // Đảm bảo storeId được gửi đi
+      formData.append('isGlobal', 'false'); // Đảm bảo template không trở thành global
+      formData.append('frameTypeId', template.frameTypeId); // Gửi frameTypeId để kiểm tra trùng vị trí
+      
       const response = await fetch(`/api/frame-templates/${templateId}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          position: newPosition
-        }),
+        body: formData,
       });
       
       if (!response.ok) {
-        throw new Error('Failed to update template position');
+        const errorData = await response.json();
+        if (errorData && errorData.error) {
+          setError(errorData.error);
+        } else {
+          throw new Error('Failed to update template position');
+        }
+        return;
       }
       
       // Cập nhật lại danh sách templates
-      fetchData(pagination.page, pagination.limit, searchQuery, filterFrameType, filterStore, filterGlobal, sortOrder);
+      fetchData(pagination.page, pagination.limit, searchQuery, filterFrameType, sortOrder);
     } catch (err) {
       console.error('Error updating template position:', err);
-      setError('Failed to update template position');
+      setError(err instanceof Error ? err.message : 'Failed to update template position');
     }
   };
   
@@ -511,8 +404,6 @@ export default function TemplatesManagement() {
       background: '',
       overlay: '',
       frameTypeId: '',
-      storeId: '',
-      isGlobal: false,
       isActive: true,
       position: 0
     });
@@ -539,9 +430,9 @@ export default function TemplatesManagement() {
   }
   
   return (
-    <div className="">
+    <div className="container mx-auto px-4 py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Quản lý mẫu khung</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Quản lý mẫu khung</h1>
         <button
           onClick={handleCreateNew}
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
@@ -557,8 +448,8 @@ export default function TemplatesManagement() {
       )}
       
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Tìm kiếm</label>
             <input
@@ -586,42 +477,11 @@ export default function TemplatesManagement() {
             </select>
           </div>
           
-          {user?.role === 'ADMIN' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Cửa hàng</label>
-              <select
-                value={filterStore}
-                onChange={(e) => handleFilterChange('store', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Tất cả cửa hàng</option>
-                {stores && stores.length > 0 && stores.map(store => (
-                  <option key={store.id} value={store.id}>
-                    {store.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Loại mẫu</label>
-            <select
-              value={filterGlobal}
-              onChange={(e) => handleFilterChange('global', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Tất cả mẫu</option>
-              <option value="true">Mẫu toàn hệ thống</option>
-              <option value="false">Mẫu theo cửa hàng</option>
-            </select>
-          </div>
-          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Sắp xếp</label>
             <select
               value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
+              onChange={(e) => handleFilterChange('sortOrder', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="position">Theo thứ tự hiển thị</option>
@@ -636,83 +496,105 @@ export default function TemplatesManagement() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
         {templates && templates.length > 0 ? (
           templates.map(template => (
-          <div key={template.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="relative h-48">
-              {template.background && (
-                <Image
-                  src={template.background}
-                  alt={template.name}
-                  fill
-                  className="object-cover"
-                />
-              )}
-              <div className="absolute top-2 right-2 flex gap-1">
-                {template.isGlobal && (
-                  <span className="bg-green-500 text-white px-2 py-1 rounded text-xs">Toàn hệ thống</span>
+            <div key={template.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="relative h-48">
+                {template.background && (
+                  <Image
+                    src={template.background}
+                    alt={template.name}
+                    fill
+                    className="object-cover"
+                  />
                 )}
-                {!template.isActive && (
-                  <span className="bg-red-500 text-white px-2 py-1 rounded text-xs">Ngưng hoạt động</span>
-                )}
-              </div>
-            </div>
-            
-            <div className="p-4">
-              <h3 className="font-semibold text-lg mb-2">{template.name}</h3>
-              <div className="text-sm text-gray-600 mb-2">
-                <div>Loại khung: {template.frameType.name}</div>
-                <div>Bố cục: {template.frameType.columns}x{template.frameType.rows}</div>
-                <div className="flex items-center gap-2">
-                  <span>Thứ tự hiển thị: {template.position}</span>
-                  <div className="flex items-center gap-1">
-                    <button 
-                      onClick={() => handleChangePosition(template.id, template.position - 1)}
-                      className="text-gray-600 hover:text-blue-600 transition-colors"
-                      title="Tăng thứ tự ưu tiên"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
-                    </button>
-                    <button 
-                      onClick={() => handleChangePosition(template.id, template.position + 1)}
-                      className="text-gray-600 hover:text-blue-600 transition-colors"
-                      title="Giảm thứ tự ưu tiên"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                  </div>
+                <div className="absolute top-2 right-2 flex gap-1">
+                  {!template.isActive && (
+                    <span className="bg-red-500 text-white px-2 py-1 rounded text-xs">Ngưng hoạt động</span>
+                  )}
                 </div>
-                {template.store && (
-                  <div className="flex items-center gap-1">
-                    Cửa hàng: {template.store.name}
-                    {template.store.primaryColor && (
-                      <div 
-                        className="w-4 h-4 rounded-full border"
-                        style={{ backgroundColor: template.store.primaryColor }}
-                      />
-                    )}
-                  </div>
-                )}
               </div>
               
-              <div className="flex gap-2 mt-4">
+              <div className="p-4">
+                <h3 className="font-semibold text-lg mb-2">{template.name}</h3>
+                <div className="text-sm text-gray-600 mb-2">
+                  <div>Loại khung: {template.frameType.name}</div>
+                  <div>Bố cục: {template.frameType.columns}x{template.frameType.rows}</div>
+                  <div className="flex items-center gap-2">
+                    <span>Thứ tự hiển thị: {template.position}</span>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => handleChangePosition(template.id, template.position - 1)}
+                        className="text-gray-600 hover:text-blue-600 transition-colors"
+                        title="Tăng thứ tự ưu tiên"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      </button>
+                      <button 
+                        onClick={() => handleChangePosition(template.id, template.position + 1)}
+                        className="text-gray-600 hover:text-blue-600 transition-colors"
+                        title="Giảm thứ tự ưu tiên"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      <div className="relative ml-2">
+                        <button
+                          onClick={() => {
+                            const positionInput = window.prompt(`Chọn vị trí mới cho "${template.name}"`, template.position.toString());
+                            if (positionInput !== null) {
+                              const position = parseInt(positionInput);
+                              if (!isNaN(position) && position >= 0) {
+                                handleChangePosition(template.id, position);
+                              } else {
+                                alert("Vui lòng nhập một số không âm hợp lệ");
+                              }
+                            }
+                          }}
+                          className="bg-green-500 hover:bg-green-600 text-white px-2 py-0.5 rounded text-xs transition-colors"
+                          title="Đặt vị trí cụ thể"
+                        >
+                          Chọn vị trí
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => handleEdit(template)}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-colors"
+                  >
+                    Sửa
+                  </button>
+                  <button
+                    onClick={() => handleDelete(template.id)}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-colors"
+                  >
+                    Xóa
+                  </button>
+                </div>
+                
                 <button
-                  onClick={() => handleEdit(template)}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm transition-colors"
+                  onClick={() => {
+                    const newPosition = prompt("Nhập vị trí hiển thị mới:", template.position.toString());
+                    if (newPosition !== null) {
+                      const position = parseInt(newPosition);
+                      if (!isNaN(position) && position >= 0) {
+                        handleChangePosition(template.id, position);
+                      } else {
+                        alert("Vui lòng nhập một số không âm hợp lệ");
+                      }
+                    }
+                  }}
+                  className="w-full mt-2 bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm transition-colors"
                 >
-                  Sửa
-                </button>
-                <button
-                  onClick={() => handleDelete(template.id)}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm transition-colors"
-                >
-                  Xóa
+                  Đặt vị trí hiển thị
                 </button>
               </div>
             </div>
-          </div>
           ))
         ) : (
           <div className="col-span-full text-center py-8 text-gray-500">
@@ -722,27 +604,29 @@ export default function TemplatesManagement() {
       </div>
       
       {/* Pagination */}
-      <div className="flex justify-center items-center gap-2 mb-6">
-        <button
-          onClick={() => handlePageChange(pagination.page - 1)}
-          disabled={!pagination.hasPrevPage}
-          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-        >
-          Trang trước
-        </button>
-        
-        <span className="px-3 py-1">
-          Trang {pagination.page} / {pagination.totalPages}
-        </span>
-        
-        <button
-          onClick={() => handlePageChange(pagination.page + 1)}
-          disabled={!pagination.hasNextPage}
-          className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
-        >
-          Trang sau
-        </button>
-      </div>
+      {templates.length > 0 && (
+        <div className="flex justify-center items-center gap-2 mb-6">
+          <button
+            onClick={() => handlePageChange(pagination.page - 1)}
+            disabled={!pagination.hasPrevPage}
+            className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+          >
+            Trang trước
+          </button>
+          
+          <span className="px-3 py-1">
+            Trang {pagination.page} / {pagination.totalPages}
+          </span>
+          
+          <button
+            onClick={() => handlePageChange(pagination.page + 1)}
+            disabled={!pagination.hasNextPage}
+            className="px-3 py-1 rounded bg-gray-200 text-gray-700 disabled:opacity-50"
+          >
+            Trang sau
+          </button>
+        </div>
+      )}
       
       {/* Create/Edit Form Modal */}
       {isFormOpen && (
@@ -793,66 +677,22 @@ export default function TemplatesManagement() {
                 </select>
               </div>
               
-              {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Loại mẫu
-                  </label>
-                  <div className="flex items-center space-x-4">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="isGlobal"
-                        checked={formData.isGlobal}
-                        onChange={(e) => {
-                          // Reset storeId if switching to global
-                          if (e.target.checked) {
-                            setFormData(prev => ({
-                              ...prev,
-                              isGlobal: true,
-                              storeId: ''
-                            }));
-                          } else {
-                            setFormData(prev => ({
-                              ...prev,
-                              isGlobal: false
-                            }));
-                          }
-                        }}
-                        className="mr-2"
-                      />
-                      Mẫu toàn hệ thống (dùng cho tất cả cửa hàng)
-                    </label>
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Mẫu toàn hệ thống sẽ dùng cho tất cả cửa hàng. Nếu muốn tạo mẫu riêng cho cửa hàng, hãy chọn cửa hàng bên dưới.
-                  </p>
-                </div>
-              )}
-              
-              {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && !formData.isGlobal && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Cửa hàng
-                  </label>
-                  <select
-                    name="storeId"
-                    value={formData.storeId}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Chọn cửa hàng</option>
-                    {stores && stores.length > 0 && stores.map(store => (
-                      <option key={store.id} value={store.id}>
-                        {store.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Nếu không chọn cửa hàng, mẫu sẽ được tạo thành mẫu toàn hệ thống.
-                  </p>
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Thứ tự hiển thị
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  name="position"
+                  value={formData.position}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  Số nhỏ hơn sẽ hiển thị trước. Mặc định là 0.
+                </p>
+              </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -900,23 +740,6 @@ export default function TemplatesManagement() {
                     />
                   </div>
                 )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Thứ tự hiển thị
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  name="position"
-                  value={formData.position}
-                  onChange={(e) => setFormData(prev => ({ ...prev, position: parseInt(e.target.value) || 0 })) }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  Số nhỏ hơn sẽ hiển thị trước. Mặc định là 0.
-                </p>
               </div>
               
               <div>

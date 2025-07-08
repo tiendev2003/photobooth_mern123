@@ -4,17 +4,17 @@ import { useAuth } from '@/lib/context/AuthContext';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    Camera,
-    DollarSign,
-    Grid,
-    Home,
-    Image,
-    Layers,
-    LogOut,
-    Package,
-    Tag,
-    Users,
-    X
+  Camera,
+  DollarSign,
+  Grid,
+  Home,
+  Image,
+  Layers,
+  LogOut,
+  Package,
+  Tag,
+  Users,
+  X
 } from 'react-feather';
 
 interface SidebarProps {
@@ -27,27 +27,27 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
   const pathname = usePathname();
   
   const menuItems = [
-    { href: '/admin', label: 'Dashboard', icon: Grid },
-    { href: '/admin/users', label: 'Users', icon: Users },
-    { href: '/admin/frames', label: 'Frame Types', icon: Layers },
-    { href: '/admin/templates', label: 'Templates', icon: Image },
-    { href: '/admin/coupons', label: 'Coupons', icon: Tag },
-    { href: '/admin/images', label: 'Images', icon: Camera },
+    { href: '/admin', label: 'Bảng điều khiển', icon: Grid },
+    { href: '/admin/users', label: 'Người dùng', icon: Users },
+    { href: '/admin/frames', label: 'Loại khung', icon: Layers },
+    { href: '/admin/templates', label: 'Mẫu khung', icon: Image },
+    { href: '/admin/coupons', label: 'Mã giảm giá', icon: Tag },
+    { href: '/admin/images', label: 'Hình ảnh', icon: Camera },
   ];
 
   // Thêm menu Stores cho ADMIN và MANAGER
   if (user?.role === 'ADMIN' || user?.role === 'MANAGER') {
-    menuItems.splice(1, 0, { href: '/admin/stores', label: 'Stores', icon: Home });
+    menuItems.splice(1, 0, { href: '/admin/stores', label: 'Cửa hàng', icon: Home });
   }
 
   // Thêm menu Pricing cho ADMIN
   if (user?.role === 'ADMIN') {
-    menuItems.push({ href: '/admin/pricing', label: 'Pricing', icon: Package });
+    menuItems.push({ href: '/admin/pricing', label: 'Bảng giá', icon: Package });
   }
 
   // Thêm menu Revenues cho ADMIN, MANAGER, và STORE_OWNER
   if (user?.role === 'ADMIN' || user?.role === 'MANAGER' || (user?.role as string) === 'STORE_OWNER') {
-    menuItems.push({ href: '/admin/revenues', label: 'Revenues', icon: DollarSign });
+    menuItems.push({ href: '/admin/revenues', label: 'Doanh thu', icon: DollarSign });
   }
 
   return (
@@ -65,7 +65,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Admin Panel</h2>
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Quản trị viên</h2>
           <button 
             className="rounded-full p-1 hover:bg-gray-200 dark:hover:bg-gray-700 md:hidden"
             onClick={toggleSidebar}
@@ -107,7 +107,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
             className="flex items-center justify-center w-full px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
           >
             <LogOut size={18} className="mr-2" />
-            Logout
+            Đăng xuất
           </button>
         </div>
       </aside>

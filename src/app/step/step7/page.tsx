@@ -1,7 +1,8 @@
 "use client";
 
-import HomeButton from "@/app/components/HomeButton";
-import LogoApp from "@/app/components/LogoApp";
+import StoreBackground from "@/app/components/StoreBackground";
+import StoreHeader from "@/app/components/StoreHeader";
+import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useBooth } from "@/lib/context/BoothContext";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -9,7 +10,7 @@ import { useRouter } from "next/navigation";
 
 export default function Step7() {
   const router = useRouter();
-  const { photos, selectedFrame, selectedIndices, setSelectedIndices } = useBooth();
+  const { photos, selectedFrame, selectedIndices, setSelectedIndices, currentStore } = useBooth();
   const handleBack = () => {
     router.push("/step/step6");
   };
@@ -185,29 +186,11 @@ export default function Step7() {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-between min-h-screen bg-purple-900 text-white overflow-hidden">
-      {/* Background graphics */}
-      <div className="absolute bottom-0 w-full h-1/3 bg-gradient-to-t from-black to-transparent z-0"></div>
-      <div className="absolute top-0 left-0 right-0 w-full h-full">
-        <Image
-          src="/anh/bg.png"
-          alt="Background"
-          layout="fill"
-          objectFit="cover"
-          className="opacity-30"
-          priority
-        />
-      </div>
-
-      <header className="flex justify-between items-center w-full px-6 pt-10 z-10">
-        <div className="flex items-center">
-          <LogoApp />
-        </div>
-        <h1 className="text-white text-3xl md:text-5xl lg:text-6xl font-bold text-center tracking-wide">
-          HOÀN THIỆN ẢNH CỦA BẠN
-        </h1>
-        <HomeButton />
-      </header>
+    <StoreBackground currentStore={currentStore}>
+      <StoreHeader 
+        currentStore={currentStore}
+        title="HOÀN THIỆN ẢNH CỦA BẠN"
+      />
 
       <div className="grid grid-cols-2 gap-6 mx-32 z-30">
         <div className="lg:col-span-1 flex flex-col gap-6">
@@ -270,26 +253,11 @@ export default function Step7() {
         </div>
       </div>
 
-
-      <div className="flex justify-between w-full px-16 pb-20 z-10">
-        <button
-          onClick={handleBack}
-          className="rounded-full p-6 bg-transparent border-2 white  glow-button"
-        >
-          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
-            &#8592;
-          </div>
-        </button>
-
-        <button
-          onClick={handleNext}
-          className="rounded-full p-6 bg-transparent border-2 white  glow-button"
-        >
-          <div className="w-12 h-12 flex items-center justify-center text-pink-500 text-4xl">
-            &#8594;
-          </div>
-        </button>
-      </div>
-    </div >
+      <StoreNavigationButtons 
+        onBack={handleBack}
+        onNext={handleNext}
+        currentStore={currentStore}
+      />
+    </StoreBackground>
   );
 }

@@ -36,6 +36,12 @@ body {
 /* Photobooth effects */
 .glow-button {
   box-shadow: 0 0 10px rgba(236, 72, 153, 0.7);
+  transition: all 0.3s ease;
+}
+
+.glow-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px rgba(236, 72, 153, 0.9);
 }
 
 .glow-button-green {
@@ -44,6 +50,48 @@ body {
 
 .glow-image {
   filter: drop-shadow(0 0 5px rgba(236, 72, 153, 0.7));
+}
+
+/* Dynamic store branding */
+.store-branded-button {
+  transition: all 0.3s ease;
+}
+
+.store-branded-button:hover {
+  transform: scale(1.05);
+}
+
+.store-branded-border {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.store-branded-text {
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168, 85, 247, 0.7) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.7);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.9);
 }
 
 /* Print styles for DNP RX1 HS printer */

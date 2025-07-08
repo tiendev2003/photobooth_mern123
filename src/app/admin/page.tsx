@@ -68,7 +68,7 @@ export default function AdminDashboard() {
         });
       } catch (err) {
         console.error('Error fetching dashboard stats:', err);
-        setError('Failed to load dashboard data');
+        setError('Không thể tải dữ liệu dashboard');
       } finally {
         setLoading(false);
       }
@@ -81,14 +81,14 @@ export default function AdminDashboard() {
   if (!user) {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-gray-500">Please log in to view the dashboard.</p>
+        <p className="text-gray-500">Vui lòng đăng nhập để xem dashboard.</p>
       </div>
     );
   }
   if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-red-500">You do not have permission to view this page.</p>
+        <p className="text-red-500">Bạn không có quyền truy cập trang này.</p>
       </div>
     );
   }
@@ -120,27 +120,27 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Dashboard</h1>
+      <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Bảng điều khiển</h1>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <StatCard title="Users" value={stats?.userCount || 0} icon="users" />
-        <StatCard title="Frame Types" value={stats?.frameTypesCount || 0} icon="layers" />
-        <StatCard title="Templates" value={stats?.templatesCount || 0} icon="image" />
-        <StatCard title="Images" value={stats?.imagesCount || 0} icon="camera" />
-        <StatCard title="Coupons" value={stats?.couponsCount || 0} icon="tag" />
+        <StatCard title="Người dùng" value={stats?.userCount || 0} icon="users" />
+        <StatCard title="Loại khung" value={stats?.frameTypesCount || 0} icon="layers" />
+        <StatCard title="Mẫu khung" value={stats?.templatesCount || 0} icon="image" />
+        <StatCard title="Hình ảnh" value={stats?.imagesCount || 0} icon="camera" />
+        <StatCard title="Mã giảm giá" value={stats?.couponsCount || 0} icon="tag" />
         {(user?.role === 'ADMIN' || user?.role === 'MANAGER') && (
-          <StatCard title="Stores" value={stats?.storesCount || 0} icon="store" />
+          <StatCard title="Cửa hàng" value={stats?.storesCount || 0} icon="store" />
         )}
         {stats?.revenueCount && (
-          <StatCard title="Revenue Records" value={stats.revenueCount} icon="money" />
+          <StatCard title="Bản ghi doanh thu" value={stats.revenueCount} icon="money" />
         )}
       </div>
       
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Welcome, {user?.name}!</h2>
+        <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Chào mừng, {user?.name}!</h2>
         <p className="text-gray-600 dark:text-gray-400">
-          This is your admin dashboard where you can manage all aspects of your photobooth application.
-          Use the sidebar to navigate to different sections.
+          Đây là bảng điều khiển quản trị của bạn, nơi bạn có thể quản lý tất cả các khía cạnh của ứng dụng photobooth.
+          Sử dụng thanh bên để điều hướng đến các phần khác nhau.
         </p>
       </div>
     </div>

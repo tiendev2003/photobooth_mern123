@@ -45,7 +45,7 @@ async function uploadImage(file: File) {
 
     return {
       filename: uniqueFilename,
-      path: relativePath
+      path: relativePath,
     };
   } catch (error) {
     console.error("Error uploading image:", error);
@@ -130,26 +130,43 @@ export async function PUT(
           ? formData.get("isActive") === "true"
           : undefined,
       };
-      
+
+      // Handle position
+      const positionValue = formData.get("position") as string;
+      if (positionValue) {
+        updateData.position = parseInt(positionValue);
+      }
+
       // Handle isGlobal and storeId
       const isGlobalValue = formData.get("isGlobal") as string;
-      const isGlobal = isGlobalValue === 'true';
+      const isGlobal = isGlobalValue === "true";
       updateData.isGlobal = isGlobal;
-      
+
       // If global, set storeId to null, otherwise use provided storeId
       if (isGlobal) {
         updateData.storeId = null;
       } else {
         const storeId = formData.get("storeId") as string;
-        if (storeId && storeId.trim() !== '') {
+        if (storeId && storeId.trim() !== "") {
           updateData.storeId = storeId;
         } else {
-          // If not global but no storeId provided, make it global
-          updateData.isGlobal = true;
-          updateData.storeId = null;
+          // Kiểm tra xem đã có storeId trong cơ sở dữ liệu chưa
+          const existingTemplate = await prisma.frameTemplate.findUnique({
+            where: { id },
+          });
+
+          if (existingTemplate && existingTemplate.storeId) {
+            // Giữ lại storeId hiện tại nếu đã có
+            updateData.storeId = existingTemplate.storeId;
+            updateData.isGlobal = false;
+          } else {
+            // Nếu không có storeId, mặc định là template global
+            updateData.isGlobal = true;
+            updateData.storeId = null;
+          }
         }
       }
-      
+
       // Comment out userId handling until migration is complete
       // const userId = formData.get("userId") as string;
       // if (userId === "null") {
@@ -160,7 +177,11 @@ export async function PUT(
 
       // Get background image file if provided
       const backgroundFile = formData.get("backgroundFile");
-      if (backgroundFile && backgroundFile instanceof File && backgroundFile.size > 0) {
+      if (
+        backgroundFile &&
+        backgroundFile instanceof File &&
+        backgroundFile.size > 0
+      ) {
         // Upload background file
         backgroundImage = await uploadImage(backgroundFile);
         if (backgroundImage) {
@@ -192,8 +213,30 @@ export async function PUT(
         // userId: rawBody.userId === "null" ? null : rawBody.userId,
         isActive: rawBody.isActive,
         isGlobal: rawBody.isGlobal,
-        storeId: rawBody.isGlobal ? null : (rawBody.storeId || null)
+        position:
+          rawBody.position !== undefined ? Number(rawBody.position) : undefined,
       };
+
+      // Handle storeId based on isGlobal
+      if (rawBody.isGlobal) {
+        updateData.storeId = null;
+      } else if (rawBody.storeId) {
+        updateData.storeId = rawBody.storeId;
+      } else {
+        // If not global but no storeId provided, check if it exists in database
+        const existingTemplate = await prisma.frameTemplate.findUnique({
+          where: { id },
+        });
+
+        if (existingTemplate && existingTemplate.storeId) {
+          // Giữ lại storeId hiện tại nếu đã có
+          updateData.storeId = existingTemplate.storeId;
+        } else {
+          // Mặc định là template global nếu không có storeId
+          updateData.isGlobal = true;
+          updateData.storeId = null;
+        }
+      }
     }
 
     // Filter out undefined values
@@ -219,38 +262,82 @@ export async function PUT(
         );
       }
     }
-    
-    // Comment out user validation until migration is complete
-    // if (updateData.userId && updateData.userId !== null) {
-    //   const user = await prisma.user.findUnique({
-    //     where: { id: updateData.userId },
-    //   });
+    const existingTemplate = await prisma.frameTemplate.findUnique({
+      where: { id },
+      include: { frameType: true },
+    });
 
-    //   if (!user) {
-    //     return NextResponse.json(
-    //       {
-    //         success: false,
-    //         error: "User không tồn tại",
-    //       },
-    //       { status: 404 }
-    //     );
-    //   }
-    // }
+    if (!existingTemplate) {
+      return NextResponse.json(
+        { error: "Frame template not found" },
+        { status: 404 }
+      );
+    }
 
-    // Cập nhật frame template với các trường background và overlay
-    // Sử dụng as any để tránh lỗi TypeScript nếu cần
     // Use a properly typed approach to update only the fields that exist in updateData
     const updateFields: Record<string, unknown> = {};
-    
+
     if (updateData.name !== undefined) updateFields.name = updateData.name;
-    if (updateData.filename !== undefined) updateFields.filename = updateData.filename;
-    if (updateData.background !== undefined) updateFields.background = updateData.background;
-    if (updateData.overlay !== undefined) updateFields.overlay = updateData.overlay;
-    if (updateData.frameTypeId !== undefined) updateFields.frameTypeId = updateData.frameTypeId;
-    if (updateData.isActive !== undefined) updateFields.isActive = updateData.isActive;
-    if (updateData.isGlobal !== undefined) updateFields.isGlobal = updateData.isGlobal;
-    if (updateData.storeId !== undefined) updateFields.storeId = updateData.storeId;
-    
+    if (updateData.filename !== undefined)
+      updateFields.filename = updateData.filename;
+    if (updateData.background !== undefined)
+      updateFields.background = updateData.background;
+    if (updateData.overlay !== undefined)
+      updateFields.overlay = updateData.overlay;
+    if (updateData.frameTypeId !== undefined)
+      updateFields.frameTypeId = updateData.frameTypeId;
+    if (updateData.isActive !== undefined)
+      updateFields.isActive = updateData.isActive;
+    if (updateData.isGlobal !== undefined)
+      updateFields.isGlobal = updateData.isGlobal;
+    if (updateData.storeId !== undefined)
+      updateFields.storeId = updateData.storeId;
+    if (updateData.position !== undefined)
+      updateFields.position = updateData.position;
+
+    // Ensure isGlobal and storeId are consistent
+    if (updateFields.isGlobal === true) {
+      updateFields.storeId = null;
+    } else if (
+      updateFields.isGlobal === false &&
+      !updateFields.storeId &&
+      existingTemplate.storeId
+    ) {
+      updateFields.storeId = existingTemplate.storeId;
+    }
+
+    // Check for duplicate positions in the same store and frame type
+    if (updateFields.position !== undefined && updateFields.storeId !== null) {
+      const storeIdToUse =
+        (updateFields.storeId as string) || existingTemplate.storeId;
+      const frameTypeIdToUse =
+        (updateFields.frameTypeId as string) || existingTemplate.frameTypeId;
+
+      if (storeIdToUse) {
+        // Check if there is already a template with this position for the same store and frame type
+        const existingTemplateWithSamePosition =
+          await prisma.frameTemplate.findFirst({
+            where: {
+              position: updateFields.position as number,
+              storeId: storeIdToUse,
+              frameTypeId: frameTypeIdToUse,
+              id: { not: id }, // Exclude the current template
+            },
+          });
+
+        if (existingTemplateWithSamePosition) {
+          // If a template with this position already exists, return error
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Vị trí ${updateFields.position} đã được sử dụng cho template ${existingTemplateWithSamePosition.name}. Vui lòng chọn vị trí khác.`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     const frameTemplate = await prisma.frameTemplate.update({
       where: { id },
       data: updateFields,
@@ -303,9 +390,10 @@ export async function DELETE(
         overlay?: string;
         preview?: string;
       };
-      
-      const template = existingFrameTemplate as unknown as FrameTemplateWithPaths;
-      
+
+      const template =
+        existingFrameTemplate as unknown as FrameTemplateWithPaths;
+
       // Delete background file (which might be in path or background field)
       const backgroundPath = template.background || template.path;
       if (backgroundPath) {
@@ -316,7 +404,7 @@ export async function DELETE(
           console.error("Error deleting background file:", fileError);
         }
       }
-      
+
       // Delete overlay file (which might be in preview or overlay field)
       const overlayPath = template.overlay || template.preview;
       if (overlayPath) {
