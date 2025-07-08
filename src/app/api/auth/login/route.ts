@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password } = body;
+    const { email, password, isAdminLogin = false } = body;
 
     // Validate input
     if (!email || !password) {
@@ -23,6 +23,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 }
+      );
+    }
+
+    // If this is an admin login, check if the user has admin privileges
+    if (isAdminLogin && !['ADMIN', 'KETOAN'].includes(result.user.role)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions for admin access" },
+        { status: 403 }
       );
     }
 

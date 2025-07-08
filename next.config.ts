@@ -113,7 +113,12 @@ const nextConfig = {
   
    images: {
     unoptimized: true,  
-    domains: ['localhost'],
+    domains: [
+      'localhost',
+      process.env.NEXT_PUBLIC_MAIN_DOMAIN || '', 
+      process.env.NEXT_PUBLIC_ADMIN_DOMAIN || '',
+      // Add any other domains if needed
+    ].filter(Boolean), // Remove empty strings
     remotePatterns: [
       {
         protocol: 'http',
@@ -139,6 +144,61 @@ const nextConfig = {
       },
     ],
   },
+
+  // Configure for domain handling
+  assetPrefix: process.env.NEXT_PUBLIC_ASSET_PREFIX,
+  
+  // Handle rewrites for subdomains in development
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // Admin subdomain handling
+        {
+          source: '/:path*',
+          has: [
+            {
+              type: 'host',
+              value: `admin.${process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'localhost:3000'}`,
+            },
+          ],
+          destination: '/admin/:path*',
+        },
+      ],
+    };
+  },
+  
+  // Add security headers
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+        ],
+      },
+    ];
+  },
+  
+  // Add needed redirects
+  async redirects() {
+    return [
+      {
+        source: '/admin',
+        destination: '/admin/',
+        permanent: true,
+      },
+    ];
+  },
+
+  // Other Next.js config options...
+  swcMinify: true,
 };
 
 module.exports = withPWA(nextConfig);

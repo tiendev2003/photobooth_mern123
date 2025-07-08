@@ -7,7 +7,7 @@ interface AuthContextType {
   user: UserWithoutPassword | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, isAdminLogin?: boolean) => Promise<boolean>;
   logout: () => void;
   isAdmin: boolean;
 }
@@ -142,7 +142,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Removed idle timeout and activity tracking - tokens persist indefinitely
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string, isAdminLogin = false): Promise<boolean> => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/auth/login', {
@@ -150,7 +150,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, isAdminLogin }),
       });
 
       if (!response.ok) {
@@ -159,6 +159,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const data = await response.json();
       const { user, token } = data;
+      
+      // If this is an admin login but user doesn't have admin role, return false
+      if (isAdminLogin && !['ADMIN', 'KETOAN'].includes(user.role)) {
+        return false;
+      }
 
       setUser(user);
       setToken(token);
