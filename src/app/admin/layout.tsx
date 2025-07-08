@@ -7,7 +7,7 @@ export default function AdminRootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthGuard requireAdmin={true}>
+    <AuthGuard >
       <AdminLayout>
         {children}
       </AdminLayout>

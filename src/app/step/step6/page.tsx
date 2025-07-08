@@ -243,7 +243,7 @@ export default function Step6() {
       try {
         await navigator.mediaDevices.getUserMedia({ video: true });
         setPermissionStatus("granted");
-         
+        enumerateCameras();
       } catch (error) {
         console.error("Error checking camera permission:", error);
         setPermissionStatus("denied");

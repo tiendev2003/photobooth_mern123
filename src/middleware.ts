@@ -1,6 +1,5 @@
 import { jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
-import { getLoginUrl, isAdminDomain } from "./lib/domainConfig";
 
 // Define JWT payload interface
 interface JWTPayload {
@@ -32,7 +31,6 @@ const publicPaths = [
   "/api/images",
   "/api/filters",
   "/login",
-  "/admin/login", // Add admin login as a public path
   "/step/step1",
   "/step/step2",
   "/step/step3",
@@ -52,9 +50,7 @@ const publicPaths = [
 export async function middleware(request: NextRequest) {
   // Check if the path is public
   const path = request.nextUrl.pathname;
-  const host = request.headers.get('host') || '';
-  const isAdminDomainActive = isAdminDomain(host);
-  
+
   // Handle static files with higher priority
   if (path.startsWith('/uploads/')) {
     console.log(`Static file request bypassing middleware: ${path}`);
@@ -68,19 +64,6 @@ export async function middleware(request: NextRequest) {
     // Check for routes with patterns like /api/frame-types/123
     publicPaths.some((publicPath) => path.startsWith(publicPath + "/"))
   ) {
-    // Special handling for subdomain routing
-    if (isAdminDomainActive && !path.startsWith('/admin') && !path.startsWith('/api/')) {
-      // Redirect to admin subdomain's admin path if it's not already there
-      const url = request.nextUrl.clone();
-      url.pathname = `/admin${path === '/' ? '' : path}`;
-      return NextResponse.redirect(url);
-    }
-    
-    // If accessing admin login from main domain, let it proceed
-    if (path === '/admin/login') {
-      return NextResponse.next();
-    }
-    
     return NextResponse.next();
   }
 
@@ -106,6 +89,9 @@ export async function middleware(request: NextRequest) {
         const { payload } = await jwtVerify(token, secretKey);
         const decodedToken = payload as JWTPayload;
         
+        // Verify with server if token is still valid by calling verify endpoint
+        // This is done by the client via AuthContext to avoid circular dependencies
+
         // Admin-only routes
         if (
           (path.startsWith("/api/users") && request.method !== "GET") ||
@@ -132,13 +118,8 @@ export async function middleware(request: NextRequest) {
         });
       }
 
-      // For admin routes, check if we're on the admin subdomain or under /admin path
-      if (path.startsWith("/admin/")) {
-        // Client-side AuthGuard component will handle authorization
-        return NextResponse.next();
-      }
-      
-      // For store routes
+      // For admin routes or store routes, redirect to login if no token in cookies or local storage
+      // Client-side AuthGuard component will handle this, so we can just let it proceed
       return NextResponse.next();
     } catch (error) {
       console.error("Authentication error:", error);
@@ -148,17 +129,9 @@ export async function middleware(request: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
 
-      // For admin routes, redirect to admin login
-      if (path.startsWith("/admin/")) {
-        const url = request.nextUrl.clone();
-        url.pathname = getLoginUrl(true); // admin login
-        url.searchParams.set("from", request.nextUrl.pathname);
-        return NextResponse.redirect(url);
-      }
-      
-      // For store routes, redirect to regular login
+      // For admin routes or store routes, redirect to login
       const url = request.nextUrl.clone();
-      url.pathname = getLoginUrl(false); // client login
+      url.pathname = "/login";
       url.searchParams.set("from", request.nextUrl.pathname);
       return NextResponse.redirect(url);
     }
@@ -175,9 +148,6 @@ export const config = {
     "/api/:path*", 
     "/admin/:path*",
     "/store/:path*",
-    
-    // Include root path for subdomain handling
-    "/",
     
     // Explicitly exclude static file paths
     "/((?!uploads|public|_next/static|_next/image|favicon.ico).*)"
