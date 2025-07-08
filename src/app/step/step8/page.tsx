@@ -82,7 +82,8 @@ export default function Step8() {
     gifQrCode,
     setGifQrCode,
     videos,
-    currentStore
+    currentStore,
+    selectedQuantity
   } = useBooth();
   console.log("Step 8 - Current selected frame:", videoQrCode, gifQrCode, imageQrCode, selectedTemplate);
 
@@ -439,6 +440,7 @@ export default function Step8() {
                 "imageUrl": imageData.data.url,
                 "fileName": imageData.data.fileName,
                 "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
+                "quantity": selectedQuantity || 1,
               }),
             })
               .then((response) => {

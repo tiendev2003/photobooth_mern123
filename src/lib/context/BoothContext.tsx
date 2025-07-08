@@ -31,6 +31,8 @@ interface BoothContextType {
   setSelectedTemplate: (template: FrameTemplate | null) => void;
   selectedTotalAmount: number;
   setSelectedTotalAmount: (amount: number) => void;
+  selectedQuantity: number;
+  setSelectedQuantity: (quantity: number) => void;
   videos: string[]; // blob URLs
   setVideos: (videos: string[] | ((prev: string[]) => string[])) => void;
   imageQrCode: string; // URL for the QR code image
@@ -69,6 +71,7 @@ export const BoothProvider = ({ children }: { children: ReactNode }) => {
   const [selectedFilter, setSelectedFilter] = useState<FilterOption>(filterOptions[0]);
   const [selectedTemplate, setSelectedTemplate] = useState<FrameTemplate | null>(null);
   const [selectedTotalAmount, setSelectedTotalAmount] = useState<number>(1);
+  const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
   const [videos, setVideos] = useState<string[]>([]);
   const [imageQrCode, setImageQrCode] = useState<string>("");
   const [videoQrCode, setVideoQrCode] = useState<string>("");
@@ -91,6 +94,8 @@ export const BoothProvider = ({ children }: { children: ReactNode }) => {
       setSelectedTemplate,
       selectedTotalAmount,
       setSelectedTotalAmount,
+      selectedQuantity,
+      setSelectedQuantity,
       videos, setVideos,
       imageQrCode, setImageQrCode,
       videoQrCode, setVideoQrCode,
@@ -118,6 +123,7 @@ export const useBooth = () => {
     context.setSelectedFilter(filterOptions[0]);
     context.setSelectedTemplate(null);
     context.setSelectedTotalAmount(1);
+    context.setSelectedQuantity(1);
     context.setVideos([]);
     context.setImageQrCode("");
     context.setVideoQrCode("");

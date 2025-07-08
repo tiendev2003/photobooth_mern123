@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 export default function Step4() {
   const router = useRouter();
   const [quantity, setQuantity] = useState(1)
-  const { setSelectedTotalAmount, currentStore } = useBooth();
+  const { setSelectedTotalAmount, setSelectedQuantity, currentStore } = useBooth();
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -57,6 +57,7 @@ export default function Step4() {
   const handleNext = () => {
     const price = getPriceForQuantity(quantity);
     setSelectedTotalAmount(price);
+    setSelectedQuantity(quantity);
     router.push("/step/step5");
   };
 
