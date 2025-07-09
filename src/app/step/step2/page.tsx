@@ -46,19 +46,18 @@ export default function Step2() {
         }
       />
 
-      <main className={`flex-1 flex flex-col items-center justify-center z-10 px-8 py-8 transition-opacity duration-500`}>
-        <div className="flex flex-col md:flex-row gap-6 md:gap-8 justify-between items-center mt-20">
+      <main className={`flex-1 flex flex-col items-center justify-center z-10  px-8 py-8 transition-opacity duration-500`}>
+        <div className="flex flex-col md:flex-row gap-6 md:gap-8   justify-between items-center mt-20">
           {languageOptions.map((lang) => (
             <button
               key={lang.code}
               onClick={() => setSelectedLanguage(lang.code)}
-              style={{
-                border: selectedLanguage === lang.code ? '14px solid white' : 'none',
-                background: currentStore?.primaryColor 
-                  ? `linear-gradient(45deg, ${currentStore.primaryColor}, ${currentStore.secondaryColor || currentStore.primaryColor})`
-                  : 'linear-gradient(to right, #ec4899, #8b5cf6)'
-              }}
-              className={`text-white text-2xl md:text-4xl font-semibold py-4 md:py-6 px-8 md:px-12 rounded-full transition-all duration-300 transform shadow-lg ${selectedLanguage === lang.code ? 'ring-white' : ''}`}
+              style={
+                {
+                  border: selectedLanguage === lang.code ? '14px solid white' : 'none',
+                }
+              }
+              className={`bg-gradient-to-r from-pink-500 to-purple-600  text-white text-2xl md:text-4xl font-semibold py-4 md:py-6 px-8 md:px-12 rounded-full transition-all duration-300 transform  shadow-lg  ${selectedLanguage === lang.code ? '  ring-white' : ''}`}
             >
               {lang.label}
             </button>

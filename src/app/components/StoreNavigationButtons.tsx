@@ -36,7 +36,7 @@ export default function StoreNavigationButtons({
         <button
           onClick={onBack}
           disabled={backDisabled}
-          className={`rounded-full p-6 bg-transparent border-2 transition glow-button ${backDisabled ? "opacity-50 cursor-not-allowed" : ""
+          className={`rounded-full p-6 bg-transparent border-2 active:opacity-75 ${backDisabled ? "opacity-50 cursor-not-allowed" : ""
             }`}
           style={{ borderColor }}
         >
@@ -59,7 +59,7 @@ export default function StoreNavigationButtons({
         <button
           onClick={onNext}
           disabled={nextDisabled}
-          className={`rounded-full p-6 bg-transparent border-2 transition glow-button ${nextDisabled ? "opacity-50 cursor-not-allowed" : ""
+          className={`rounded-full p-6 bg-transparent border-2 active:opacity-75 ${nextDisabled ? "opacity-50 cursor-not-allowed" : ""
             }`}
           style={{ borderColor }}
         >

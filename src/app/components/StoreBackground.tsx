@@ -24,11 +24,13 @@ export default function StoreBackground({ currentStore, children, className = ""
                 <div className="absolute top-0 left-0 right-0 w-full h-full">
                     <Image
                         src="/anh/bg.png"
+                        fill
                         alt="Background"
-                        layout="fill"
-                        objectFit="cover"
                         className="opacity-30"
                         priority
+                        onError={(e) => {
+                            e.currentTarget.src = "/logo.png"; // Fallback image
+                        }}
                     />
                 </div>
             )}

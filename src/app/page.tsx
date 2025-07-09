@@ -22,7 +22,6 @@ export default function Home() {
         return;
       }
 
-      // Redirect based on user role
       if (user.role === 'ADMIN' || user.role === 'MANAGER' || user.role === 'KETOAN') {
         router.push('/admin');
         return;
@@ -30,7 +29,6 @@ export default function Home() {
         router.push('/store');
         return;
       }
-      // USER and MACHINE stay on main photobooth interface
     }
   }, [user, isAdmin, isLoading, router]);
 
@@ -54,6 +52,10 @@ export default function Home() {
                 alt={currentStore.name}
                 width={300}
                 height={150}
+                // xử lý khi ảnh lỗi
+                onError={(e) => {
+                  e.currentTarget.src = "/logo.png";
+                }}
               />
 
             </div>

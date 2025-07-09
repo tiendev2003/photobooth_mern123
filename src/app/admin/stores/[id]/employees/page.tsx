@@ -8,6 +8,7 @@ interface Employee {
   id: string;
   name: string;
   email: string;
+  username  : string;
   isActive: boolean;
   createdAt: string;
 }
@@ -144,7 +145,7 @@ export default function StoreEmployeesPage({ params }: { params: Promise<{ id: s
                 <tr className="bg-gray-50">
                   <th className="border border-gray-300 px-4 py-2 text-left">STT</th>
                   <th className="border border-gray-300 px-4 py-2 text-left">Tên</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Email</th>
+                  <th className="border border-gray-300 px-4 py-2 text-left">Tên tài khoản</th>
                   <th className="border border-gray-300 px-4 py-2 text-left">Mật khẩu</th>
                   <th className="border border-gray-300 px-4 py-2 text-left">Trạng thái</th>
                   <th className="border border-gray-300 px-4 py-2 text-left">Ngày tạo</th>
@@ -158,7 +159,7 @@ export default function StoreEmployeesPage({ params }: { params: Promise<{ id: s
                     <td className="border border-gray-300 px-4 py-2">{employee.name}</td>
                     <td className="border border-gray-300 px-4 py-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm">{employee.email}</span>
+                        <span className="font-mono text-sm">{employee.username}</span>
                         <button
                           onClick={() => copyToClipboard(employee.email)}
                           className="text-blue-500 hover:text-blue-700 text-xs"

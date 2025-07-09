@@ -21,6 +21,7 @@ export async function GET(
             id: true,
             name: true,
             email: true,
+            username:true,
             phone: true,
             role: true,
             isActive: true,
