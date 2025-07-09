@@ -213,7 +213,7 @@ export default function Step6() {
     [isCapturing]
   );
 
- 
+
 
   const handleNext = () => {
     if (photos.length >= maxShots && !isCapturing && !isCameraLoading) {
@@ -266,126 +266,124 @@ export default function Step6() {
         </div>
       )}
 
-      <StoreHeader 
+      <StoreHeader
         currentStore={currentStore}
         title="Chế độ chụp hình"
       />
 
       {/* Main content */}
-      <main className="flex flex-col md:flex-row items-center justify-center flex-grow z-10 w-full px-4 gap-6">
-        <div className="aspect-[4/3] bg-black bg-opacity-70 rounded-2xl border store-branded-border shadow-lg overflow-hidden relative"
-          style={storeTheme.glowStyle}
-        >
-          {/* Camera selector button */}
-          {availableCameras.length > 1 && permissionStatus === "granted" && (
-            <div className="absolute top-4 right-4 z-20">
-              <button
-                onClick={() => setShowCameraSelector(!showCameraSelector)}
-                disabled={isCapturing}
-                className={`p-3 rounded-full bg-black bg-opacity-70 border text-white hover:bg-opacity-90 transition-all ${isCapturing ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                style={{ borderColor: storeTheme.borderColor }}
-                title="Chọn camera"
-              >
-                <Monitor size={20} />
-              </button>
+      <main className="flex flex-row items-center justify-center flex-grow z-10 gap-8 px-4 min-h-0 overflow-hidden">
+        <div className="flex-1 max-w-5xl h-full flex items-center justify-center">
+          <div className="w-full max-h-full aspect-[4/3] bg-black bg-opacity-70 rounded-2xl border shadow-lg overflow-hidden relative"
 
-              {showCameraSelector && (
-                <div 
-                  className="absolute top-full right-0 mt-2 bg-black bg-opacity-90 rounded-lg border shadow-lg min-w-48"
+          >
+            {/* Camera selector button */}
+            {availableCameras.length > 1 && permissionStatus === "granted" && (
+              <div className="absolute top-4 right-4 z-20">
+                <button
+                  onClick={() => setShowCameraSelector(!showCameraSelector)}
+                  disabled={isCapturing}
+                  className={`p-3 rounded-full bg-black bg-opacity-70 border text-white hover:bg-opacity-90 transition-all ${isCapturing ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   style={{ borderColor: storeTheme.borderColor }}
+                  title="Chọn camera"
                 >
-                  {availableCameras.map((camera, index) => (
-                    <button
-                      key={camera.deviceId}
-                      onClick={() => handleCameraChange(camera.deviceId)}
-                      className={`block w-full px-4 py-3 text-left hover:bg-opacity-50 transition-colors ${index === 0 ? "rounded-t-lg" : ""} ${index === availableCameras.length - 1 ? "rounded-b-lg" : ""
-                        }`}
-                      style={{
-                        backgroundColor: selectedCameraId === camera.deviceId 
-                          ? `${storeTheme.primaryColor}70` 
-                          : 'transparent'
-                      }}
-                      onMouseEnter={(e) => {
-                        if (selectedCameraId !== camera.deviceId) {
-                          e.currentTarget.style.backgroundColor = `${storeTheme.primaryColor}50`;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (selectedCameraId !== camera.deviceId) {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Camera size={16} />
-                        <span className="text-sm">{camera.label || `Camera ${index + 1}`}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                  <Monitor size={20} />
+                </button>
 
-          {cameraError ? (
-            <div className="w-full h-full flex items-center justify-center bg-black bg-opacity-70">
-              <div className="flex flex-col items-center text-red-500">
-                <CameraOff size={40} className="mb-2" />
-                <p className="text-xl font-semibold text-center">{cameraError}</p>
-                {permissionStatus === "prompt" && (
-                  <button
-                    onClick={requestCameraPermission}
-                    className="mt-4 px-4 py-2 rounded-lg hover:opacity-90 transition-colors text-white"
-                    style={{ backgroundColor: storeTheme.primaryColor }}
+                {showCameraSelector && (
+                  <div
+                    className="absolute top-full right-0 mt-2 bg-black bg-opacity-90 rounded-lg border shadow-lg min-w-48"
+                    style={{ borderColor: storeTheme.borderColor }}
                   >
-                    Yêu cầu quyền truy cập
-                  </button>
-                )}
-                {permissionStatus === "denied" && (
-                  <p className="mt-2 text-sm text-gray-300">
-                    Vui lòng cấp quyền trong cài đặt trình duyệt và thử lại.
-                  </p>
+                    {availableCameras.map((camera, index) => (
+                      <button
+                        key={camera.deviceId}
+                        onClick={() => handleCameraChange(camera.deviceId)}
+                        className={`block w-full px-4 py-3 text-left hover:bg-opacity-50 transition-colors ${index === 0 ? "rounded-t-lg" : ""} ${index === availableCameras.length - 1 ? "rounded-b-lg" : ""
+                          }`}
+                        style={{
+                          backgroundColor: selectedCameraId === camera.deviceId
+                            ? `${storeTheme.primaryColor}70`
+                            : 'transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (selectedCameraId !== camera.deviceId) {
+                            e.currentTarget.style.backgroundColor = `${storeTheme.primaryColor}50`;
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedCameraId !== camera.deviceId) {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Camera size={16} />
+                          <span className="text-sm">{camera.label || `Camera ${index + 1}`}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
-          ) : (
-            <>
-              {isCameraLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 z-10">
-                  <div className="flex flex-col items-center text-white">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-4"></div>
-                    <p className="text-lg">Đang khởi tạo camera...</p>
-                  </div>
+            )}
+
+            {cameraError ? (
+              <div className="w-full h-full flex items-center justify-center bg-black bg-opacity-70">
+                <div className="flex flex-col items-center text-red-500">
+                  <CameraOff size={40} className="mb-2" />
+                  <p className="text-xl font-semibold text-center">{cameraError}</p>
+                  {permissionStatus === "prompt" && (
+                    <button
+                      onClick={requestCameraPermission}
+                      className="mt-4 px-4 py-2 rounded-lg hover:opacity-90 transition-colors text-white"
+                      style={{ backgroundColor: storeTheme.primaryColor }}
+                    >
+                      Yêu cầu quyền truy cập
+                    </button>
+                  )}
+                  {permissionStatus === "denied" && (
+                    <p className="mt-2 text-sm text-gray-300">
+                      Vui lòng cấp quyền trong cài đặt trình duyệt và thử lại.
+                    </p>
+                  )}
                 </div>
-              )}
-              <video
-                ref={videoRef}
-                autoPlay
-                className="w-full h-full object-cover"
-                style={{ transform: "scaleX(-1)" }}
-              />
-            </>
-          )}
+              </div>
+            ) : (
+              <>
+                {isCameraLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 z-10">
+                    <div className="flex flex-col items-center text-white">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mb-4"></div>
+                      <p className="text-lg">Đang khởi tạo camera...</p>
+                    </div>
+                  </div>
+                )}
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  className="w-full h-full object-cover"
+                  style={{ transform: "scaleX(-1)" }}
+                />
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="w-full md:w-1/5 h-full flex flex-col gap-4">
-          <div 
-            className="bg-black bg-opacity-70 rounded-xl border store-branded-border shadow-md p-6 flex flex-col items-center gap-4"
+        <div className="w-80 h-full flex flex-col gap-4 min-h-0">
+          <div
+            className="bg-black bg-opacity-70 rounded-xl border store-branded-border shadow-md p-4 flex flex-col items-center gap-3"
             style={storeTheme.glowStyle}
           >
-            <h2 
-              className="text-3xl font-semibold mb-2 store-branded-text"
-              style={{
-                background: storeTheme.textGradient,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}
+            <h2
+              className="text-2xl font-semibold text-white"
+
             >
               Bảng điều khiển
             </h2>
             <div className="text-center">
-              <p className="text-gray-300 text-2xl">
+              <p className="text-gray-300 text-xl">
                 Đã chụp: <span className="font-bold text-white">{shotCount}/{maxShots}</span>
               </p>
             </div>
@@ -393,7 +391,7 @@ export default function Step6() {
             <button
               onClick={startCapture}
               disabled={isCapturing || isCameraLoading || cameraError !== null || isCompleted || permissionStatus !== "granted"}
-              className={`mt-2 px-8 py-3 rounded-full font-semibold text-white flex items-center gap-2 transition-all store-branded-button ${isCapturing || isCameraLoading || cameraError || isCompleted || permissionStatus !== "granted"
+              className={`px-6 py-3 rounded-full font-semibold text-white flex items-center gap-2 transition-all store-branded-button ${isCapturing || isCameraLoading || cameraError || isCompleted || permissionStatus !== "granted"
                 ? "bg-gray-600 cursor-not-allowed"
                 : "shadow-lg hover:shadow-xl"
                 }`}
@@ -410,43 +408,42 @@ export default function Step6() {
                   ? "Đã hoàn thành"
                   : "Bắt đầu chụp"}
             </button>
+
+            {isCapturing && (
+              <h1
+                className="text-6xl font-bold text-center"
+                style={{ color: storeTheme.primaryColor }}
+              >
+                {countdown}s
+              </h1>
+            )}
           </div>
 
-          <h1 
-            className="text-9xl font-bold text-center"
-            style={{ color: storeTheme.primaryColor }}
-          >
-            {isCapturing && `${countdown}s`}
-          </h1>
-
           {/* Photo gallery */}
-          <div 
-            className="flex-1 bg-black bg-opacity-70 rounded-xl border store-branded-border shadow-md p-4 overflow-hidden flex flex-col"
+          <div
+            className="flex-1 bg-black bg-opacity-70 rounded-xl border store-branded-border shadow-md p-4 overflow-hidden flex flex-col min-h-0"
             style={storeTheme.glowStyle}
           >
-            <h2 
-              className="text-xl font-semibold mb-3 store-branded-text"
-              style={{
-                background: storeTheme.textGradient,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}
+            <h2
+              className="text-lg font-semibold mb-3"
+
             >
               Ảnh đã chụp ({photos.length})
             </h2>
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0">
               {photos.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-6 text-gray-400">
                   <Camera size={40} className="mb-2 opacity-50" />
                   <p>Chưa có ảnh nào được chụp</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-4 gap-3">
-                  {photos.map((photo, index) => (                  <div
-                    key={index}
-                    className="relative border rounded-lg overflow-hidden group transition-all duration-300"
-                    style={{ borderColor: `${storeTheme.primaryColor}70` }}
-                  >
+                <div className="grid grid-cols-3 gap-2">
+                  {photos.map((photo, index) => (
+                    <div
+                      key={index}
+                      className="relative border rounded-lg overflow-hidden group transition-all duration-300"
+                      style={{ borderColor: `${storeTheme.primaryColor}70` }}
+                    >
                       <Image
                         src={photo.image}
                         alt={`Photo ${index + 1}`}
@@ -466,8 +463,8 @@ export default function Step6() {
         </div>
       </main>
 
-      <StoreNavigationButtons 
-         onNext={handleNext}
+      <StoreNavigationButtons
+        onNext={handleNext}
         nextDisabled={photos.length < maxShots || isCapturing || isCameraLoading}
         currentStore={currentStore}
       />
