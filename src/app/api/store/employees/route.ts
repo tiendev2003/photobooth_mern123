@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         role: true,
         machineCode: true,
@@ -90,10 +91,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, password, role, machineCode, location } = body;
+    const { name, username, email, password, role, machineCode, location } = body;
 
     // Validate required fields
-    if (!name || !email || !password || !role) {
+    if (!name || !username || !password || !role) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -125,14 +126,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email already exists
+    // Check if username already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { username }
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Email already exists' },
+        { error: 'Username already exists' },
         { status: 400 }
       );
     }
@@ -144,6 +145,7 @@ export async function POST(request: NextRequest) {
     const newEmployee = await prisma.user.create({
       data: {
         name,
+        username,
         email,
         password: hashedPassword,
         role: role ,
@@ -155,6 +157,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         role: true,
         machineCode: true,

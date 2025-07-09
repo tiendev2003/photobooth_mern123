@@ -274,17 +274,36 @@ export default function Step8() {
   // Upload video to server
   const uploadVideo = async (videoUrl: string): Promise<string> => {
     try {
+      console.log("Starting video upload process...");
+      console.log("Video URL:", videoUrl);
+      
       // Fetch the video blob from the URL
       const response = await fetch(videoUrl);
+      if (!response.ok) {
+        console.error("Failed to fetch video blob:", response.status, response.statusText);
+        throw new Error(`Failed to fetch video blob: ${response.statusText}`);
+      }
+      
       const blob = await response.blob();
+      console.log("Video blob created:", {
+        size: blob.size,
+        type: blob.type
+      });
 
       // Create a file from the blob
       const file = new File([blob], "photobooth.webm", { type: "video/webm" });
+      console.log("Video file created:", {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
 
       // Create form data for upload
       const formData = new FormData();
       formData.append("file", file);
 
+      console.log("Sending upload request to /api/images/video");
+      
       // Upload to server
       const uploadResponse = await fetch("/api/images/video", {
         method: "POST",
@@ -294,8 +313,26 @@ export default function Step8() {
         }
       });
 
+      console.log("Upload response status:", uploadResponse.status);
+      console.log("Upload response headers:", Object.fromEntries(uploadResponse.headers.entries()));
+
       if (!uploadResponse.ok) {
-        throw new Error(`Video upload failed: ${uploadResponse.statusText}`);
+        let errorMessage = `Video upload failed: ${uploadResponse.statusText}`;
+        try {
+          const errorData = await uploadResponse.json();
+          console.error("Upload error details:", errorData);
+          errorMessage += ` - ${errorData.error || JSON.stringify(errorData)}`;
+        } catch (jsonError) {
+          console.error("Could not parse error response as JSON:", jsonError);
+          try {
+            const errorText = await uploadResponse.text();
+            console.error("Error response text:", errorText);
+            errorMessage += ` - ${errorText}`;
+          } catch (textError) {
+            console.error("Could not read error response as text:", textError);
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await uploadResponse.json();
@@ -317,9 +354,15 @@ export default function Step8() {
         throw new Error("Invalid response format from server");
       }
 
+      console.log("Final video URL:", url);
       return url;
     } catch (error) {
       console.error("Error uploading video:", error);
+      console.error("Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      });
       throw error;
     }
   };
@@ -477,6 +520,7 @@ export default function Step8() {
               });
 
               const videoUrl = await generateSmoothVideo(isLandscape);
+              console.log("Generated video URL:", videoUrl);
               if (videoUrl) {
                 console.log("Video generated successfully, uploading to server...");
                 const serverUrl = await uploadVideo(videoUrl);

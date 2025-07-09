@@ -110,6 +110,7 @@ export default function StoreDashboard() {
   const [defaultPricing, setDefaultPricing] = useState<Pricing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'revenues' | 'machine-revenues' | 'coupons' | 'settings' | 'edit' | 'templates'>('revenues');
   const [selectedMachine, setSelectedMachine] = useState<string | null>(null);
   const [machineRevenues, setMachineRevenues] = useState<MachineRevenue[]>([]);
@@ -622,17 +623,78 @@ export default function StoreDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex relative">
       {/* Sidebar */}
-      <StoreSidebar 
-        store={store}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
+      <div className={`${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } fixed md:relative md:translate-x-0 z-30 transition-transform duration-300 ease-in-out`}>
+        <StoreSidebar 
+          store={store}
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+        />
+      </div>
+
+      {/* Overlay for mobile */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0   z-20 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <div className="p-8">
+        {/* Main Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsSidebarOpen(prev => !prev)}
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                {isSidebarOpen ? (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                ) : (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                )}
+              </svg>
+            </button>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {activeTab === 'overview' && 'Tổng quan'}
+              {activeTab === 'revenues' && 'Doanh thu'}
+              {activeTab === 'machine-revenues' && 'Chi tiết máy'}
+              {activeTab === 'coupons' && 'Mã giảm giá'}
+              {activeTab === 'employees' && 'Nhân viên'}
+              {activeTab === 'settings' && 'Thông tin cửa hàng'}
+              {activeTab === 'edit' && 'Chỉnh sửa cửa hàng'}
+              {activeTab === 'templates' && 'Mẫu khung ảnh'}
+            </h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500">{store.name}</span>
+          </div>
+        </header>
+
+        <div className="p-4 md:p-8">
           {/* Employee Welcome Message */}
           <EmployeeWelcome storeName={store.name} />
 

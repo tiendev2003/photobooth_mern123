@@ -213,11 +213,7 @@ export default function Step6() {
     [isCapturing]
   );
 
-  const handleBack = () => {
-    if (!isCapturing && !isCameraLoading) {
-      router.push("/step/step5");
-    }
-  };
+ 
 
   const handleNext = () => {
     if (photos.length >= maxShots && !isCapturing && !isCameraLoading) {
@@ -471,8 +467,7 @@ export default function Step6() {
       </main>
 
       <StoreNavigationButtons 
-        onBack={handleBack}
-        onNext={handleNext}
+         onNext={handleNext}
         nextDisabled={photos.length < maxShots || isCapturing || isCameraLoading}
         currentStore={currentStore}
       />

@@ -5,18 +5,18 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password, isAdminLogin = false } = body;
+    const { username, password, isAdminLogin = false } = body;
 
     // Validate input
-    if (!email || !password) {
+    if (!username || !password) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Username and password are required" },
         { status: 400 }
       );
     }
 
     // Authenticate user using our model function
-    const loginData: UserLoginData = { email, password };
+    const loginData: UserLoginData = { username, password };
     const result = await authenticate(loginData);
  
     if (!result) {

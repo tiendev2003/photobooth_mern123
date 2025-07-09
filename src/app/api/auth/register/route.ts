@@ -1,27 +1,28 @@
-import { createUser, findUserByEmail, UserRegistrationData } from '@/lib/models/User';
+import { createUser, findUserByUsername, UserRegistrationData } from '@/lib/models/User';
 import { NextRequest, NextResponse } from 'next/server';
 
 // POST /api/auth/register - User registration
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password } = body;
+    const { name, username, email, password } = body;
 
     // Validate required fields
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: 'Name, email, and password are required' }, { status: 400 });
+    if (!name || !username || !password) {
+      return NextResponse.json({ error: 'Name, username, and password are required' }, { status: 400 });
     }
 
-    // Check if user with this email already exists
-    const existingUser = await findUserByEmail(email);
+    // Check if user with this username already exists
+    const existingUser = await findUserByUsername(username);
 
     if (existingUser) {
-      return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
+      return NextResponse.json({ error: 'User with this username already exists' }, { status: 409 });
     }
 
     // Create the new user using our model function
     const userData: UserRegistrationData = {
       name,
+      username,
       email,
       password
       // Default role (USER) sẽ được xử lý trong hàm createUser

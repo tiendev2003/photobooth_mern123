@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const success = await login(email, password);
+      const success = await login(username, password);
       if (success) {
          // reload the page to ensure the user is authenticated
         router.refresh();
@@ -89,17 +89,17 @@ export default function Login() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md -space-y-px">
             <div className="mb-4">
-              <label htmlFor="email-address" className="block text-sm font-medium text-gray-200 mb-1">Email</label>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-200 mb-1">Tên đăng nhập</label>
               <input
-                id="email-address"
-                name="email"
-                type="email"
-                autoComplete="email"
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
                 required
                 className="appearance-none rounded-md relative block w-full px-3 py-3 border border-pink-500 placeholder-gray-300 text-white bg-purple-900 bg-opacity-70 focus:outline-none focus:ring-pink-400 focus:border-pink-400 focus:z-10 sm:text-sm"
-                placeholder="Nhập email của bạn"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Nhập tên đăng nhập của bạn"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
             </div>
             <div className="mt-4">

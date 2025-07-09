@@ -28,7 +28,7 @@ export async function PUT(
   try {
     const id = (await params).id;
     const body = await req.json();
-    const { name, email, password, role, phone, address } = body;
+    const { name, username, email, password, role, phone, address } = body;
 
     // Check if user exists
     const existingUser = await findUserById(id);
@@ -40,6 +40,7 @@ export async function PUT(
     // Update user using our model function
     const updatedUser = await updateUser(id, {
       name,
+      username,
       email,
       password,
       role,

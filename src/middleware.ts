@@ -44,6 +44,7 @@ const publicPaths = [
   "/session", // Add session routes
   "/session-temp", // Add temp session routes
   "/media", // Add media routes
+  "/api/upload/store-image",  
 ];
 
 // Middleware function

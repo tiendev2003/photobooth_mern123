@@ -10,13 +10,14 @@ type User = PrismaUser;
 export type UserWithoutPassword = Omit<User, "password">;
 
 export interface UserLoginData {
-  email: string;
+  username: string;
   password: string;
 }
 
 export interface UserRegistrationData {
   name: string;
-  email: string;
+  username: string;
+  email?: string;
   password: string;
   role?: Role;
   phone?: string | null;
@@ -37,7 +38,7 @@ export async function comparePasswords(
 export async function generateToken(user: User): Promise<string> {
   const payload = {
     id: user.id,
-    email: user.email,
+    username: user.username,
     role: user.role,
   };
 
@@ -57,9 +58,9 @@ export function sanitizeUser(user: User): UserWithoutPassword {
   return sanitizedUser;
 }
 
-export async function findUserByEmail(email: string): Promise<User | null> {
+export async function findUserByUsername(username: string): Promise<User | null> {
   return prisma.user.findUnique({
-    where: { email },
+    where: { username },
   });
 }
 
@@ -77,7 +78,8 @@ export async function createUser(
   const newUser = await prisma.user.create({
     data: {
       name: data.name,
-      email: data.email,
+      username: data.username,
+      email: data.email || null,
       password: hashedPassword,
       role: data.role || "USER",
       phone: data.phone,
@@ -94,6 +96,7 @@ export async function updateUser(
 ): Promise<UserWithoutPassword | null> {
   const updateData: Partial<{
     name?: string;
+    username?: string;
     email?: string;
     password?: string;
     role?: Role;
@@ -122,7 +125,7 @@ export async function updateUser(
 export async function authenticate(
   loginData: UserLoginData
 ): Promise<{ user: UserWithoutPassword; token: string } | null> {
-  const user = await findUserByEmail(loginData.email);
+  const user = await findUserByUsername(loginData.username);
 
   if (!user) {
     return null;

@@ -272,7 +272,7 @@ export default function RevenueManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {revenue.coupon ? (
                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                          {revenue.coupon.code} (-{revenue.coupon.discount})
+                          {revenue.coupon.code} 
                         </span>
                       ) : (
                         <span className="text-gray-400">-</span>

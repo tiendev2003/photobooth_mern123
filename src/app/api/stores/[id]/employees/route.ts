@@ -55,7 +55,7 @@ export async function POST(
     const storeId = (await params).id;
 
     const body = await request.json();
-    const { name, email, password, phone, role = "USER" } = body;
+    const { name, username, email, password, phone, role = "USER" } = body;
 
     // Kiểm tra store tồn tại và giới hạn nhân viên
     const store = await prisma.store.findUnique({
@@ -76,14 +76,14 @@ export async function POST(
       );
     }
 
-    // Kiểm tra email đã tồn tại
+    // Kiểm tra username đã tồn tại
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { username },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "Email already exists" },
+        { error: "Username already exists" },
         { status: 400 }
       );
     }
@@ -95,6 +95,7 @@ export async function POST(
     const employee = await prisma.user.create({
       data: {
         name,
+        username,
         email,
         password: hashedPassword,
         phone,

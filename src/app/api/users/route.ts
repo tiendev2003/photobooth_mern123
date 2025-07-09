@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
       ...(searchQuery && {
         OR: [
           { name: { contains: searchQuery } },
+          { username: { contains: searchQuery } },
           { email: { contains: searchQuery } }
         ]
       })
@@ -46,6 +47,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         role: true,
         phone: true,
@@ -84,20 +86,20 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password, role, phone, address } = body;
+    const { name, username, email, password, role, phone, address } = body;
 
     // Validate required fields
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: 'Name, email, and password are required' }, { status: 400 });
+    if (!name || !username || !password) {
+      return NextResponse.json({ error: 'Name, username, and password are required' }, { status: 400 });
     }
 
-    // Check if user with this email already exists
+    // Check if user with this username already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { username }
     });
 
     if (existingUser) {
-      return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
+      return NextResponse.json({ error: 'User with this username already exists' }, { status: 409 });
     }
 
     // Hash the password
@@ -107,6 +109,7 @@ export async function POST(req: NextRequest) {
     const newUser = await prisma.user.create({
       data: {
         name,
+        username,
         email,
         password: hashedPassword,
         role: role || 'USER',
@@ -116,6 +119,7 @@ export async function POST(req: NextRequest) {
       select: {
         id: true,
         name: true,
+        username: true,
         email: true,
         role: true,
         phone: true,

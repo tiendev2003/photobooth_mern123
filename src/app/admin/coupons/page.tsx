@@ -9,13 +9,20 @@ interface User {
   email: string;
 }
 
+interface Store {
+  id: string;
+  name: string;
+  address?: string;
+}
+
 interface Coupon {
   id: string;
   code: string;
   discount: number;
   expiresAt: string;
-  user_id: string | null;
+  storeId: string | null;
   user: User | null;
+  store: Store | null;
   createdAt: string;
   usageLimit?: number | null;
   currentUsage?: number;
@@ -36,6 +43,7 @@ export default function CouponsManagement() {
   const { token } = useAuth();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [defaultPricing, setDefaultPricing] = useState<Pricing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,9 +66,8 @@ export default function CouponsManagement() {
     id: '',
     code: '',
     discount: 0,
-    expiresAt: '',
-    user_id: '',
-    usageLimit: '',
+    store_id: '', // Add store_id field
+    usageLimit: 1, // Default to 1
     isActive: true
   });
 
@@ -108,6 +115,20 @@ export default function CouponsManagement() {
       const usersData = await usersResponse.json();
       setUsers(usersData.users); // Extract users from the paginated response
 
+      // Fetch stores for dropdown
+      const storesResponse = await fetch('/api/stores', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!storesResponse.ok) {
+        throw new Error('Failed to fetch stores');
+      }
+
+      const storesData = await storesResponse.json();
+      setStores(storesData.stores || []);
+
       // Fetch default pricing
       const pricingResponse = await fetch('/api/pricing/default');
       if (pricingResponse.ok) {
@@ -136,6 +157,7 @@ export default function CouponsManagement() {
       setPagination(prev => ({ ...prev, page: newPage }));
     }
   };
+  console.log('Pagination state:', users);
 
   // Handle search input
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,18 +181,13 @@ export default function CouponsManagement() {
 
   // Hàm tạo coupon với mức giảm giá cụ thể (mở form)
   const createCouponWithDiscount = (discount: number) => {
-    const today = new Date();
-    const nextMonth = new Date(today);
-    nextMonth.setMonth(today.getMonth() + 1);
-
     setIsEditing(false);
     setFormData({
       id: '',
       code: generateCouponCode(),
       discount: discount,
-      expiresAt: nextMonth.toISOString().split('T')[0],
-      user_id: '',
-      usageLimit: '',
+      store_id: '',
+      usageLimit: 1,
       isActive: true
     });
     setIsFormOpen(true);
@@ -181,15 +198,10 @@ export default function CouponsManagement() {
     try {
       setLoading(true);
 
-      const today = new Date();
-      const nextMonth = new Date(today);
-      nextMonth.setMonth(today.getMonth() + 1);
-
       const couponData = {
         code: generateCouponCode(),
         discount: discount,
-        expires_at: nextMonth.toISOString().split('T')[0],
-        user_id: null,
+        store_id: null,
         usageLimit: 1, // Mặc định giới hạn sử dụng là 1 lần
         isActive: true
       };
@@ -226,7 +238,8 @@ export default function CouponsManagement() {
       const numValue = parseFloat(value);
       setFormData(prev => ({ ...prev, [name]: isNaN(numValue) ? 0 : numValue }));
     } else if (name === 'usageLimit') {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      const numValue = parseInt(value);
+      setFormData(prev => ({ ...prev, [name]: isNaN(numValue) ? 1 : numValue }));
     } else if (type === 'checkbox') {
       setFormData(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
     } else {
@@ -246,9 +259,8 @@ export default function CouponsManagement() {
       id: coupon.id,
       code: coupon.code,
       discount: coupon.discount,
-      expiresAt: new Date(coupon.expiresAt).toISOString().split('T')[0],
-      user_id: coupon.user_id || '',
-      usageLimit: coupon.usageLimit !== undefined && coupon.usageLimit !== null ? String(coupon.usageLimit) : '',
+      store_id: coupon.storeId || '',
+      usageLimit: coupon.usageLimit !== undefined && coupon.usageLimit !== null ? coupon.usageLimit : 1,
       isActive: coupon.isActive !== undefined ? coupon.isActive : true
     });
     setIsFormOpen(true);
@@ -260,8 +272,8 @@ export default function CouponsManagement() {
       // Prepare data for API
       const couponData = {
         ...formData,
-        user_id: formData.user_id || null,
-        usageLimit: formData.usageLimit === '' ? null : Number(formData.usageLimit),
+        store_id: formData.store_id || null,
+        usageLimit: formData.usageLimit,
         isActive: formData.isActive
       };
       // Create or update coupon
@@ -336,14 +348,17 @@ export default function CouponsManagement() {
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Coupons Management</h1>
-        <div className="flex space-x-2">
+    <div className="p-4 sm:p-6 min-h-screen bg-gray-50">
+      {/* Header - Responsive */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Coupons Management</h1>
+        
+        {/* Action Buttons - Responsive Grid */}
+        <div className="w-full sm:w-auto grid grid-cols-1 sm:grid-cols-2 lg:flex gap-2 lg:space-x-2">
           <button
             onClick={() => createAndSaveCouponDirectly(defaultPricing ? defaultPricing.priceOnePhoto : 70)}
-            className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm flex items-center gap-1"
-            title={`Tạo mã giảm giá ${defaultPricing ? defaultPricing.priceOnePhoto : 70} xu `}
+            className="w-full sm:w-auto px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm flex items-center justify-center gap-1"
+            title={`Tạo mã giảm giá ${defaultPricing ? defaultPricing.priceOnePhoto : 70} xu`}
             disabled={loading}
           >
             {loading ? (
@@ -352,12 +367,14 @@ export default function CouponsManagement() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             ) : null}
-            <span>Tạo mã {defaultPricing ? defaultPricing.priceOnePhoto : 70} xu</span>
+            <span className="hidden sm:inline">Tạo mã</span>
+            <span className="font-medium">{defaultPricing ? defaultPricing.priceOnePhoto : 70} xu</span>
           </button>
+          
           <button
             onClick={() => createAndSaveCouponDirectly(defaultPricing ? defaultPricing.priceTwoPhoto : 120)}
-            className="px-3 py-1.5 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm flex items-center gap-1"
-            title={`Tạo mã giảm giá ${defaultPricing ? defaultPricing.priceTwoPhoto : 120} xu `}
+            className="w-full sm:w-auto px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm flex items-center justify-center gap-1"
+            title={`Tạo mã giảm giá ${defaultPricing ? defaultPricing.priceTwoPhoto : 120} xu`}
             disabled={loading}
           >
             {loading ? (
@@ -366,11 +383,13 @@ export default function CouponsManagement() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             ) : null}
-            <span>Tạo mã {defaultPricing ? defaultPricing.priceTwoPhoto : 120} xu  </span>
+            <span className="hidden sm:inline">Tạo mã</span>
+            <span className="font-medium">{defaultPricing ? defaultPricing.priceTwoPhoto : 120} xu</span>
           </button>
+          
           <button
             onClick={() => createAndSaveCouponDirectly(defaultPricing ? defaultPricing.priceThreePhoto : 150)}
-            className="px-3 py-1.5 bg-pink-600 text-white rounded-md hover:bg-pink-700 text-sm flex items-center gap-1"
+            className="w-full sm:w-auto px-3 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 text-sm flex items-center justify-center gap-1"
             title={`Tạo mã giảm giá ${defaultPricing ? defaultPricing.priceThreePhoto : 150} xu`}
             disabled={loading}
           >
@@ -380,216 +399,205 @@ export default function CouponsManagement() {
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
             ) : null}
-            <span>Tạo mã {defaultPricing ? defaultPricing.priceThreePhoto : 150} xu </span>
+            <span className="hidden sm:inline">Tạo mã</span>
+            <span className="font-medium">{defaultPricing ? defaultPricing.priceThreePhoto : 150} xu</span>
           </button>
+          
           <button
             onClick={handleCreateCoupon}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+            className="w-full sm:w-auto sm:col-span-2 lg:col-span-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center gap-2"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span>Create Coupon</span>
+            <span>Tạo mã</span>
           </button>
         </div>
       </div>
 
-      {/* Search bar */}
+      {/* Search bar - Responsive */}
       <div className="mb-6">
-        <form onSubmit={handleSearch} className="flex gap-2">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
-            placeholder="Search by coupon code..."
+            placeholder="Nhập mas..."
             value={searchQuery}
             onChange={handleSearchChange}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
           >
-            Search
+            Tìm kiếm
           </button>
         </form>
       </div>
 
-      {/* Coupon Form Modal */}
+      {/* Coupon Form Modal - Responsive */}
       {isFormOpen && (
         <div
-          className="fixed inset-0 flex items-center justify-center z-50 bg-gray-700 bg-opacity-30"
+          className="fixed inset-0 flex items-center justify-center z-50 bg-gray-700 bg-opacity-30 p-4"
           onClick={(e) => {
-            // Only close if clicking the backdrop, not the modal itself
             if (e.target === e.currentTarget) {
               setIsFormOpen(false);
               setError(null);
             }
           }}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {isEditing ? 'Edit Coupon' : 'Create New Coupon'}
-              </h3>
-              <button
-                onClick={() => {
-                  setIsFormOpen(false);
-                  setError(null);
-                }}
-                className="text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 p-1"
-                aria-label="Close"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="code" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Coupon Code</label>
-                <div className="mt-1 flex rounded-md shadow-sm">
-                  <input
-                    type="text"
-                    id="code"
-                    name="code"
-                    value={formData.code}
-                    onChange={e => {
-                      const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
-                      setFormData(prev => ({ ...prev, code: value }));
-                    }}
-                    required
-                    maxLength={4}
-                    pattern="[0-9]{1,4}"
-                    className="flex-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, code: generateCouponCode() }))}
-                    className="ml-2 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
-                  >
-                    Generate
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="discount" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Discount
-                </label>
-                <input
-                  type="number"
-                  id="discount"
-                  name="discount"
-                  value={formData.discount}
-                  onChange={handleInputChange}
-                  required
-                  step="10"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="expires_at" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Expiration Date
-                </label>
-                <input
-                  type="date"
-                  id="expires_at"
-                  name="expires_at"
-                  value={formData.expiresAt}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="user_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Assign to User (optional)
-                </label>
-                <select
-                  id="user_id"
-                  name="user_id"
-                  value={formData.user_id}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                >
-                  <option value="">-- Unassigned --</option>
-                  {users.map(user => (
-                    <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="usageLimit" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Usage Limit (optional)
-                </label>
-                <input
-                  type="number"
-                  id="usageLimit"
-                  name="usageLimit"
-                  value={formData.usageLimit}
-                  onChange={handleInputChange}
-                  min="1"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleInputChange}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
-                  Active
-                </label>
-              </div>
-              <div className="flex justify-end space-x-3 pt-3 sticky bottom-0 bg-white dark:bg-gray-800 pb-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-4 sm:p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  {isEditing ? 'Sửa mã' : 'Tạo mã'}
+                </h3>
                 <button
-                  type="button"
                   onClick={() => {
                     setIsFormOpen(false);
                     setError(null);
                   }}
-                  disabled={loading}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
+                  className="text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 p-1"
+                  aria-label="Close"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
-                >
-                  {loading && (
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  )}
-                  <span>{isEditing ? 'Update' : 'Create'}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="code" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mã</label>
+                  <div className="mt-1 flex rounded-md shadow-sm">
+                    <input
+                      type="text"
+                      id="code"
+                      name="code"
+                      value={formData.code}
+                      onChange={e => {
+                        const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+                        setFormData(prev => ({ ...prev, code: value }));
+                      }}
+                      required
+                      maxLength={4}
+                      pattern="[0-9]{1,4}"
+                      className="flex-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, code: generateCouponCode() }))}
+                      className="ml-2 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none"
+                    >
+                      Tạo tự động
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="discount" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Giá trị
+                  </label>
+                  <input
+                    type="number"
+                    id="discount"
+                    name="discount"
+                    value={formData.discount}
+                    onChange={handleInputChange}
+                    required
+                    step="10"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="store_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Cửa hàng (tùy chọn - để trống cho coupon toàn cầu)
+                  </label>
+                  <select
+                    id="store_id"
+                    name="store_id"
+                    value={formData.store_id}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                    <option value="">-- Coupon toàn cầu --</option>
+                    {stores.map(store => (
+                      <option key={store.id} value={store.id}>{store.name} {store.address && `(${store.address})`}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="usageLimit" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Số lần sử dụng tối đa
+                  </label>
+                  <input
+                    type="number"
+                    id="usageLimit"
+                    name="usageLimit"
+                    value={formData.usageLimit}
+                    onChange={handleInputChange}
+                    min="1"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Coupon sẽ tự động hết hạn sau 1 ngày kể từ khi tạo</p>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    name="isActive"
+                    checked={formData.isActive}
+                    onChange={handleInputChange}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                    Kích hoạt
+                  </label>
+                </div>
+                <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFormOpen(false);
+                      setError(null);
+                    }}
+                    disabled={loading}
+                    className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center space-x-2"
+                  >
+                    {loading && (
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    <span>{isEditing ? 'Cập nhật' : 'Tạo mới'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Coupons Table */}
-      <div className="bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
+      {/* Desktop Table View */}
+      <div className="hidden lg:block bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Code</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Discount</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Expires</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Assigned To</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Usage Limit</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Mã</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Giá trị</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Hết hạn</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Cửa hàng</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Giới hạn sử dụng</th>
                 <th scope="col" className="relative px-6 py-3">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -617,7 +625,7 @@ export default function CouponsManagement() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {coupon.user ? coupon.user.name : 'Unassigned'}
+                        {coupon.store ? coupon.store.name : 'Toàn cầu'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {coupon.currentUsage !== undefined && coupon.usageLimit !== undefined
@@ -649,7 +657,7 @@ export default function CouponsManagement() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     No coupons found
                   </td>
                 </tr>
@@ -657,75 +665,183 @@ export default function CouponsManagement() {
             </tbody>
           </table>
         </div>
+      </div>
 
-        {/* Pagination controls */}
-        {pagination.totalPages > 0 && (
-          <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} coupons
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => handlePageChange(1)}
-                disabled={!pagination.hasPrevPage}
-                className={`px-3 py-1 rounded ${pagination.hasPrevPage
-                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                  }`}
-              >
-                &laquo; First
-              </button>
-              <button
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={!pagination.hasPrevPage}
-                className={`px-3 py-1 rounded ${pagination.hasPrevPage
-                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                  }`}
-              >
-                &lsaquo; Prev
-              </button>
+      {/* Mobile Card View */}
+      <div className="lg:hidden space-y-4">
+        {coupons.length > 0 ? (
+          coupons.map((coupon) => {
+            const isExpired = new Date(coupon.expiresAt) < new Date();
+            return (
+              <div key={coupon.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Mã: {coupon.code}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {coupon.discount} xu
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEditCoupon(coupon)}
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900"
+                      title="Edit coupon"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCoupon(coupon.id)}
+                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900"
+                      title="Delete coupon"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
 
-              {/* Page number buttons */}
-              <div className="flex space-x-1">
-                {[...Array(pagination.totalPages)].map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handlePageChange(i + 1)}
-                    className={`px-3 py-1 rounded ${pagination.page === i + 1
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                      }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Hết hạn</div>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isExpired
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                      }`}>
+                      {new Date(coupon.expiresAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Cửa hàng</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {coupon.store ? coupon.store.name : 'Toàn cầu'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Giới hạn sử dụng</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {coupon.currentUsage !== undefined && coupon.usageLimit !== undefined
+                      ? `${coupon.currentUsage} / ${coupon.usageLimit}`
+                      : 'N/A'}
+                  </div>
+                </div>
               </div>
-
-              <button
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={!pagination.hasNextPage}
-                className={`px-3 py-1 rounded ${pagination.hasNextPage
-                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                  }`}
-              >
-                Next &rsaquo;
-              </button>
-              <button
-                onClick={() => handlePageChange(pagination.totalPages)}
-                disabled={!pagination.hasNextPage}
-                className={`px-3 py-1 rounded ${pagination.hasNextPage
-                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                  }`}
-              >
-                Last &raquo;
-              </button>
+            );
+          })
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
+            <div className="text-gray-500 dark:text-gray-400 text-base">
+              Không có mã giảm giá nào được tìm thấy.
             </div>
           </div>
         )}
       </div>
+
+      {/* Pagination controls - Responsive */}
+      {pagination.totalPages > 0 && (
+        <div className="bg-white dark:bg-gray-800 px-4 py-4 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 mt-4 rounded-b-lg">
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-4 sm:mb-0">
+            Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} coupons
+          </div>
+          
+          {/* Mobile pagination - simplified */}
+          <div className="flex space-x-2 sm:hidden">
+            <button
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={!pagination.hasPrevPage}
+              className={`px-3 py-2 rounded text-sm ${pagination.hasPrevPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              Trước
+            </button>
+            <span className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+              {pagination.page} / {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={!pagination.hasNextPage}
+              className={`px-3 py-2 rounded text-sm ${pagination.hasNextPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              Tiếp
+            </button>
+          </div>
+
+          {/* Desktop pagination - full */}
+          <div className="hidden sm:flex space-x-2">
+            <button
+              onClick={() => handlePageChange(1)}
+              disabled={!pagination.hasPrevPage}
+              className={`px-3 py-1 rounded ${pagination.hasPrevPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              &laquo; Đầu tiên
+            </button>
+            <button
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={!pagination.hasPrevPage}
+              className={`px-3 py-1 rounded ${pagination.hasPrevPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              &lsaquo; Trước
+            </button>
+
+            {/* Page number buttons */}
+            <div className="flex space-x-1">
+              {[...Array(Math.min(pagination.totalPages, 5))].map((_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`px-3 py-1 rounded ${pagination.page === pageNum
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                      }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={!pagination.hasNextPage}
+              className={`px-3 py-1 rounded ${pagination.hasNextPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              Tiếp &rsaquo;
+            </button>
+            <button
+              onClick={() => handlePageChange(pagination.totalPages)}
+              disabled={!pagination.hasNextPage}
+              className={`px-3 py-1 rounded ${pagination.hasNextPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              Cuối &raquo;
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

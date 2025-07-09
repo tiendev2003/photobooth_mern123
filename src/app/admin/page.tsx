@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 interface DashboardStats {
@@ -14,50 +15,50 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
-  const { user, token } = useAuth();
+  const { user, token, } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        // Fetch user count
         const userResponse = await fetch('/api/users', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const userData = await userResponse.json();
-        
+
         // Fetch frame types count
         const frameTypesResponse = await fetch('/api/frame-types', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const frameTypesData = await frameTypesResponse.json();
-        
+
         // Fetch templates count
         const templatesResponse = await fetch('/api/frame-templates', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const templatesData = await templatesResponse.json();
-        
+
         // Fetch images count
         const imagesResponse = await fetch('/api/images', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const imagesData = await imagesResponse.json();
-        
+
         // Fetch coupons count
         const couponsResponse = await fetch('/api/coupons', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const couponsData = await couponsResponse.json();
-        
+
         // Fetch stores count
         const storesResponse = await fetch('/api/stores', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const storesData = await storesResponse.json();
-        
+
         setStats({
           userCount: userData.pagination?.total ?? userData.users?.length ?? 0,
           frameTypesCount: frameTypesData.pagination?.total ?? frameTypesData.data?.length ?? 0,
@@ -73,7 +74,7 @@ export default function AdminDashboard() {
         setLoading(false);
       }
     };
-    
+
     if (token) {
       fetchDashboardStats();
     }
@@ -86,11 +87,7 @@ export default function AdminDashboard() {
     );
   }
   if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <p className="text-red-500">Bạn không có quyền truy cập trang này.</p>
-      </div>
-    );
+    router.push('/'); // Redirect to home if not admin or manager
   }
 
   if (loading) {
@@ -121,7 +118,7 @@ export default function AdminDashboard() {
   return (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Bảng điều khiển</h1>
-      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <StatCard title="Người dùng" value={stats?.userCount || 0} icon="users" />
         <StatCard title="Loại khung" value={stats?.frameTypesCount || 0} icon="layers" />
@@ -135,7 +132,7 @@ export default function AdminDashboard() {
           <StatCard title="Bản ghi doanh thu" value={stats.revenueCount} icon="money" />
         )}
       </div>
-      
+
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <h2 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Chào mừng, {user?.name}!</h2>
         <p className="text-gray-600 dark:text-gray-400">

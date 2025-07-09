@@ -7,7 +7,7 @@ interface AuthContextType {
   user: UserWithoutPassword | null;
   token: string | null;
   isLoading: boolean;
-  login: (email: string, password: string, isAdminLogin?: boolean) => Promise<boolean>;
+  login: (username: string, password: string, isAdminLogin?: boolean) => Promise<boolean>;
   logout: () => void;
   isAdmin: boolean;
 }
@@ -31,8 +31,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (storedToken && storedUser) {
         try {
-          // Check token validity with the server
-          const response = await fetch('/api/auth/verify', {
+           const response = await fetch('/api/auth/verify', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -94,7 +93,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [user, token]);
  
 
-  const login = async (email: string, password: string, isAdminLogin = false): Promise<boolean> => {
+  const login = async (username: string, password: string, isAdminLogin = false): Promise<boolean> => {
     try {
       setIsLoading(true);
       const response = await fetch('/api/auth/login', {
@@ -102,7 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, isAdminLogin }),
+        body: JSON.stringify({ username, password, isAdminLogin }),
       });
 
       if (!response.ok) {

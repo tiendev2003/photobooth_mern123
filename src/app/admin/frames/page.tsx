@@ -391,12 +391,13 @@ export default function FrameTypesManagement() {
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Quản lý loại khung</h1>
+    <div className="p-4 sm:p-6 min-h-screen bg-gray-50">
+      {/* Header - Responsive */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">Quản lý loại khung</h1>
         <button
           onClick={handleCreateFrameType}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+          className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center gap-2 font-medium"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -405,268 +406,269 @@ export default function FrameTypesManagement() {
         </button>
       </div>
 
-      {/* Search bar */}
+      {/* Search bar - Responsive */}
       <div className="mb-6">
-        <form onSubmit={handleSearch} className="flex gap-2">
+        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             placeholder="Tìm kiếm theo tên hoặc mô tả..."
             value={searchQuery}
             onChange={handleSearchChange}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="flex-1 px-4 py-3 sm:py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            className="w-full sm:w-auto px-6 py-3 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
           >
             Tìm kiếm
           </button>
         </form>
       </div>
 
-      {/* Frame Type Form Modal */}
+      {/* Frame Type Form Modal - Responsive */}
       {isFormOpen && (
         <div 
-          className="fixed inset-0 flex items-center justify-center z-50 bg-gray-700 bg-opacity-40" 
+          className="fixed inset-0 flex items-center justify-center z-50 bg-gray-700 bg-opacity-40 p-4" 
           onClick={(e) => {
-            // Only close if clicking the backdrop, not the modal itself
             if (e.target === e.currentTarget) {
               setIsFormOpen(false);
               setError(null);
             }
           }}
         >
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {isEditing ? 'Edit Frame Type' : 'Create New Frame Type'}
-              </h3>
-              <button
-                onClick={() => {
-                  setIsFormOpen(false);
-                  setError(null);
-                }}
-                className="text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 p-1"
-                aria-label="Close"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tên</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mô tả</label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                ></textarea>
-              </div>
-
-              <div>
-                <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Hình ảnh khung
-                  {autoGeneratedImage && <span className="ml-2 text-sm text-green-600">(Tự động tạo dựa trên cột và hàng)</span>}
-                </label>
-                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  <p>File sẽ được lưu theo tên: <strong>{formData.columns}x{formData.rows}.png</strong></p>
-                  <p className="mt-1">Chấp nhận định dạng: JPG, PNG, WEBP, SVG</p>
-                </div>
-                
-                <div className="mt-2 flex items-center space-x-2">
-                  {autoGeneratedImage ? (
-                    <div className="flex items-center">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAutoGeneratedImage(false);
-                          setImageFile(null);
-                        }}
-                        className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                      >
-                        Use Custom Image
-                      </button>
-                      <span className="ml-2 text-sm text-gray-500">Using auto-generated image: {formData.columns}x{formData.rows}.png</span>
-                    </div>
-                  ) : (
-                    <>
-                      <input
-                        type="file"
-                        id="image"
-                        name="image"
-                        accept="image/jpeg, image/png, image/webp, image/svg+xml"
-                        onChange={handleImageChange}
-                        className="block w-full text-sm text-gray-900 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAutoGeneratedImage(true);
-                          setImageFile(null);
-                          setImagePreview(`/uploads/type/${formData.columns}x${formData.rows}.png`);
-                        }}
-                        className="text-blue-500 hover:text-blue-700"
-                      >
-                        Use Auto Image
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {/* Preview section */}
-                <div className="mt-3">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    {autoGeneratedImage
-                      ? "Auto-generated image preview:"
-                      : imageFile
-                        ? "Preview of new image:"
-                        : formData.image
-                          ? "Current image:"
-                          : "No image selected"}
-                  </p>
-
-                  {imagePreview && (
-                    <div className="border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700 max-w-xs">
-                      <Image
-                        src={imagePreview.startsWith('data:') ? imagePreview : `${imagePreview}`}
-                        alt="Frame preview"
-                        width={320}
-                        unoptimized 
-                        height={128}
-                        className="w-full h-auto max-h-32 object-contain"
-                        onError={(e) => {
-                          console.error('Image failed to load:', imagePreview);
-                          e.currentTarget.src = '/uploads/type/1x1.png'; // Fallback image
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {!imagePreview && (
-                    <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-gray-50 dark:bg-gray-700 text-center">
-                      <span className="text-gray-500 dark:text-gray-400">No image</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="columns" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Cột</label>
-                  <input
-                    type="number"
-                    id="columns"
-                    name="columns"
-                    value={formData.columns}
-                    onChange={handleInputChange}
-                    min={1}
-                    required
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="rows" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Hàng</label>
-                  <input
-                    type="number"
-                    id="rows"
-                    name="rows"
-                    value={formData.rows}
-                    onChange={handleInputChange}
-                    min={1}
-                    required
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="totalImages" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tổng số hình</label>
-                  <input
-                    type="number"
-                    id="totalImages"
-                    name="totalImages"
-                    value={formData.totalImages}
-                    onChange={handleInputChange}
-                    min={1}
-                    required
-                    disabled={true}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 cursor-not-allowed dark:bg-gray-600 dark:border-gray-600 dark:text-gray-300"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
-                  Hoạt động
-                </label>
-              </div>
-
-              {/* Form submission status */}
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3">
-                  <p className="text-sm">{error}</p>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-3 pt-3 sticky bottom-0 bg-white dark:bg-gray-800 pb-2">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-4 sm:p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  {isEditing ? 'Sửa loại khung' : 'Tạo loại khung mới'}
+                </h3>
                 <button
-                  type="button"
                   onClick={() => {
                     setIsFormOpen(false);
                     setError(null);
                   }}
-                  disabled={loading}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
+                  className="text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100 p-1"
+                  aria-label="Close"
                 >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
-                >
-                  {loading && (
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  )}
-                  <span>{isEditing ? 'Cập nhật' : 'Tạo'}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tên</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mô tả</label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label htmlFor="image" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Hình ảnh khung
+                    {autoGeneratedImage && <span className="ml-2 text-sm text-green-600">(Tự động tạo dựa trên cột và hàng)</span>}
+                  </label>
+                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <p>File sẽ được lưu theo tên: <strong>{formData.columns}x{formData.rows}.png</strong></p>
+                    <p className="mt-1">Chấp nhận định dạng: JPG, PNG, WEBP, SVG</p>
+                  </div>
+                  
+                  <div className="mt-2 flex items-center space-x-2">
+                    {autoGeneratedImage ? (
+                      <div className="flex items-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAutoGeneratedImage(false);
+                            setImageFile(null);
+                          }}
+                          className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                          Use Custom Image
+                        </button>
+                        <span className="ml-2 text-sm text-gray-500">Using auto-generated image: {formData.columns}x{formData.rows}.png</span>
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          type="file"
+                          id="image"
+                          name="image"
+                          accept="image/jpeg, image/png, image/webp, image/svg+xml"
+                          onChange={handleImageChange}
+                          className="block w-full text-sm text-gray-900 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAutoGeneratedImage(true);
+                            setImageFile(null);
+                            setImagePreview(`/uploads/type/${formData.columns}x${formData.rows}.png`);
+                          }}
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          Use Auto Image
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Preview section */}
+                  <div className="mt-3">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      {autoGeneratedImage
+                        ? "Auto-generated image preview:"
+                        : imageFile
+                          ? "Preview of new image:"
+                          : formData.image
+                            ? "Current image:"
+                            : "No image selected"}
+                    </p>
+
+                    {imagePreview && (
+                      <div className="border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700 max-w-xs">
+                        <Image
+                          src={imagePreview.startsWith('data:') ? imagePreview : `${imagePreview}`}
+                          alt="Frame preview"
+                          width={320}
+                          unoptimized 
+                          height={128}
+                          className="w-full h-auto max-h-32 object-contain"
+                          onError={(e) => {
+                            console.error('Image failed to load:', imagePreview);
+                            e.currentTarget.src = '/uploads/type/1x1.png'; // Fallback image
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {!imagePreview && (
+                      <div className="border border-gray-300 dark:border-gray-600 rounded-md p-4 bg-gray-50 dark:bg-gray-700 text-center">
+                        <span className="text-gray-500 dark:text-gray-400">No image</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label htmlFor="columns" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Cột</label>
+                    <input
+                      type="number"
+                      id="columns"
+                      name="columns"
+                      value={formData.columns}
+                      onChange={handleInputChange}
+                      min={1}
+                      required
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="rows" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Hàng</label>
+                    <input
+                      type="number"
+                      id="rows"
+                      name="rows"
+                      value={formData.rows}
+                      onChange={handleInputChange}
+                      min={1}
+                      required
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="totalImages" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tổng số hình</label>
+                    <input
+                      type="number"
+                      id="totalImages"
+                      name="totalImages"
+                      value={formData.totalImages}
+                      onChange={handleInputChange}
+                      min={1}
+                      required
+                      disabled={true}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 cursor-not-allowed dark:bg-gray-600 dark:border-gray-600 dark:text-gray-300"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    name="isActive"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, isActive: e.target.checked }))}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
+                    Hoạt động
+                  </label>
+                </div>
+
+                {/* Form submission status */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3">
+                    <p className="text-sm">{error}</p>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFormOpen(false);
+                      setError(null);
+                    }}
+                    disabled={loading}
+                    className="w-full sm:w-auto px-4 py-3 sm:py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50 font-medium"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center space-x-2 font-medium"
+                  >
+                    {loading && (
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                    <span>{isEditing ? 'Cập nhật' : 'Tạo'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Frame Types Table */}
-      <div className="bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
+      {/* Desktop Table View */}
+      <div className="hidden lg:block bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
@@ -695,7 +697,6 @@ export default function FrameTypesManagement() {
                           unoptimized 
                           className="w-16 h-16 object-fill rounded"
                           onError={(e) => {
-                            // Backup handling nếu ảnh không load được
                             console.error('Image failed to load:', frameType.image);
                             e.currentTarget.onerror = null;
                             e.currentTarget.style.display = 'none';
@@ -774,97 +775,241 @@ export default function FrameTypesManagement() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                    No frame types found
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                    Không có loại khung nào được tìm thấy
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+      </div>
 
-        {/* Pagination controls */}
-        {pagination.totalPages > 0 && (
-          <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} frame types
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => handlePageChange(1)}
-                disabled={!pagination.hasPrevPage}
-                className={`px-3 py-1 rounded ${pagination.hasPrevPage
-                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                  }`}
-              >
-                &laquo; First
-              </button>
-              <button
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={!pagination.hasPrevPage}
-                className={`px-3 py-1 rounded ${pagination.hasPrevPage
-                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                  }`}
-              >
-                &lsaquo; Prev
-              </button>
-
-              {/* Page number buttons - show up to 5 pages */}
-              <div className="flex space-x-1">
-                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                  // Calculate page numbers to show based on current page
-                  let pageNum;
-                  if (pagination.totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else {
-                    const startPage = Math.max(1, pagination.page - 2);
-                    pageNum = startPage + i;
-                    if (pageNum > pagination.totalPages) {
-                      pageNum = pagination.totalPages - (4 - i);
-                    }
-                  }
-
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={`px-3 py-1 rounded ${pagination.page === pageNum
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                        }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
+      {/* Mobile Card View */}
+      <div className="lg:hidden space-y-4">
+        {frameTypes.length > 0 ? (
+          frameTypes.map((frameType) => (
+            <div key={frameType.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
+              <div className="flex items-start space-x-4 mb-4">
+                <div className="flex-shrink-0">
+                  {frameType.image ? (
+                    <Image
+                      src={`${frameType.image}`}
+                      alt={frameType.name}
+                      width={64}
+                      height={64}
+                      unoptimized 
+                      className="w-16 h-16 object-fill rounded"
+                      onError={(e) => {
+                        console.error('Image failed to load:', frameType.image);
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.style.display = 'none';
+                        const parent = e.currentTarget.parentElement;
+                        if (parent) {
+                          const fallback = document.createElement('div');
+                          fallback.className = 'w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center';
+                          fallback.innerHTML = '<span class="text-gray-500 dark:text-gray-400 text-xs">Image Error</span>';
+                          parent.appendChild(fallback);
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                      <span className="text-gray-500 dark:text-gray-400 text-xs">No Image</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+                    {frameType.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {frameType.description || 'Không có mô tả'}
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleEditFrameType(frameType)}
+                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900"
+                    title="Chỉnh sửa loại khung"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleToggleActive(frameType.id, frameType.isActive)}
+                    className={`p-2 rounded-full ${frameType.isActive
+                      ? 'text-amber-600 hover:text-amber-900 dark:text-amber-400 dark:hover:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900'
+                      : 'text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-200 hover:bg-green-100 dark:hover:bg-green-900'
+                      }`}
+                    title={frameType.isActive ? 'Tạm dừng' : 'Kích hoạt'}
+                  >
+                    {frameType.isActive ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteFrameType(frameType.id)}
+                    className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900"
+                    title="Xóa loại khung"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
-              <button
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={!pagination.hasNextPage}
-                className={`px-3 py-1 rounded ${pagination.hasNextPage
-                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                  }`}
-              >
-                Next &rsaquo;
-              </button>
-              <button
-                onClick={() => handlePageChange(pagination.totalPages)}
-                disabled={!pagination.hasNextPage}
-                className={`px-3 py-1 rounded ${pagination.hasNextPage
-                  ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                  }`}
-              >
-                Last &raquo;
-              </button>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Bố cục</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {frameType.columns} x {frameType.rows}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Tổng số hình</div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {frameType.totalImages}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Trạng thái</div>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${frameType.isActive
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                    : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                    }`}>
+                    {frameType.isActive ? 'Hoạt động' : 'Tạm dừng'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-8 text-center">
+            <div className="text-gray-500 dark:text-gray-400 text-base">
+              Không có loại khung nào được tìm thấy.
             </div>
           </div>
         )}
       </div>
+
+      {/* Pagination controls - Responsive */}
+      {pagination.totalPages > 0 && (
+        <div className="bg-white dark:bg-gray-800 px-4 py-4 flex flex-col sm:flex-row items-center justify-between border-t border-gray-200 dark:border-gray-700 mt-4 rounded-b-lg">
+          <div className="text-sm text-gray-500 dark:text-gray-400 mb-4 sm:mb-0">
+            Hiển thị {((pagination.page - 1) * pagination.limit) + 1} đến {Math.min(pagination.page * pagination.limit, pagination.total)} trong tổng {pagination.total} loại khung
+          </div>
+          
+          {/* Mobile pagination - simplified */}
+          <div className="flex space-x-2 sm:hidden">
+            <button
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={!pagination.hasPrevPage}
+              className={`px-3 py-2 rounded text-sm ${pagination.hasPrevPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              Trước
+            </button>
+            <span className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
+              {pagination.page} / {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={!pagination.hasNextPage}
+              className={`px-3 py-2 rounded text-sm ${pagination.hasNextPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              Tiếp
+            </button>
+          </div>
+
+          {/* Desktop pagination - full */}
+          <div className="hidden sm:flex space-x-2">
+            <button
+              onClick={() => handlePageChange(1)}
+              disabled={!pagination.hasPrevPage}
+              className={`px-3 py-1 rounded ${pagination.hasPrevPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              &laquo; Đầu tiên
+            </button>
+            <button
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={!pagination.hasPrevPage}
+              className={`px-3 py-1 rounded ${pagination.hasPrevPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              &lsaquo; Trước
+            </button>
+
+            {/* Page number buttons - show up to 5 pages */}
+            <div className="flex space-x-1">
+              {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                let pageNum;
+                if (pagination.totalPages <= 5) {
+                  pageNum = i + 1;
+                } else {
+                  const startPage = Math.max(1, pagination.page - 2);
+                  pageNum = startPage + i;
+                  if (pageNum > pagination.totalPages) {
+                    pageNum = pagination.totalPages - (4 - i);
+                  }
+                }
+
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`px-3 py-1 rounded ${pagination.page === pageNum
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                      }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={!pagination.hasNextPage}
+              className={`px-3 py-1 rounded ${pagination.hasNextPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              Tiếp &rsaquo;
+            </button>
+            <button
+              onClick={() => handlePageChange(pagination.totalPages)}
+              disabled={!pagination.hasNextPage}
+              className={`px-3 py-1 rounded ${pagination.hasNextPage
+                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                }`}
+            >
+              Cuối &raquo;
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

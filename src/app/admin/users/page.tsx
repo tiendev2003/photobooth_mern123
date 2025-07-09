@@ -8,6 +8,7 @@ interface User {
   name: string;
   email: string;
   role: string;
+  username: string;
   phone: string | null;
   address: string | null;
   createdAt: string;
@@ -43,6 +44,7 @@ export default function UserManagement() {
   const [formData, setFormData] = useState({
     id: '',
     name: '',
+    username: '',
     email: '',
     password: '',
     role: 'USER',
@@ -113,6 +115,7 @@ export default function UserManagement() {
     setFormData({
       id: '',
       name: '',
+      username: '',
       email: '',
       password: '',
       role: 'USER',
@@ -129,6 +132,7 @@ export default function UserManagement() {
     setFormData({
       id: user.id,
       name: user.name,
+      username: user.username,
       email: user.email,
       password: '', // Don't populate password for security
       role: user.role,
@@ -144,7 +148,7 @@ export default function UserManagement() {
     e.preventDefault();
     
     try {
-      const url = isEditing ? `/api/users/${formData.id}` : '/api/auth/register';
+      const url = isEditing ? `/api/users/${formData.id}` : '/api/users';
       const method = isEditing ? 'PUT' : 'POST';
       
       // Remove password if editing and it's empty
@@ -208,19 +212,21 @@ export default function UserManagement() {
   
   if (error) {
     return (
-      <div className="bg-red-50 border-l-4 border-red-400 p-4">
+      <div className="bg-red-50 border-l-4 border-red-400 p-4 mx-4">
         <p className="text-red-700">{error}</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Quản lý người dùng</h1>
+    <div className="px-4 sm:px-6 lg:px-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+        <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
+          Quản lý người dùng
+        </h1>
         <button
           onClick={handleCreateUser}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center gap-2 w-full sm:w-auto"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -231,165 +237,179 @@ export default function UserManagement() {
       
       {/* User Form Modal */}
       {isFormOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {isEditing ? 'Edit User' : 'Create New User'}
-              </h3>
-              <button
-                onClick={() => setIsFormOpen(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tên</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {isEditing ? 'Mật khẩu (để trống để giữ nguyên)' : 'Mật khẩu'}
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required={!isEditing}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Vai trò</label>
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                >
-                  <option value="USER">User</option>
-                  <option value="STORE_OWNER">Store Owner</option>
-                  <option value="MACHINE">Machine</option>
-                  <option value="MANAGER">Manager</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="KETOAN">Kế toán</option>
-                </select>
-              </div>
-              
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Điện thoại (tùy chọn)</label>
-                <input
-                  type="text"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Địa chỉ (tùy chọn)</label>
-                <input
-                  type="text"
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                />
-              </div>
-              
-              {/* Machine Code field - only show for MACHINE role */}
-              {formData.role === 'MACHINE' && (
-                <>
-                  <div>
-                    <label htmlFor="machineCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mã máy</label>
-                    <input
-                      type="text"
-                      id="machineCode"
-                      name="machineCode"
-                      value={formData.machineCode}
-                      onChange={handleInputChange}
-                      placeholder="Enter machine code (e.g., M001)"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Vị trí</label>
-                    <input
-                      type="text"
-                      id="location"
-                      name="location"
-                      value={formData.location}
-                      onChange={handleInputChange}
-                      placeholder="Enter machine location"
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    />
-                  </div>
-                </>
-              )}
-              
-              <div className="flex justify-end space-x-3 pt-3">
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md max-h-screen overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  {isEditing ? 'Chỉnh sửa người dùng' : 'Tạo người dùng mới'}
+                </h3>
                 <button
-                  type="button"
                   onClick={() => setIsFormOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  className="text-gray-500 hover:text-gray-700 p-1"
                 >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  {isEditing ? 'Cập nhật' : 'Tạo'}
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
-            </form>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tên</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tên đăng nhập</label>
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email (tùy chọn)</label>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {isEditing ? 'Mật khẩu (để trống để giữ nguyên)' : 'Mật khẩu'}
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required={!isEditing}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Vai trò</label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={formData.role}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  >
+                    <option value="USER">User</option>
+                    <option value="STORE_OWNER">Store Owner</option>
+                    <option value="MACHINE">Machine</option>
+                    <option value="MANAGER">Manager</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="KETOAN">Kế toán</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Điện thoại (tùy chọn)</label>
+                  <input
+                    type="text"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Địa chỉ (tùy chọn)</label>
+                  <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  />
+                </div>
+                
+                {/* Machine Code field - only show for MACHINE role */}
+                {formData.role === 'MACHINE' && (
+                  <>
+                    <div>
+                      <label htmlFor="machineCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Mã máy</label>
+                      <input
+                        type="text"
+                        id="machineCode"
+                        name="machineCode"
+                        value={formData.machineCode}
+                        onChange={handleInputChange}
+                        placeholder="Enter machine code (e.g., M001)"
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="location" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Vị trí</label>
+                      <input
+                        type="text"
+                        id="location"
+                        name="location"
+                        value={formData.location}
+                        onChange={handleInputChange}
+                        placeholder="Enter machine location"
+                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                      />
+                    </div>
+                  </>
+                )}
+                
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsFormOpen(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 w-full sm:w-auto"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 w-full sm:w-auto"
+                  >
+                    {isEditing ? 'Cập nhật' : 'Tạo'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
       
-      {/* User Table */}
-      <div className="bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
+      {/* User Table - Desktop View */}
+      <div className="hidden md:block bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tên</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tên tài khoản</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Vai trò</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ngày tạo</th>
                 <th scope="col" className="relative px-6 py-3">
@@ -402,7 +422,7 @@ export default function UserManagement() {
                 users.map((user) => (
                   <tr key={user.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{user.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.username}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         user.role === 'ADMIN'
@@ -459,18 +479,96 @@ export default function UserManagement() {
             </tbody>
           </table>
         </div>
-        
-        {/* Pagination controls */}
-        {pagination.totalPages > 1 && (
-          <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} người dùng
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-4">
+        {users.length > 0 ? (
+          users.map((user) => (
+            <div key={user.id} className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">{user.name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-300">@{user.username}</p>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleEditUser(user)}
+                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900"
+                    title="Chỉnh sửa người dùng"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteUser(user.id)}
+                    className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900"
+                    title="Xóa người dùng"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 dark:text-gray-400 w-20">Vai trò:</span>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    user.role === 'ADMIN'
+                      ? 'bg-red-100 text-red-800'
+                      : user.role === 'MANAGER'
+                      ? 'bg-purple-100 text-purple-800'
+                      : user.role === 'STORE_OWNER'
+                      ? 'bg-blue-100 text-blue-800'
+                      : user.role === 'MACHINE'
+                      ? 'bg-orange-100 text-orange-800'
+                      : user.role === 'KETOAN'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {user.role}
+                    {user.role === 'MACHINE' && user.machineCode && ` (${user.machineCode})`}
+                  </span>
+                </div>
+                
+                {user.role === 'MACHINE' && user.location && (
+                  <div className="flex items-center">
+                    <span className="text-sm text-gray-500 dark:text-gray-400 w-20">Vị trí:</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">📍 {user.location}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center">
+                  <span className="text-sm text-gray-500 dark:text-gray-400 w-20">Ngày tạo:</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {new Date(user.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex space-x-2">
+          ))
+        ) : (
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-8 text-center">
+            <p className="text-gray-500 dark:text-gray-300">Không tìm thấy người dùng</p>
+          </div>
+        )}
+      </div>
+        
+      {/* Pagination controls */}
+      {pagination.totalPages > 1 && (
+        <div className="mt-6 px-4 py-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="text-sm text-gray-500 dark:text-gray-400 text-center sm:text-left">
+              Hiển thị {((pagination.page - 1) * pagination.limit) + 1} đến {Math.min(pagination.page * pagination.limit, pagination.total)} trong tổng số {pagination.total} người dùng
+            </div>
+            <div className="flex items-center space-x-2">
               <button
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={!pagination.hasPrevPage}
-                className={`px-3 py-1 rounded flex items-center ${
+                className={`px-3 py-1 rounded flex items-center text-sm ${
                   pagination.hasPrevPage 
                     ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600' 
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
@@ -479,29 +577,29 @@ export default function UserManagement() {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                Trước
+                <span className="hidden sm:inline">Trước</span>
               </button>
-              <span className="px-3 py-1">
-                Trang {pagination.page} / {pagination.totalPages}
+              <span className="px-3 py-1 text-sm">
+                <span className="hidden sm:inline">Trang </span>{pagination.page} / {pagination.totalPages}
               </span>
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={!pagination.hasNextPage}
-                className={`px-3 py-1 rounded flex items-center ${
+                className={`px-3 py-1 rounded flex items-center text-sm ${
                   pagination.hasNextPage 
                     ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600' 
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
                 }`}
               >
-                Tiếp
+                <span className="hidden sm:inline">Tiếp</span>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

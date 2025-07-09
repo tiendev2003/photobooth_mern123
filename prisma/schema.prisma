@@ -39,7 +39,8 @@ model Store {
 model User {
   id            String          @id @default(uuid())
   name          String          // Tên người dùng
-  email         String          @unique // Email đăng nhập
+  username      String          @unique // Username đăng nhập
+  email         String?         // Email (optional)
   password      String          // Mật khẩu
   role          Role            @default(USER) // Vai trò: ADMIN, MANAGER, STORE_OWNER, USER, MACHINE
   phone         String?         // Số điện thoại

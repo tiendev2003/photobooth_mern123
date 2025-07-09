@@ -31,12 +31,19 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { code, discount, expires_at, user_id, store_id, usageLimit, isActive } = body;
+    const { code, discount, store_id, usageLimit = 1, isActive = true } = body;
 
     // Validate required fields
-    if (!code || !discount || !expires_at) {
+    if (!code || !discount) {
       return NextResponse.json({ 
-        error: 'Coupon code, discount, and expiration date are required' 
+        error: 'Coupon code and discount are required' 
+      }, { status: 400 });
+    }
+
+    // Validate discount range
+    if (discount <= 0 || discount > 800) {
+      return NextResponse.json({
+        error: 'Discount must be between 1 and 800'
       }, { status: 400 });
     }
 
@@ -50,25 +57,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Coupon with this code already exists' }, { status: 409 });
     }
 
-    // If user_id is provided, verify the user exists
-    if (user_id) {
-      const { findUserById } = await import('@/lib/models/User');
-      const userExists = await findUserById(user_id);
+    // Validate store exists if store_id is provided
+    if (store_id) {
+      const store = await prisma.store.findUnique({
+        where: { id: store_id }
+      });
 
-      if (!userExists) {
-        return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      if (!store) {
+        return NextResponse.json({ error: 'Store not found' }, { status: 404 });
       }
     }
 
+    // Set expiration to 1 day from now
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 1);
+
     // Tạo coupon mới sử dụng model
     const couponData: CouponData = {
-      code,
+      code: code.toUpperCase(),
       discount: parseFloat(discount.toString()),
-      expiresAt: new Date(expires_at),
-      userId: user_id,
-      storeId: store_id,
-      usageLimit: usageLimit === undefined ? null : usageLimit,
-      isActive: isActive === undefined ? true : isActive
+      expiresAt: expiresAt,
+      userId: null, // Admin created coupons don't have specific user
+      storeId: store_id || null, // null for global coupons
+      usageLimit: parseInt(usageLimit.toString()),
+      isActive: isActive
     };
     
     const newCoupon = await createCoupon(couponData);

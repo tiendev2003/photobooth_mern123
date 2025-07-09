@@ -92,9 +92,11 @@ export async function POST(request: NextRequest) {
     for (let i = 1; i <= numberOfUsers; i++) {
       const randomId = Math.floor(Math.random() * 10000);
       const hashedPassword = await bcrypt.hash('123456', 10);
+      const storeCode = name.toLowerCase().replace(/\s+/g, '').substring(0, 10);
       const userData = {
         name: `Nhân viên ${i}`,
-        email: `nhanvien${i}_${randomId}@${name.toLowerCase().replace(/\s+/g, '')}.com`,
+        username: `${storeCode}_nv${i}_${randomId}`,
+        email: `nhanvien${i}_${randomId}@${storeCode}.com`,
         password: hashedPassword,
         role: Role.USER,
         storeId: store.id,
@@ -108,9 +110,10 @@ export async function POST(request: NextRequest) {
         users.push(user);
       } catch (error) {
         console.error(`Error creating user ${i}:`, error);
-        // Nếu email trùng thì thử lại với random id khác
+        // Nếu username trùng thì thử lại với random id khác
         const newRandomId = Math.floor(Math.random() * 10000);
-        userData.email = `nhanvien${i}_${newRandomId}@${name.toLowerCase().replace(/\s+/g, '')}.com`;
+        userData.username = `${storeCode}_nv${i}_${newRandomId}`;
+        userData.email = `nhanvien${i}_${newRandomId}@${storeCode}.com`;
         try {
           const user = await prisma.user.create({
             data: userData,

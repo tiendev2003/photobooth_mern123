@@ -27,6 +27,7 @@ async function main() {
   const admin = await prisma.user.create({
     data: {
       name: "Super Admin",
+      username: "admin",
       email: "admin@gmail.com",
       password: defaultPassword,
       role: Role.ADMIN,
@@ -45,6 +46,7 @@ async function main() {
     const manager = await prisma.user.create({
       data: {
         name: `Manager ${i}`,
+        username: `manager${i}`,
         email: `manager${i}@photobooth.com`,
         password: defaultPassword,
         role: Role.MANAGER,
@@ -112,6 +114,7 @@ async function main() {
     const storeOwner = await prisma.user.create({
       data: {
         name: `Chủ cửa hàng ${storeCode}`,
+        username: `owner${storeIndex + 1}`,
         email: `owner${
           storeIndex + 1
         }@${storeCode.toLowerCase()}.photobooth.com`,
@@ -131,6 +134,7 @@ async function main() {
       const employee = await prisma.user.create({
         data: {
           name: `Nhân viên ${storeCode} ${i}`,
+          username: `user${storeIndex + 1}_${i}`,
           email: `user${i}@${storeCode.toLowerCase()}.photobooth.com`,
           password: defaultPassword,
           role: Role.USER,
@@ -149,6 +153,7 @@ async function main() {
       const machine = await prisma.user.create({
         data: {
           name: `Máy ${storeCode} ${i}`,
+          username: `machine${storeIndex + 1}_${i}`,
           email: `machine${i}@${storeCode.toLowerCase()}.photobooth.com`,
           password: defaultPassword,
           role: Role.MACHINE,
@@ -439,12 +444,12 @@ async function main() {
   console.log("- 5 Sample revenues created");
   console.log("");
   console.log("🔑 Login credentials:");
-  console.log("Admin: admin@gmail.com / 123456");
-  console.log("Manager 1: manager1@photobooth.com / 123456");
-  console.log("Manager 2: manager2@photobooth.com / 123456");
-  console.log("Store Owner 1: owner1@hn.photobooth.com / 123456");
-  console.log("Employee 1: user1@hn.photobooth.com / 123456");
-  console.log("Machine 1: machine1@hn.photobooth.com / 123456");
+  console.log("Admin: admin / 123456");
+  console.log("Manager 1: manager1 / 123456");
+  console.log("Manager 2: manager2 / 123456");
+  console.log("Store Owner 1: owner1 / 123456");
+  console.log("Employee 1: user1_1 / 123456");
+  console.log("Machine 1: machine1_1 / 123456");
   console.log("... (and so on for all stores)");
 
   console.log("💰 Creating default pricing...");
@@ -484,11 +489,11 @@ async function main() {
   console.log("✅ Seeding completed successfully!");
   console.log("");
   console.log("📋 Default accounts created:");
-  console.log("Admin: admin@gmail.com / 123456");
-  console.log("Manager 1: manager1@photobooth.com / 123456");
-  console.log("Store Owner 1: owner1@hn.photobooth.com / 123456");
-  console.log("User 1: user1@hn.photobooth.com / 123456");
-  console.log("Machine 1: machine1@hn.photobooth.com / 123456");
+  console.log("Admin: admin / 123456");
+  console.log("Manager 1: manager1 / 123456");
+  console.log("Store Owner 1: owner1 / 123456");
+  console.log("User 1: user1_1 / 123456");
+  console.log("Machine 1: machine1_1 / 123456");
   console.log("... (and so on for all stores)");
   console.log("");
   console.log("💰 Default pricing created:");

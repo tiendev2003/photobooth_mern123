@@ -125,6 +125,9 @@ export default function StoresPage() {
     const response = await fetch('/api/upload/store-images', {
       method: 'POST',
       body: formData,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     });
 
     if (!response.ok) {

@@ -74,7 +74,7 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon.ico" />
       </head>
       <body
-        className={`${ubuntu.className} antialiased select-none`}
+        className={`${ubuntu.className} antialiased`}
         suppressHydrationWarning
       >
         <AuthProvider>
