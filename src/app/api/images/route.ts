@@ -149,6 +149,23 @@ export async function POST(req: NextRequest) {
        }
     });
 
+    // Invalidate cache after successful upload
+    try {
+      await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/cache/invalidate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paths: ['/uploads', newImage.path, '/'],
+          tags: ['images', 'uploads']
+        })
+      });
+    } catch (cacheError) {
+      console.warn('Failed to invalidate cache:', cacheError);
+      // Don't fail the upload if cache invalidation fails
+    }
+
     return NextResponse.json({ 
       success: true, 
       data: {

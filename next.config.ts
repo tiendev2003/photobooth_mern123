@@ -27,6 +27,21 @@ const withPWA = require('next-pwa')({
       },
     },
     {
+      urlPattern: /\/uploads\/.*\.(jpg|jpeg|gif|png|svg|ico|webp)$/i,
+      handler: 'NetworkFirst', // Always try network first for uploads
+      options: {
+        cacheName: 'uploaded-images',
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60 * 5, // 5 minutes only
+        },
+        cacheableResponse: {
+          statuses: [0, 200],
+        },
+        networkTimeoutSeconds: 3,
+      },
+    },
+    {
       urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
       handler: 'StaleWhileRevalidate',
       options: {
@@ -109,9 +124,37 @@ const withPWA = require('next-pwa')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: process.env.NODE_ENV === 'development',
-   output: 'standalone',
+  output: 'standalone',
   
-   images: {
+  // Disable static optimization for uploads
+  experimental: {
+    isrMemoryCacheSize: 0, // Disable ISR memory cache
+  },
+  
+  // Headers for better cache control
+  async headers() {
+    return [
+      {
+        source: '/uploads/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate, max-age=0',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+          {
+            key: 'Expires',
+            value: '0',
+          },
+        ],
+      },
+    ];
+  },
+  
+  images: {
     unoptimized: true,  
     domains: ['localhost'],
     remotePatterns: [

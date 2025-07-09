@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { cacheUtils } from '@/lib/utils/cache-utils';
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -96,6 +97,12 @@ export default function ImagesManagement() {
       }
       
       setUploadedFile(null);
+      
+      // Clear cache and force refresh
+      await cacheUtils.clearServiceWorkerCache();
+      await cacheUtils.invalidateServerCache();
+      cacheUtils.forceReloadImages('/uploads/');
+      
       fetchImages(); // Refresh images list
       
     } catch (err) {
