@@ -49,18 +49,7 @@ async function uploadImage(file: File) {
     return null;
   }
 }
-
-// Helper function to create directory if it doesn't exist
-async function createDirIfNotExists(dirPath: string) {
-  const fs = await import("fs").then((module) => module.promises);
-  try {
-    await fs.access(dirPath);
-  } catch (error) {
-    console.log(error);
-    await fs.mkdir(dirPath, { recursive: true });
-  }
-}
-
+ 
 // GET - Lấy frame template theo ID
 export async function GET(
   request: NextRequest,
