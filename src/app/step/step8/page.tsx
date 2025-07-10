@@ -92,19 +92,13 @@ export default function Step8() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [mediaSessionCode, setMediaSessionCode] = useState<string>("");
   const [mediaSessionUrl, setMediaSessionUrl] = useState<string>("");
-
-  // Debug log for session state
-  useEffect(() => {
-    console.log("Media session state:", {
-      mediaSessionCode,
-      mediaSessionUrl,
-      localStorageCode: localStorage.getItem("mediaSessionCode")
-    });
-  }, [mediaSessionCode, mediaSessionUrl]);
+  const [sessionReady, setSessionReady] = useState(false);
 
   // Tối ưu thời gian xử lý bằng cách xử lý song song và cache
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
+
+  console.log("Step 8 - Session state:", { mediaSessionCode, mediaSessionUrl, sessionReady });
 
  
   const printPreviewRef = useRef<HTMLDivElement>(null);
@@ -159,17 +153,18 @@ export default function Step8() {
     const initializeMediaSession = async () => {
       if (photos && photos.length > 0) {
         try {
-          // Kiểm tra xem đã có session code trong localStorage chưa
+          // Check if we already have a session code
           const existingSessionCode = localStorage.getItem("mediaSessionCode");
           if (existingSessionCode) {
-            console.log("Found existing session code:", existingSessionCode);
+            console.log("Using existing media session code:", existingSessionCode);
             setMediaSessionCode(existingSessionCode);
             
-            // Tạo URL cho session
+            // Create URL for existing session
             const baseUrl = typeof window !== 'undefined' ?
               `${window.location.protocol}//${window.location.host}` : '';
             const sessionUrl = `${baseUrl}/session/${existingSessionCode}`;
             setMediaSessionUrl(sessionUrl);
+            setSessionReady(true);
             return;
           }
 
@@ -196,21 +191,16 @@ export default function Step8() {
               `${window.location.protocol}//${window.location.host}` : '';
             const sessionUrl = `${baseUrl}/session/${session.sessionCode}`;
             setMediaSessionUrl(sessionUrl);
+            setSessionReady(true);
 
             console.log("Media session created:", session.sessionCode, sessionUrl);
           } else {
-            console.error("Failed to create media session", response.status);
-            // Tạo session code tạm thời để tránh lỗi
-            const tempSessionCode = `temp_${Date.now()}`;
-            setMediaSessionCode(tempSessionCode);
-            localStorage.setItem("mediaSessionCode", tempSessionCode);
+            console.error("Failed to create media session:", response.status, await response.text());
+            setSessionReady(false);
           }
         } catch (error) {
           console.error("Error creating media session:", error);
-          // Tạo session code tạm thời để tránh lỗi
-          const tempSessionCode = `temp_${Date.now()}`;
-          setMediaSessionCode(tempSessionCode);
-          localStorage.setItem("mediaSessionCode", tempSessionCode);
+          setSessionReady(false);
         }
       }
     };
@@ -264,10 +254,10 @@ export default function Step8() {
 
   // Function to update session with media URLs
   const updateMediaSession = async (imageUrl?: string, videoUrl?: string, gifUrl?: string) => {
-    // Try to get session code from multiple sources
-    const sessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
+    // Try to get session code from localStorage as backup
+    const currentSessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
     
-    if (!sessionCode) {
+    if (!currentSessionCode) {
       console.error("No media session code available");
       return;
     }
@@ -279,7 +269,7 @@ export default function Step8() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sessionCode: sessionCode,
+          sessionCode: currentSessionCode,
           imageUrl,
           videoUrl,
           gifUrl
@@ -317,22 +307,48 @@ export default function Step8() {
     setProcessingProgress(0);
 
     try {
-      // Kiểm tra session code trước khi tiến hành
-      const sessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
-      if (!sessionCode) {
-        console.warn("No media session code available, creating temporary session");
-        // Tạo session code tạm thời
-        const tempSessionCode = `temp_${Date.now()}`;
-        setMediaSessionCode(tempSessionCode);
-        localStorage.setItem("mediaSessionCode", tempSessionCode);
-      }
-
       const previewContent = printPreviewRef.current;
       if (!previewContent) {
         alert('Không tìm thấy nội dung để in');
         setIsPrinting(false);
         setIsProcessing(false);
         return;
+      }
+
+      // Ensure we have a media session before proceeding
+      const currentSessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
+      if (!currentSessionCode) {
+        console.error("No media session available, creating one...");
+        // Try to create a session immediately
+        try {
+          const response = await fetch('/api/media-session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              storeId: currentStore?.id || null
+            })
+          });
+
+          if (response.ok) {
+            const session = await response.json();
+            setMediaSessionCode(session.sessionCode);
+            localStorage.setItem("mediaSessionCode", session.sessionCode);
+            
+            const baseUrl = typeof window !== 'undefined' ?
+              `${window.location.protocol}//${window.location.host}` : '';
+            const sessionUrl = `${baseUrl}/session/${session.sessionCode}`;
+            setMediaSessionUrl(sessionUrl);
+            setSessionReady(true);
+            
+            console.log("Emergency media session created:", session.sessionCode);
+          } else {
+            console.error("Failed to create emergency media session");
+          }
+        } catch (error) {
+          console.error("Error creating emergency media session:", error);
+        }
       }
 
       const isCustomFrame = selectedFrame?.isCustom === true;
@@ -1245,9 +1261,7 @@ export default function Step8() {
         cells.forEach((cell, idx) => {
           if (!cellVideoMap.has(idx)) return;
 
-          // const cellRect = cell.getBoundingClientRect();
-          // const relativeLeft = cellRect.left - rect.left;
-          // const relativeTop = cellRect.top - rect.top;
+ 
           const videoElement = cellVideoMap.get(idx)!;
           const cellData = cellPositions.get(idx);
 
@@ -1473,8 +1487,17 @@ export default function Step8() {
     if (!previewContent) return;
 
     try {
-      // Use existing media session URL 
-      const sessionUrl = mediaSessionUrl;
+      // Use existing media session URL or fallback to localStorage
+      let sessionUrl = mediaSessionUrl;
+      if (!sessionUrl) {
+        const sessionCode = localStorage.getItem("mediaSessionCode");
+        if (sessionCode) {
+          const baseUrl = typeof window !== 'undefined' ?
+            `${window.location.protocol}//${window.location.host}` : '';
+          sessionUrl = `${baseUrl}/session/${sessionCode}`;
+        }
+      }
+      
       console.log("Using media session URL:", sessionUrl);
       const isCustomFrame = selectedFrame?.isCustom === true;
       const isSquare = selectedFrame?.columns === selectedFrame?.rows;
@@ -2214,9 +2237,9 @@ export default function Step8() {
 
       <StoreNavigationButtons
         currentStore={currentStore}
-        nextLabel="In ảnh"
+        nextLabel={!sessionReady ? "Đang tạo phiên..." : "In ảnh"}
         onNext={handlePrint}
-        nextDisabled={isPrinting}
+        nextDisabled={isPrinting || !sessionReady}
       >
         {isPrinting && (
           <div className="flex flex-col items-center justify-center text-white">
@@ -2235,6 +2258,12 @@ export default function Step8() {
             {isProcessing && (
               <p className="text-sm opacity-75">{processingProgress}% hoàn thành</p>
             )}
+          </div>
+        )}
+        {!sessionReady && !isPrinting && (
+          <div className="flex items-center justify-center text-white text-sm">
+            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+            Đang khởi tạo phiên làm việc...
           </div>
         )}
       </StoreNavigationButtons>
