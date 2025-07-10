@@ -1,11 +1,11 @@
 import { UpdateFrameTemplateInput } from "@/lib/models";
 import { prisma } from "@/lib/prisma";
-import fs, { writeFile } from "fs/promises";
+import { uploadImageToExternalAPI } from "@/lib/utils/uploadApi";
+import fs from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
-import { v4 as uuidv4 } from "uuid";
 
-// Function to upload an image and return its details
+// Function to upload an image to external API and return its details
 async function uploadImage(file: File) {
   try {
     // Validate file type
@@ -20,32 +20,29 @@ async function uploadImage(file: File) {
       return null;
     }
 
-    // Generate a unique filename
-    const uniqueFilename = `${uuidv4()}_${file.name.replace(/\s+/g, "_")}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "images");
-    const filePath = path.join(uploadsDir, uniqueFilename);
-    const relativePath = `/uploads/images/${uniqueFilename}`;
+    // Upload to external API
+    const imageUrl = await uploadImageToExternalAPI(file);
+    if (!imageUrl) {
+      throw new Error("Image upload failed");
+    }
 
-    // Ensure the uploads directory exists
-    await createDirIfNotExists(uploadsDir);
-
-    // Write the file to disk
-    await writeFile(filePath, buffer);
+    // Extract filename from URL
+    const urlParts = imageUrl.split("/");
+    const filename = urlParts[urlParts.length - 1];
 
     // Save the file information to the database
     await prisma.image.create({
       data: {
-        filename: uniqueFilename,
-        path: relativePath,
+        filename: filename,
+        path: imageUrl,
         fileType: "IMAGE",
-        size: buffer.length,
+        size: file.size,
       },
     });
 
     return {
-      filename: uniqueFilename,
-      path: relativePath,
+      filename: filename,
+      path: imageUrl,
     };
   } catch (error) {
     console.error("Error uploading image:", error);
