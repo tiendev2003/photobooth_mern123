@@ -1,25 +1,25 @@
 import { cleanupExpiredSessions, mediaSessions } from '@/lib/media-session-storage';
 import { NextRequest, NextResponse } from 'next/server';
 
-// GET /api/media-session-temp/[code] - Get media session by code
+// GET /api/media-session-temp/[sessionCode] - Get media session by code
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ code: string }> }
+  { params }: { params: Promise<{ sessionCode: string }> }
 ) {
   try {
-    const { code } = await params;
+    const { sessionCode } = await params;
 
-    if (!code) {
+    if (!sessionCode) {
       return NextResponse.json({ error: 'Session code is required' }, { status: 400 });
     }
 
     // Clean up expired sessions first
     cleanupExpiredSessions();
 
-    console.log(`Looking for session ${code}`);
+    console.log(`Looking for session ${sessionCode}`);
     console.log('Available sessions:', Array.from(mediaSessions.keys()));
 
-    const mediaSession = mediaSessions.get(code);
+    const mediaSession = mediaSessions.get(sessionCode);
 
     if (!mediaSession) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
@@ -27,7 +27,7 @@ export async function GET(
 
     // Check if session has expired
     if (new Date() > mediaSession.expiresAt) {
-      mediaSessions.delete(code);
+      mediaSessions.delete(sessionCode);
       return NextResponse.json({ error: 'Session has expired' }, { status: 410 });
     }
 

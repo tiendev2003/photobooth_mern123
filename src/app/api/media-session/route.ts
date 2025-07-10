@@ -1,63 +1,85 @@
 import { prisma } from '@/lib/prisma';
+import { nanoid } from 'nanoid';
 import { NextRequest, NextResponse } from 'next/server';
 
-// POST /api/media-session - Create a new media session
+// POST /api/media-session - Tạo session mới
 export async function POST(req: NextRequest) {
   try {
-    const { imageIds } = await req.json();
+    const body = await req.json();
+    const { storeId } = body;
 
-    if (!imageIds || !Array.isArray(imageIds) || imageIds.length === 0) {
-      return NextResponse.json({ error: 'imageIds array is required' }, { status: 400 });
-    }
-
-    // First, check which media IDs actually exist in the database
-    const existingImages = await prisma.image.findMany({
-      where: {
-        id: {
-          in: imageIds
-        }
-      },
-      select: {
-        id: true
-      }
-    });
-
-    const existingImageIds = existingImages.map(img => img.id);
-
-    if (existingImageIds.length === 0) {
-      return NextResponse.json({ error: 'No valid media found' }, { status: 404 });
-    }
-
-    // Create media session with 72 hour expiration
+    // Tạo session code ngẫu nhiên
+    const sessionCode = nanoid(10);
+    
+    // Tạo thời gian hết hạn (72 giờ)
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 72);
 
+    // Tạo session trong database
     const mediaSession = await prisma.mediaSession.create({
       data: {
-        sessionCode: generateSessionCode(),
+        sessionCode,
         expiresAt,
-        images: {
-          connect: existingImageIds.map(id => ({ id }))
-        }
-      },
-      include: {
-        images: true
+        status: 'PROCESSING',
+        storeId: storeId || null
       }
     });
 
-    return NextResponse.json(mediaSession, { status: 201 });
+    console.log(`Created media session: ${sessionCode}`);
+
+    return NextResponse.json({
+      sessionCode: mediaSession.sessionCode,
+      status: mediaSession.status,
+      expiresAt: mediaSession.expiresAt
+    }, { status: 201 });
+
   } catch (error) {
     console.error('Error creating media session:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
 
-// Generate a unique session code
-function generateSessionCode(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+// PUT /api/media-session - Cập nhật session với URLs
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { sessionCode, imageUrl, videoUrl, gifUrl } = body;
+
+    if (!sessionCode) {
+      return NextResponse.json({ error: 'Session code is required' }, { status: 400 });
+    }
+
+    // Tìm session trong database
+    const session = await prisma.mediaSession.findUnique({
+      where: { sessionCode }
+    });
+
+    if (!session) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    // Kiểm tra hết hạn
+    if (new Date() > session.expiresAt) {
+      return NextResponse.json({ error: 'Session has expired' }, { status: 410 });
+    }
+
+    // Cập nhật session
+    const updatedSession = await prisma.mediaSession.update({
+      where: { sessionCode },
+      data: {
+        imageUrl: imageUrl || session.imageUrl,
+        videoUrl: videoUrl || session.videoUrl,
+        gifUrl: gifUrl || session.gifUrl,
+        status: 'COMPLETED'
+      }
+    });
+
+    console.log(`Updated media session: ${sessionCode}`);
+
+    return NextResponse.json(updatedSession, { status: 200 });
+
+  } catch (error) {
+    console.error('Error updating media session:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
-  return result;
 }

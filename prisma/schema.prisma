@@ -120,14 +120,30 @@ model Image {
   @@index([sessionId])
 }
 
-// Model MediaSession - Quản lý phiên chụp ảnh
+// Model MediaSession - Quản lý phiên chụp ảnh và QR code
 model MediaSession {
   id          String   @id @default(uuid())
   sessionCode String   @unique // Mã phiên để truy cập
-  images      Image[]  // Danh sách media trong phiên
+  imageUrl    String?  // URL ảnh đã upload
+  videoUrl    String?  // URL video đã upload
+  gifUrl      String?  // URL GIF đã upload
+  images      Image[]  // Danh sách media trong phiên (legacy)
+  status      MediaSessionStatus @default(PROCESSING) // Trạng thái xử lý
+  storeId     String?  // ID cửa hàng
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   expiresAt   DateTime // Thời gian hết hạn phiên
+
+  @@index([sessionCode])
+  @@index([expiresAt])
+  @@index([storeId])
+}
+
+// Enum MediaSessionStatus - Trạng thái session
+enum MediaSessionStatus {
+  PROCESSING    // Đang xử lý
+  COMPLETED     // Hoàn thành
+  EXPIRED       // Đã hết hạn
 }
 
 // Model Pricing - Quản lý bảng giá chung toàn hệ thống
