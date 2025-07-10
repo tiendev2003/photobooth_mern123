@@ -1,10 +1,8 @@
 // Universal upload functions that can switch between external and internal APIs
-import { ImageFilterParams, uploadGifToExternalAPI, uploadImageToExternalAPI, uploadVideoToExternalAPI } from './uploadApi';
+import { uploadGifToExternalAPI, uploadImageToExternalAPI, uploadVideoToExternalAPI } from './uploadApi';
 import { UPLOAD_CONFIG } from './uploadConfig';
 
-// Re-export types for convenience
-export type { ImageFilterParams };
-
+  
 /**
  * Universal video upload function
  * Switches between external and internal API based on configuration

@@ -166,44 +166,30 @@ export const uploadGifToExternalAPI = async (gifFile: File): Promise<string> => 
     throw error;
   }
 };
+ 
 
 /**
- * Upload image to external PHP API with filter parameters
- */
-export interface ImageFilterParams {
-  filter: string;
-  brightness: number;
-  contrast: number;
-  saturation: number;
-  quality: number;
-}
+ * Upload image with store
+ * @param imageFile - The image file to upload
+ * */
 
-export const uploadImageWithFilterToExternalAPI = async (
-  imageFile: File, 
-  filterParams: ImageFilterParams
-): Promise<string> => {
+export const uploadImageWithStore = async (imageFile: File): Promise<string> => {
   try {
-    console.log("Starting image upload with filter to external API...");
+    console.log("Starting image upload with store...");
     console.log("Image file:", {
       name: imageFile.name,
       size: imageFile.size,
       type: imageFile.type
     });
-    console.log("Filter parameters:", filterParams);
 
-    // Create form data for upload with filter parameters
+    // Create form data for upload
     const formData = new FormData();
-    formData.append("image", imageFile);
-    formData.append("filter", filterParams.filter);
-    formData.append("brightness", filterParams.brightness.toString());
-    formData.append("contrast", filterParams.contrast.toString());
-    formData.append("saturation", filterParams.saturation.toString());
-    formData.append("quality", filterParams.quality.toString());
+    formData.append("store", imageFile);
 
-    console.log("Sending upload request with filter parameters to external API");
+    console.log("Sending upload request to external API with store");
     
     // Upload to external PHP API
-    const uploadResponse = await fetch(UPLOAD_CONFIG.EXTERNAL_API.UPLOAD_IMAGE, {
+    const uploadResponse = await fetch(UPLOAD_CONFIG.EXTERNAL_API.UPLOAD_STORE, {
       method: "POST",
       body: formData,
     });
@@ -213,11 +199,11 @@ export const uploadImageWithFilterToExternalAPI = async (
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
       console.error("Upload error response:", errorText);
-      throw new Error(`Image upload with filter failed: ${uploadResponse.statusText}`);
+      throw new Error(`Image upload with store failed: ${uploadResponse.statusText}`);
     }
 
     const data: UploadResponse = await uploadResponse.json();
-    console.log("Image with filter uploaded successfully:", data);
+    console.log("Image uploaded successfully with store:", data);
 
     if (!data.success || !data.data?.url) {
       throw new Error(data.message || "Upload failed");
@@ -225,12 +211,10 @@ export const uploadImageWithFilterToExternalAPI = async (
 
     // Return the full URL from the API using helper function
     const fullUrl = UPLOAD_CONFIG.EXTERNAL_API.getFileUrl(data.data.url);
-    console.log("Final filtered image URL:", fullUrl);
+    console.log("Final image URL with store:", fullUrl);
     return fullUrl;
   } catch (error) {
-    console.error("Error uploading image with filter to external API:", error);
+    console.error("Error uploading image with store:", error);
     throw error;
   }
-};
- 
- 
+}
