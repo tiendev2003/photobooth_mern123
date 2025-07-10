@@ -16,7 +16,7 @@ interface MediaSessionTemp {
 
 export default function MediaSessionTempPage() {
   const params = useParams();
-  const code = params?.code as string;
+  const sessionCode = params?.sessionCode as string;
   
   const [session, setSession] = useState<MediaSessionTemp | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export default function MediaSessionTempPage() {
     const fetchSession = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/media-session-temp/${code}`);
+        const response = await fetch(`/api/media-session-temp/${sessionCode}`);
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -48,10 +48,10 @@ export default function MediaSessionTempPage() {
       }
     };
 
-    if (code) {
+    if (sessionCode) {
       fetchSession();
     }
-  }, [code]);
+  }, [sessionCode]);
 
   const handleDownloadAll = () => {
     if (!session || !session.mediaUrls.length) return;

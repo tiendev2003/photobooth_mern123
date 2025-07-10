@@ -6,18 +6,15 @@ import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useBooth } from "@/lib/context/BoothContext";
 import { FrameTemplate } from "@/lib/models/FrameTemplate";
 import { cn, TIMEOUT_DURATION } from "@/lib/utils";
+import { uploadGif, uploadImage, uploadVideo } from "@/lib/utils/universalUpload";
 import { ChevronLeft, ChevronRight, ImageIcon, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import QRCode from 'qrcode';
 import { useEffect, useMemo, useRef, useState } from "react";
-
-// Import React Slick
 import Slider from "react-slick";
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
-
-// Import QR Code
-import * as QRCode from 'qrcode';
 
 // Enhanced filters for skin beautification with server-side processing support
 const skinFilters = [
@@ -58,7 +55,6 @@ const skinFilters = [
   { id: "slimFace", name: "Mặt thon", className: "brightness-105 contrast-105 saturate-100 blur-[0.4px]", preview: "/anh/10.png", icon: "😊" }
 ]
 
- 
 export default function Step8() {
   interface ExtendedCSSStyleDeclaration extends CSSStyleDeclaration {
     colorAdjust?: string;
@@ -94,8 +90,14 @@ export default function Step8() {
   const [frameTemplates, setFrameTemplates] = useState<FrameTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [mediaSessionCode, setMediaSessionCode] = useState<string>("");
   const [mediaSessionUrl, setMediaSessionUrl] = useState<string>("");
 
+  // Tối ưu thời gian xử lý bằng cách xử lý song song và cache
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+
+ 
   const printPreviewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -143,18 +145,47 @@ export default function Step8() {
     fetchTemplates();
   }, [selectedFrame, setSelectedTemplate]);
 
-  // Create media session URL on component mount
+  // Create media session on component mount
   useEffect(() => {
     const initializeMediaSession = async () => {
       if (photos && photos.length > 0) {
-        const url = await createMediaSession();
-        setMediaSessionUrl(url);
-        console.log("Media session URL created:", url);
+        try {
+          // Tạo session mới trong database
+          const response = await fetch('/api/media-session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              storeId: currentStore?.id || null
+            })
+          });
+
+          if (response.ok) {
+            const session = await response.json();
+            setMediaSessionCode(session.sessionCode);
+
+            // Lưu session code vào localStorage để step9 sử dụng
+            localStorage.setItem("mediaSessionCode", session.sessionCode);
+
+            // Tạo URL cho session
+            const baseUrl = typeof window !== 'undefined' ?
+              `${window.location.protocol}//${window.location.host}` : '';
+            const sessionUrl = `${baseUrl}/session/${session.sessionCode}`;
+            setMediaSessionUrl(sessionUrl);
+
+            console.log("Media session created:", session.sessionCode, sessionUrl);
+          } else {
+            console.error("Failed to create media session");
+          }
+        } catch (error) {
+          console.error("Error creating media session:", error);
+        }
       }
     };
 
     initializeMediaSession();
-  }, [photos]);
+  }, [photos, currentStore]);
 
   // Slick carousel settings and refs
   const skinFilterSliderRef = useRef<Slider | null>(null);
@@ -200,64 +231,38 @@ export default function Step8() {
     sliderRef.current?.slickNext();
   };
 
-  const createMediaSession = async (): Promise<string> => {
+  // Function to update session with media URLs
+  const updateMediaSession = async (imageUrl?: string, videoUrl?: string, gifUrl?: string) => {
+    if (!mediaSessionCode) {
+      console.error("No media session code available");
+      return;
+    }
+
     try {
-      // Tạo một placeholder URL để có thể hiển thị QR code
-      // Trong step8, chúng ta chưa có image/video/gif URL final
-      // Nên tạo một session tạm thời với thông tin cơ bản
-      const tempSessionData = {
-        timestamp: Date.now(),
-        preview: true, // Đánh dấu là preview session
-        photos: photos.map(photo => photo.image).filter(Boolean)
-      };
-
-      console.log('Creating media session with data:', tempSessionData);
-
-      // Tạo session tạm thời
-      const response = await fetch('/api/media-session-temp', {
-        method: 'POST',
+      const response = await fetch('/api/media-session', {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          mediaUrls: tempSessionData.photos, // Sử dụng photos từ context
-          isPreview: true
+          sessionCode: mediaSessionCode,
+          imageUrl,
+          videoUrl,
+          gifUrl
         })
       });
 
-      console.log('API response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to create media session:', errorText);
-        // Trả về URL placeholder nếu API fail
-        const baseUrl = typeof window !== 'undefined' ?
-          `${window.location.protocol}//${window.location.host}` : '';
-        const fallbackUrl = `${baseUrl}/session-temp/preview-${tempSessionData.timestamp}`;
-        console.log('Using fallback URL:', fallbackUrl);
-        return fallbackUrl;
+      if (response.ok) {
+        const updatedSession = await response.json();
+        console.log("Media session updated:", updatedSession);
+      } else {
+        console.error("Failed to update media session");
       }
-
-      const session = await response.json();
-      console.log('Created session:', session);
-
-      // Create session URL
-      const baseUrl = typeof window !== 'undefined' ?
-        `${window.location.protocol}//${window.location.host}` : '';
-      const sessionUrl = `${baseUrl}/session-temp/${session.sessionCode}`;
-      console.log('Generated session URL:', sessionUrl);
-      return sessionUrl;
-
     } catch (error) {
-      console.error('Error creating media session:', error);
-      // Trả về URL placeholder nếu có lỗi
-      const baseUrl = typeof window !== 'undefined' ?
-        `${window.location.protocol}//${window.location.host}` : '';
-      const fallbackUrl = `${baseUrl}/session-temp/preview-${Date.now()}`;
-      console.log('Using fallback URL due to error:', fallbackUrl);
-      return fallbackUrl;
+      console.error("Error updating media session:", error);
     }
   };
+
   // Convert data URL to file
   const dataURLtoFile = (dataURL: string, filename: string): File => {
     const arr = dataURL.split(',');
@@ -271,163 +276,18 @@ export default function Step8() {
     return new File([u8arr], filename, { type: mime });
   };
 
-  // Upload video to server
-  const uploadVideo = async (videoUrl: string): Promise<string> => {
-    try {
-      console.log("Starting video upload process...");
-      console.log("Video URL:", videoUrl);
-      
-      // Fetch the video blob from the URL
-      const response = await fetch(videoUrl);
-      if (!response.ok) {
-        console.error("Failed to fetch video blob:", response.status, response.statusText);
-        throw new Error(`Failed to fetch video blob: ${response.statusText}`);
-      }
-      
-      const blob = await response.blob();
-      console.log("Video blob created:", {
-        size: blob.size,
-        type: blob.type
-      });
-
-      // Create a file from the blob
-      const file = new File([blob], "photobooth.webm", { type: "video/webm" });
-      console.log("Video file created:", {
-        name: file.name,
-        size: file.size,
-        type: file.type
-      });
-
-      // Create form data for upload
-      const formData = new FormData();
-      formData.append("file", file);
-
-      console.log("Sending upload request to /api/images/video");
-      
-      // Upload to server
-      const uploadResponse = await fetch("/api/images/video", {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
-        }
-      });
-
-      console.log("Upload response status:", uploadResponse.status);
-      console.log("Upload response headers:", Object.fromEntries(uploadResponse.headers.entries()));
-
-      if (!uploadResponse.ok) {
-        let errorMessage = `Video upload failed: ${uploadResponse.statusText}`;
-        try {
-          const errorData = await uploadResponse.json();
-          console.error("Upload error details:", errorData);
-          errorMessage += ` - ${errorData.error || JSON.stringify(errorData)}`;
-        } catch (jsonError) {
-          console.error("Could not parse error response as JSON:", jsonError);
-          try {
-            const errorText = await uploadResponse.text();
-            console.error("Error response text:", errorText);
-            errorMessage += ` - ${errorText}`;
-          } catch (textError) {
-            console.error("Could not read error response as text:", textError);
-          }
-        }
-        throw new Error(errorMessage);
-      }
-
-      const data = await uploadResponse.json();
-      console.log("Video uploaded successfully:", data);
-
-      // Check response structure and get the URL
-      let url = '';
-      if (data && data.path) {
-        // Direct image object response
-        url = data.path;
-      } else if (data && data.data && data.data.url) {
-        // Nested data structure
-        url = data.data.url;
-      } else if (data && data.url) {
-        // Direct url property
-        url = data.url;
-      } else {
-        console.error("Unexpected response format from video upload:", data);
-        throw new Error("Invalid response format from server");
-      }
-
-      console.log("Final video URL:", url);
-      return url;
-    } catch (error) {
-      console.error("Error uploading video:", error);
-      console.error("Error details:", {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        name: error instanceof Error ? error.name : undefined
-      });
-      throw error;
-    }
-  };
-
-  // Upload GIF to server
-  const uploadGif = async (gifUrl: string): Promise<string> => {
-    try {
-      // Fetch the GIF blob from the URL
-      const response = await fetch(gifUrl);
-      const blob = await response.blob();
-
-      // Create a file from the blob
-      const file = new File([blob], "photobooth.gif", { type: "image/gif" });
-
-      // Create form data for upload
-      const formData = new FormData();
-      formData.append("file", file);
-
-      // Upload to server
-      const uploadResponse = await fetch("/api/images/gif", {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
-        }
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error(`GIF upload failed: ${uploadResponse.statusText}`);
-      }
-
-      const data = await uploadResponse.json();
-      console.log("GIF uploaded successfully:", data);
-
-      // Check response structure and get the URL
-      let url = '';
-      if (data && data.path) {
-        // Direct image object response
-        url = data.path;
-      } else if (data && data.data && data.data.url) {
-        // Nested data structure
-        url = data.data.url;
-      } else if (data && data.url) {
-        // Direct url property
-        url = data.url;
-      } else {
-        console.error("Unexpected response format from GIF upload:", data);
-        throw new Error("Invalid response format from server");
-      }
-
-      return url;
-    } catch (error) {
-      console.error("Error uploading GIF:", error);
-      throw error;
-    }
-  };
 
   const handlePrint = async () => {
     setIsPrinting(true);
+    setIsProcessing(true);
+    setProcessingProgress(0);
 
     try {
       const previewContent = printPreviewRef.current;
       if (!previewContent) {
         alert('Không tìm thấy nội dung để in');
         setIsPrinting(false);
+        setIsProcessing(false);
         return;
       }
 
@@ -437,51 +297,49 @@ export default function Step8() {
           selectedFrame.columns > selectedFrame.rows : false);
 
       try {
-        // Process all media types in parallel
+        setProcessingProgress(10);
+
+ 
+
+        setProcessingProgress(20);
+
+        // Process all media types in parallel với progress tracking
         const processTasks = [];
 
-        // Generate and upload image
+        // Generate and upload image - Task 1
         const imageTask = (async () => {
           try {
+            setProcessingProgress(30);
             const imageDataUrl = await generateHighQualityImage(isLandscape);
             if (!imageDataUrl) {
               throw new Error("Không thể tạo ảnh");
             }
 
-            // Convert and upload image
+            setProcessingProgress(50);
+            // Convert and upload image to external API
             const imageFile = dataURLtoFile(imageDataUrl, "photobooth.jpg");
-            const imageFormData = new FormData();
-            imageFormData.append("file", imageFile);
+            const imageUrl = await uploadImage(imageFile);
 
-            const imageResponse = await fetch("/api/images", {
-              method: "POST",
-              body: imageFormData,
-              headers: {
-                "Authorization": `Bearer ${localStorage.getItem("token") || ""}`,
-              }
-            });
+            console.log("Ảnh đã được tải lên thành công:", imageUrl);
+            setImageQrCode(imageUrl);
+            localStorage.setItem("imageQrCode", imageUrl);
 
-            if (!imageResponse.ok) {
-              if (imageResponse.status === 413) {
-                throw new Error("Ảnh quá lớn để tải lên. Hệ thống đang tối ưu hóa để giải quyết vấn đề này.");
-              }
-              throw new Error("Lỗi khi tải ảnh lên");
-            }
+            // Update media session with image URL (non-blocking)
+            updateMediaSession(imageUrl).catch(err =>
+              console.error("Failed to update session with image:", err)
+            );
 
-            const imageData = await imageResponse.json();
-            console.log("Ảnh đã được tải lên thành công:", imageData);
-            setImageQrCode(imageData.data.url);
-            localStorage.setItem("imageQrCode", imageData.data.url);
+            setProcessingProgress(60);
 
-            // Send to printer
+            // Send to printer (non-blocking for better UX)
             fetch("http://localhost:4000/api/print", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                "imageUrl": imageData.data.url,
-                "fileName": imageData.data.fileName,
+                "imageUrl": imageUrl,
+                "fileName": "photobooth.jpg",
                 "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
                 "quantity": selectedQuantity || 1,
               }),
@@ -504,28 +362,26 @@ export default function Step8() {
         })();
         processTasks.push(imageTask);
 
-        // Generate and upload video if videos are available
+        // Generate and upload video if videos are available - Task 2 (parallel)
         if (videos && videos.length > 0) {
           const videoTask = (async () => {
             try {
               console.log("Starting video generation...");
-              console.log("Current selected indices:", selectedIndices);
-              console.log("Available videos:", videos ? videos.length : 0);
-
-              // Log which videos will be used for which cells
-              selectedIndices.forEach((photoIndex, idx) => {
-                if (photoIndex !== undefined && photoIndex < videos.length) {
-                  console.log(`Cell ${idx} will use photo ${photoIndex} which should map to a video`);
-                }
-              });
+              setProcessingProgress(70);
 
               const videoUrl = await generateSmoothVideo(isLandscape);
-              console.log("Generated video URL:", videoUrl);
               if (videoUrl) {
                 console.log("Video generated successfully, uploading to server...");
                 const serverUrl = await uploadVideo(videoUrl);
                 setVideoQrCode(serverUrl);
                 localStorage.setItem("videoQrCode", serverUrl);
+
+                // Update media session with video URL (non-blocking)
+                updateMediaSession(undefined, serverUrl).catch(err =>
+                  console.error("Failed to update session with video:", err)
+                );
+
+                setProcessingProgress(80);
                 console.log("Video processed and uploaded successfully");
               } else {
                 console.error("Failed to generate video - no URL returned");
@@ -536,16 +392,25 @@ export default function Step8() {
           })();
           processTasks.push(videoTask);
 
-          // Generate and upload GIF from video
+          // Generate and upload GIF from video - Task 3 (parallel với video)
           const gifTask = (async () => {
             try {
               console.log("Starting GIF generation from video...");
+              setProcessingProgress(85);
+
               const gifUrl = await generateGifFromVideo(isLandscape);
               if (gifUrl) {
                 console.log("GIF generated successfully, uploading to server...");
                 const serverUrl = await uploadGif(gifUrl);
                 setGifQrCode(serverUrl);
                 localStorage.setItem("gifQrCode", serverUrl);
+
+                // Update media session with GIF URL (non-blocking)
+                updateMediaSession(undefined, undefined, serverUrl).catch(err =>
+                  console.error("Failed to update session with GIF:", err)
+                );
+
+                setProcessingProgress(95);
                 console.log("GIF processed and uploaded successfully");
               } else {
                 console.error("Failed to generate GIF - no URL returned");
@@ -559,18 +424,24 @@ export default function Step8() {
 
         // Wait for all tasks to complete
         await Promise.all(processTasks);
+        setProcessingProgress(100);
 
-        // Navigate to step 9 after processing is complete
-        router.push("/step/step9");
+        // Ngắn delay trước khi chuyển trang để user thấy progress hoàn thành
+        setTimeout(() => {
+          router.push("/step/step9");
+        }, 500);
+
       } catch (error) {
         console.error("Lỗi khi xử lý và tải lên:", error);
         alert(`Có lỗi xảy ra: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
         setIsPrinting(false);
+        setIsProcessing(false);
       }
     } catch (error) {
       console.error("Lỗi khi xử lý:", error);
       alert(`Có lỗi xảy ra: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
       setIsPrinting(false);
+      setIsProcessing(false);
     }
   };
   const preloadImages = async (images: HTMLImageElement[]): Promise<void> => {
@@ -602,10 +473,10 @@ export default function Step8() {
       }
 
       const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 2400 : 1600;  
+      const desiredWidth = isLandscape ? 2400 : 1600;
       const desiredHeight = isLandscape ? 1600 : 2400;
 
-      
+
       const rect = previewContent.getBoundingClientRect();
 
       // Create output canvas for video with optimized settings
@@ -679,7 +550,7 @@ export default function Step8() {
       // Load all video elements with proper settings for smooth playback
       for (const idx of cellIndices) {
         if (selectedIndices[idx] !== undefined) {
-          const photoIndex = selectedIndices[idx]!
+          const photoIndex = selectedIndices[idx]!;
           let videoUrl: string | undefined = undefined;
 
           if (photoToVideoMap.has(photoIndex)) {
@@ -819,7 +690,7 @@ export default function Step8() {
         previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
         outputCtx.fillStyle = "#FFFFFF";
         outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
-        
+
         // Draw background image first if available
         if (backgroundImg && backgroundValid && backgroundImg.complete) {
           try {
@@ -923,7 +794,7 @@ export default function Step8() {
               previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
             }
           } catch (e) {
-           console.error("Error drawing overlay image:", e);
+            console.error("Error drawing overlay image:", e);
           }
         }
 
@@ -972,12 +843,11 @@ export default function Step8() {
         frameCount++;
         requestAnimationFrame(renderFrame);
       };
-      console.log("Starting video rendering...",frameCount);
+      console.log("Starting video rendering...", frameCount);
 
       // Start rendering
       requestAnimationFrame(renderFrame);
 
-      // Stop recording after fixed duration
       setTimeout(() => {
         mediaRecorder.stop();
       }, TIMEOUT_DURATION * 1000);
@@ -1008,7 +878,7 @@ export default function Step8() {
       const GIF = (await import('gif.js')).default;
 
       const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 2400 : 1600;  
+      const desiredWidth = isLandscape ? 2400 : 1600;
       const desiredHeight = isLandscape ? 1600 : 2400;
       const rect = previewContent.getBoundingClientRect();
 
@@ -1178,7 +1048,7 @@ export default function Step8() {
       const frameRate = 8; // 8 FPS for reasonable file size
       const totalFrames = gifDuration * frameRate;
       const frameInterval = 1000 / frameRate;
-      
+
       // Store first frame data for custom frames (to ensure we can restore it if needed)
       let firstFrameData = null;
 
@@ -1188,7 +1058,7 @@ export default function Step8() {
         previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
         outputCtx.fillStyle = "#FFFFFF";
         outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
-        
+
         // Draw background image first if available
         if (backgroundImg && backgroundValid && backgroundImg.complete) {
           try {
@@ -1222,9 +1092,15 @@ export default function Step8() {
                   if (["brightness", "contrast", "saturate"].includes(prop)) {
                     return `${prop}(${val}%)`;
                   } else if (prop === "blur") {
-                    return `${prop}(${val})`;
+                    return `${prop}(${val}px)`;
                   } else if (prop === "sepia") {
                     return `${prop}(1)`;
+                  } else if (prop === "grayscale") {
+                    return `${prop}(1)`;
+                  } else if (prop === "invert") {
+                    return `${prop}(1)`;
+                  } else if (prop === "hue-rotate") {
+                    return `hue-rotate(${val}deg)`;
                   }
                   return "";
                 })
@@ -1308,7 +1184,7 @@ export default function Step8() {
           // Draw the same content twice side by side (left and right)
           outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, offsetX, offsetY, drawWidth, drawHeight);
           outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, singleImageWidth + offsetX, offsetY, drawWidth, drawHeight);
-          
+
           // Save first frame for custom frames to use later if needed
           if (frameIndex === 0) {
             firstFrameData = outputCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
@@ -1334,11 +1210,11 @@ export default function Step8() {
         }
 
         // Add frame to GIF with proper delay
-        gif.addFrame(outputCanvas, { 
-          delay: frameInterval, 
+        gif.addFrame(outputCanvas, {
+          delay: frameInterval,
           copy: true,
           // For custom frames, use shorter delay at the end to reduce glitching
-          dispose: isCustomFrame && frameIndex > totalFrames * 0.8 ? 1 : 2 
+          dispose: isCustomFrame && frameIndex > totalFrames * 0.8 ? 1 : 2
         });
 
         // Ensure we're showing progress throughout the GIF
@@ -1356,16 +1232,16 @@ export default function Step8() {
         // Ensure our final frame is clear
         outputCtx.fillStyle = "#FFFFFF";
         outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
-        
+
         // Apply the first frame data to ensure a perfect duplicate
         outputCtx.putImageData(firstFrameData, 0, 0);
-        
+
         // Add this frame with a slightly longer duration to pause on this good frame
-        gif.addFrame(outputCanvas, { 
+        gif.addFrame(outputCanvas, {
           delay: frameInterval * 2,
           copy: true
         });
-        
+
         console.log("Added clean final frame for custom frame GIF");
       }
 
@@ -1398,8 +1274,8 @@ export default function Step8() {
     if (!previewContent) return;
 
     try {
-      // Use existing media session URL or create new one
-      const sessionUrl = mediaSessionUrl || await createMediaSession();
+      // Use existing media session URL 
+      const sessionUrl = mediaSessionUrl;
       console.log("Using media session URL:", sessionUrl);
       const isCustomFrame = selectedFrame?.isCustom === true;
       const isSquare = selectedFrame?.columns === selectedFrame?.rows;
@@ -1563,18 +1439,57 @@ export default function Step8() {
                   if (["brightness", "contrast", "saturate"].includes(prop)) {
                     return `${prop}(${val}%)`;
                   } else if (prop === "blur") {
-                    return `${prop}(${val})`;
+                    return `${prop}(${val}px)`;
                   } else if (prop === "sepia") {
                     return `${prop}(1)`;
+                  } else if (prop === "grayscale") {
+                    return `${prop}(1)`;
+                  } else if (prop === "invert") {
+                    return `${prop}(1)`;
+                  } else if (prop === "hue-rotate") {
+                    return `hue-rotate(${val}deg)`;
                   }
                   return "";
                 })
                 .filter(Boolean)
                 .join(" ");
 
-              img.style.filter = filterValues;
+              if (filterValues) {
+                img.style.filter = filterValues;
+                img.style.webkitFilter = filterValues; // Webkit compatibility
+                // Force filter application
+                img.setAttribute('data-filter-applied', 'true');
+              }
+            }
+
+            // Ensure filter is applied to photo-booth-image class specifically
+            if (img.classList.contains('photo-booth-image')) {
+              // Apply the selected filter class directly to maintain consistency
+              if (selectedFilter?.className) {
+                const existingClasses = img.className;
+                // Remove any existing filter classes
+                const cleanClasses = existingClasses.split(' ').filter(cls =>
+                  !cls.includes('brightness-') &&
+                  !cls.includes('contrast-') &&
+                  !cls.includes('saturate-') &&
+                  !cls.includes('blur-') &&
+                  !cls.includes('sepia') &&
+                  !cls.includes('grayscale') &&
+                  !cls.includes('invert') &&
+                  !cls.includes('hue-rotate-')
+                ).join(' ');
+
+                img.className = `${cleanClasses} ${selectedFilter.className}`;
+              }
             }
           });
+
+          // Also apply filter to the main preview container if needed
+          const previewContainer = clonedDoc.querySelector('#photobooth-print-preview');
+          if (previewContainer && selectedFilter?.className) {
+            // Apply filter class to the container level as well
+            previewContainer.classList.add(...selectedFilter.className.split(' '));
+          }
 
           // Optimize frame background rendering
           const backgroundElement = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-0 img");
@@ -1745,7 +1660,7 @@ export default function Step8() {
           selectedFrame?.columns === 2 && selectedFrame?.rows === 3 ? "aspect-[13/12]" : "",)}
       // No click handler needed in step8
       >
-        <div className="z-100 text-5xl">{cellContent}</div>
+        {cellContent}
       </div>
     );
   };
@@ -1871,7 +1786,7 @@ export default function Step8() {
 
   return (
     <StoreBackground currentStore={currentStore}>
-      <StoreHeader 
+      <StoreHeader
         currentStore={currentStore}
         title="CHỈNH SỬA FILTER"
       />
@@ -2098,16 +2013,29 @@ export default function Step8() {
         </div>
       </div>
 
-      <StoreNavigationButtons 
+      <StoreNavigationButtons
         currentStore={currentStore}
         nextLabel="In ảnh"
         onNext={handlePrint}
         nextDisabled={isPrinting}
       >
         {isPrinting && (
-          <div className="flex items-center justify-center text-white">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500 mr-2"></div>
-            Đang in...
+          <div className="flex flex-col items-center justify-center text-white">
+            <div className="flex items-center mb-2">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500 mr-2"></div>
+              {isProcessing ? 'Đang xử lý media...' : 'Đang in...'}
+            </div>
+            {isProcessing && (
+              <div className="w-48 bg-gray-200 rounded-full h-2 mb-2">
+                <div
+                  className="bg-pink-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${processingProgress}%` }}
+                ></div>
+              </div>
+            )}
+            {isProcessing && (
+              <p className="text-sm opacity-75">{processingProgress}% hoàn thành</p>
+            )}
           </div>
         )}
       </StoreNavigationButtons>
