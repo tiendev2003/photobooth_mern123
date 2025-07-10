@@ -93,6 +93,15 @@ export default function Step8() {
   const [mediaSessionCode, setMediaSessionCode] = useState<string>("");
   const [mediaSessionUrl, setMediaSessionUrl] = useState<string>("");
 
+  // Debug log for session state
+  useEffect(() => {
+    console.log("Media session state:", {
+      mediaSessionCode,
+      mediaSessionUrl,
+      localStorageCode: localStorage.getItem("mediaSessionCode")
+    });
+  }, [mediaSessionCode, mediaSessionUrl]);
+
   // Tối ưu thời gian xử lý bằng cách xử lý song song và cache
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
@@ -150,6 +159,20 @@ export default function Step8() {
     const initializeMediaSession = async () => {
       if (photos && photos.length > 0) {
         try {
+          // Kiểm tra xem đã có session code trong localStorage chưa
+          const existingSessionCode = localStorage.getItem("mediaSessionCode");
+          if (existingSessionCode) {
+            console.log("Found existing session code:", existingSessionCode);
+            setMediaSessionCode(existingSessionCode);
+            
+            // Tạo URL cho session
+            const baseUrl = typeof window !== 'undefined' ?
+              `${window.location.protocol}//${window.location.host}` : '';
+            const sessionUrl = `${baseUrl}/session/${existingSessionCode}`;
+            setMediaSessionUrl(sessionUrl);
+            return;
+          }
+
           // Tạo session mới trong database
           const response = await fetch('/api/media-session', {
             method: 'POST',
@@ -176,10 +199,18 @@ export default function Step8() {
 
             console.log("Media session created:", session.sessionCode, sessionUrl);
           } else {
-            console.error("Failed to create media session");
+            console.error("Failed to create media session", response.status);
+            // Tạo session code tạm thời để tránh lỗi
+            const tempSessionCode = `temp_${Date.now()}`;
+            setMediaSessionCode(tempSessionCode);
+            localStorage.setItem("mediaSessionCode", tempSessionCode);
           }
         } catch (error) {
           console.error("Error creating media session:", error);
+          // Tạo session code tạm thời để tránh lỗi
+          const tempSessionCode = `temp_${Date.now()}`;
+          setMediaSessionCode(tempSessionCode);
+          localStorage.setItem("mediaSessionCode", tempSessionCode);
         }
       }
     };
@@ -233,7 +264,10 @@ export default function Step8() {
 
   // Function to update session with media URLs
   const updateMediaSession = async (imageUrl?: string, videoUrl?: string, gifUrl?: string) => {
-    if (!mediaSessionCode) {
+    // Try to get session code from multiple sources
+    const sessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
+    
+    if (!sessionCode) {
       console.error("No media session code available");
       return;
     }
@@ -245,7 +279,7 @@ export default function Step8() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sessionCode: mediaSessionCode,
+          sessionCode: sessionCode,
           imageUrl,
           videoUrl,
           gifUrl
@@ -283,6 +317,16 @@ export default function Step8() {
     setProcessingProgress(0);
 
     try {
+      // Kiểm tra session code trước khi tiến hành
+      const sessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
+      if (!sessionCode) {
+        console.warn("No media session code available, creating temporary session");
+        // Tạo session code tạm thời
+        const tempSessionCode = `temp_${Date.now()}`;
+        setMediaSessionCode(tempSessionCode);
+        localStorage.setItem("mediaSessionCode", tempSessionCode);
+      }
+
       const previewContent = printPreviewRef.current;
       if (!previewContent) {
         alert('Không tìm thấy nội dung để in');
@@ -565,11 +609,25 @@ export default function Step8() {
             videoElement.muted = true;
             videoElement.playsInline = true;
             videoElement.preload = 'auto'; // Preload for smoother playback
+            videoElement.setAttribute('playsinline', ''); // iOS support
+            
+            // Add crossorigin for better handling of video sources
+            videoElement.crossOrigin = "anonymous";
 
+            // Preload content for smoother playback
             await new Promise<void>((resolve) => {
               videoElement.onloadedmetadata = () => {
-                console.log(`Video ${photoIndex} loaded for smooth playback, duration: ${videoElement.duration}`);
-                resolve();
+                // Once metadata is loaded, try to preload more of the video
+                videoElement.oncanplaythrough = () => {
+                  console.log(`Video ${photoIndex} fully loaded and ready for smooth playback`);
+                  resolve();
+                };
+                
+                // Set a timeout in case canplaythrough never fires
+                setTimeout(() => {
+                  console.log(`Video ${photoIndex} loaded metadata, duration: ${videoElement.duration}`);
+                  resolve();
+                }, 2000);
               };
               videoElement.onerror = () => {
                 console.error(`Error loading video ${photoIndex}`);
@@ -645,6 +703,8 @@ export default function Step8() {
       console.log("Starting videos for smooth recording...");
       const videoStartPromises = Array.from(cellVideoMap.values()).map(async (video) => {
         try {
+          // Make videos loop to ensure continuous playback throughout recording
+          video.loop = true;
           await video.play();
           return true;
         } catch (e) {
@@ -665,6 +725,27 @@ export default function Step8() {
       const targetFPS = 24;
       const frameInterval = 1000 / targetFPS;
       let lastTime = performance.now();
+      
+      // Store initial positions and dimensions for consistency
+      const cellPositions = new Map();
+      
+      // Calculate and store all cell positions once to ensure consistency
+      const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
+      cells.forEach((cell, idx) => {
+        if (cellVideoMap.has(idx)) {
+          const cellRect = cell.getBoundingClientRect();
+          const relativeLeft = cellRect.left - rect.left;
+          const relativeTop = cellRect.top - rect.top;
+          
+          // Store position and dimension data
+          cellPositions.set(idx, {
+            left: relativeLeft,
+            top: relativeTop,
+            width: cellRect.width,
+            height: cellRect.height
+          });
+        }
+      });
 
       const renderFrame = () => {
         const now = performance.now();
@@ -675,23 +756,38 @@ export default function Step8() {
           return;
         }
         lastTime = now;
+        
+        // Check if we've been recording too long to prevent memory issues
+        if (frameCount > targetFPS * TIMEOUT_DURATION) {
+          console.log("Reached maximum frame count, stopping recording");
+          mediaRecorder.stop();
+          return;
+        }
 
         const anyPlaying = Array.from(cellVideoMap.values()).some(
           (video) => !video.ended && !video.paused
         );
 
-        if (!anyPlaying) {
+        // Handle end of all videos more gracefully
+        // Only stop after minimum duration and if all videos are done
+        if (!anyPlaying && frameCount > targetFPS * 3) { // Ensure at least 3 seconds of recording
+          console.log("All videos completed, stopping recording");
           mediaRecorder.stop();
           return;
         }
-
-        // Clear canvases efficiently
+        
+        // Always draw the background regardless of video state
+        // Clear canvases efficiently with white background
         previewCtx.fillStyle = "#FFFFFF";
         previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
         outputCtx.fillStyle = "#FFFFFF";
         outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-        // Draw background image first if available
+        // Reset context state before drawing
+        previewCtx.filter = "none";
+        previewCtx.globalCompositeOperation = "source-over";
+
+        // Draw background image first if available - ALWAYS draw this
         if (backgroundImg && backgroundValid && backgroundImg.complete) {
           try {
             if (backgroundImg.naturalWidth > 0 && backgroundImg.naturalHeight > 0) {
@@ -702,14 +798,11 @@ export default function Step8() {
           }
         }
 
-        const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
-
+        // Use stored cell positions for consistent rendering
         cells.forEach((cell, idx) => {
-          if (!cellVideoMap.has(idx)) return;
+          if (!cellVideoMap.has(idx) || !cellPositions.has(idx)) return;
 
-          const cellRect = cell.getBoundingClientRect();
-          const relativeLeft = cellRect.left - rect.left;
-          const relativeTop = cellRect.top - rect.top;
+          const cellData = cellPositions.get(idx);
           const videoElement = cellVideoMap.get(idx)!;
 
           // Only render ready frames to avoid stuttering
@@ -736,23 +829,23 @@ export default function Step8() {
 
             // Calculate proper aspect ratio for video (like object-fit: cover)
             const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight;
-            const cellAspectRatio = cellRect.width / cellRect.height;
+            const cellAspectRatio = cellData.width / cellData.height;
 
-            let drawWidth = cellRect.width;
-            let drawHeight = cellRect.height;
-            let offsetX = relativeLeft;
-            let offsetY = relativeTop;
+            let drawWidth = cellData.width;
+            let drawHeight = cellData.height;
+            let offsetX = cellData.left;
+            let offsetY = cellData.top;
 
             if (videoAspectRatio > cellAspectRatio) {
               // Video is wider than cell - fit height and crop width
-              drawHeight = cellRect.height;
+              drawHeight = cellData.height;
               drawWidth = drawHeight * videoAspectRatio;
-              offsetX = relativeLeft - (drawWidth - cellRect.width) / 2;
+              offsetX = cellData.left - (drawWidth - cellData.width) / 2;
             } else {
               // Video is taller than cell - fit width and crop height
-              drawWidth = cellRect.width;
+              drawWidth = cellData.width;
               drawHeight = drawWidth / videoAspectRatio;
-              offsetY = relativeTop - (drawHeight - cellRect.height) / 2;
+              offsetY = cellData.top - (drawHeight - cellData.height) / 2;
             }
 
             // Save context for clipping
@@ -761,9 +854,9 @@ export default function Step8() {
             // Create clipping path for the cell area - handle circle frame
             if (selectedFrame?.isCircle) {
               // For circle frame, create circular clipping path
-              const centerX = relativeLeft + cellRect.width / 2;
-              const centerY = relativeTop + cellRect.height / 2;
-              const radius = Math.min(cellRect.width, cellRect.height) / 2;
+              const centerX = cellData.left + cellData.width / 2;
+              const centerY = cellData.top + cellData.height / 2;
+              const radius = Math.min(cellData.width, cellData.height) / 2;
 
               previewCtx.beginPath();
               previewCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
@@ -771,7 +864,7 @@ export default function Step8() {
             } else {
               // Regular rectangular clipping
               previewCtx.beginPath();
-              previewCtx.rect(relativeLeft, relativeTop, cellRect.width, cellRect.height);
+              previewCtx.rect(cellData.left, cellData.top, cellData.width, cellData.height);
               previewCtx.clip();
             }
 
@@ -784,14 +877,24 @@ export default function Step8() {
             );
 
             previewCtx.restore(); // Restore context (removes clipping and filter)
+            
+            // Reset filter after each cell to prevent interference
+            previewCtx.filter = "none";
           }
         });
 
-        // Draw overlay if available
+        // Draw overlay if available - Reset context state first
+        previewCtx.filter = "none";
+        previewCtx.globalCompositeOperation = "source-over";
         if (overlayImg && overlayValid && overlayImg.complete) {
           try {
             if (overlayImg.naturalWidth > 0 && overlayImg.naturalHeight > 0) {
+              // Draw overlay at the top layer to ensure it's always visible
               previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
+              // For debugging
+              if (frameCount % 24 === 0) {
+                console.log(`Overlay drawn for frame ${frameCount}`);
+              }
             }
           } catch (e) {
             console.error("Error drawing overlay image:", e);
@@ -848,9 +951,32 @@ export default function Step8() {
       // Start rendering
       requestAnimationFrame(renderFrame);
 
+      // Make sure we stop recording after the defined timeout
+      // Use this as a fallback in case videos don't trigger the stop condition
+      const videoDuration = Math.min(
+        10, // Max 10 seconds to match TIMEOUT_DURATION
+        Math.max(
+          ...Array.from(cellVideoMap.values()).map(v => v.duration || 0)
+        ) + 1 // Add one second to the longest video to ensure we capture everything
+      );
+      
+      // Use the defined timeout or the calculated video duration
+      const recordingTimeout = Math.min(
+        TIMEOUT_DURATION || 10, // Use full TIMEOUT_DURATION (10 seconds)
+        videoDuration
+      );
+      
+      console.log(`Setting video recording timeout to ${recordingTimeout} seconds`);
+      
+      // Force loop videos to ensure content plays throughout the recording time
+      Array.from(cellVideoMap.values()).forEach(video => {
+        video.loop = true; // Set videos to loop so they don't end prematurely
+      });
+      
       setTimeout(() => {
+        console.log("Video recording timeout reached, stopping...");
         mediaRecorder.stop();
-      }, TIMEOUT_DURATION * 1000);
+      }, recordingTimeout * 1000);
 
       return processedVideoPromise;
 
@@ -1000,26 +1126,31 @@ export default function Step8() {
       let overlayImg: HTMLImageElement | null = null;
       let overlayValid = false;
       if (selectedTemplate?.overlay) {
+        console.log("Loading overlay image for GIF:", selectedTemplate.overlay);
         overlayImg = document.createElement('img');
         overlayImg.crossOrigin = "anonymous";
 
         await new Promise<void>((resolve) => {
           overlayImg!.onload = () => {
             overlayValid = true;
+            console.log("Overlay image loaded successfully for GIF");
             resolve();
           };
           overlayImg!.onerror = () => {
             overlayValid = false;
+            console.error("Failed to load overlay image for GIF");
             resolve();
           };
           setTimeout(() => {
             overlayValid = false;
+            console.error("Overlay image timeout for GIF");
             resolve();
           }, 5000);
 
           overlayImg!.src = `${selectedTemplate.overlay}?v=${Date.now()}`;
           if (overlayImg!.complete) {
             overlayValid = overlayImg!.naturalWidth > 0 && overlayImg!.naturalHeight > 0;
+            console.log("Overlay image already cached for GIF:", overlayValid);
             resolve();
           }
         });
@@ -1029,6 +1160,8 @@ export default function Step8() {
       console.log("Starting videos for GIF creation...");
       const videoStartPromises = Array.from(cellVideoMap.values()).map(async (video) => {
         try {
+          // Set videos to loop to prevent them from ending during GIF creation
+          video.loop = true;
           await video.play();
           return true;
         } catch (e) {
@@ -1040,30 +1173,66 @@ export default function Step8() {
       await Promise.all(videoStartPromises);
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      console.log("Starting GIF frame capture...");
+      console.log("Starting GIF frame capture with background:", backgroundValid, "overlay:", overlayValid);
 
-      // Capture frames for GIF (shorter duration for smaller file)
-      // Reduce duration for custom frames to avoid the glitch at the end
-      const gifDuration = isCustomFrame ? 2 : 3; // 2 seconds for custom frames, 3 seconds for regular frames
+      // Calculate actual GIF duration based on video durations
+      const maxVideoDuration = Math.max(
+        ...Array.from(cellVideoMap.values()).map(v => v.duration || 0)
+      );
+      
+      // Use shorter duration for custom frames to prevent glitches
       const frameRate = 8; // 8 FPS for reasonable file size
-      const totalFrames = gifDuration * frameRate;
       const frameInterval = 1000 / frameRate;
-
+      
+      const adjustedGifDuration = Math.min(
+        isCustomFrame ? 2 : 3, // Default durations
+        maxVideoDuration + 0.5 // Actual max video duration plus half a second buffer
+      );
+      
+      console.log(`Using adjusted GIF duration of ${adjustedGifDuration} seconds`);
+      
+      // Recalculate frames based on adjusted duration
+      const totalFrames = Math.ceil(adjustedGifDuration * frameRate);
+      
+      // Store cell positions once for consistency
+      const cellPositions = new Map();
+      const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
+      cells.forEach((cell, idx) => {
+        if (cellVideoMap.has(idx)) {
+          const cellRect = cell.getBoundingClientRect();
+          const relativeLeft = cellRect.left - rect.left;
+          const relativeTop = cellRect.top - rect.top;
+          
+          // Store position and dimension data
+          cellPositions.set(idx, {
+            left: relativeLeft,
+            top: relativeTop,
+            width: cellRect.width,
+            height: cellRect.height
+          });
+        }
+      });
+      
       // Store first frame data for custom frames (to ensure we can restore it if needed)
       let firstFrameData = null;
 
       for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-        // Clear canvases
+        // Clear canvases with white background
         previewCtx.fillStyle = "#FFFFFF";
         previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
         outputCtx.fillStyle = "#FFFFFF";
         outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+
+        // Reset context state before drawing
+        previewCtx.filter = "none";
+        previewCtx.globalCompositeOperation = "source-over";
 
         // Draw background image first if available
         if (backgroundImg && backgroundValid && backgroundImg.complete) {
           try {
             if (backgroundImg.naturalWidth > 0 && backgroundImg.naturalHeight > 0) {
               previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
+              console.log(`Background drawn for GIF frame ${frameIndex}`);
             }
           } catch (e) {
             console.error("Error drawing background image in GIF:", e);
@@ -1076,10 +1245,11 @@ export default function Step8() {
         cells.forEach((cell, idx) => {
           if (!cellVideoMap.has(idx)) return;
 
-          const cellRect = cell.getBoundingClientRect();
-          const relativeLeft = cellRect.left - rect.left;
-          const relativeTop = cellRect.top - rect.top;
+          // const cellRect = cell.getBoundingClientRect();
+          // const relativeLeft = cellRect.left - rect.left;
+          // const relativeTop = cellRect.top - rect.top;
           const videoElement = cellVideoMap.get(idx)!;
+          const cellData = cellPositions.get(idx);
 
           if (videoElement.readyState >= 2) {
             // Apply filter
@@ -1116,52 +1286,64 @@ export default function Step8() {
             previewCtx.save();
             previewCtx.beginPath();
             if (selectedFrame?.isCircle) {
-              const centerX = relativeLeft + cellRect.width / 2;
-              const centerY = relativeTop + cellRect.height / 2;
-              const radius = Math.min(cellRect.width, cellRect.height) / 2;
+              const centerX = cellData.left + cellData.width / 2;
+              const centerY = cellData.top + cellData.height / 2;
+              const radius = Math.min(cellData.width, cellData.height) / 2;
               previewCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
             } else {
-              previewCtx.rect(relativeLeft, relativeTop, cellRect.width, cellRect.height);
+              previewCtx.rect(cellData.left, cellData.top, cellData.width, cellData.height);
             }
             previewCtx.clip();
 
             // Calculate aspect ratio for video
             const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight;
-            const cellAspectRatio = cellRect.width / cellRect.height;
+            const cellAspectRatio = cellData.width / cellData.height;
 
-            let drawWidth = cellRect.width;
-            let drawHeight = cellRect.height;
-            let offsetX = relativeLeft;
-            let offsetY = relativeTop;
+            let drawWidth = cellData.width;
+            let drawHeight = cellData.height;
+            let offsetX = cellData.left;
+            let offsetY = cellData.top;
 
             if (videoAspectRatio > cellAspectRatio) {
               // Video is wider than cell - fit height and crop width
-              drawHeight = cellRect.height;
+              drawHeight = cellData.height;
               drawWidth = drawHeight * videoAspectRatio;
-              offsetX = relativeLeft - (drawWidth - cellRect.width) / 2;
+              offsetX = cellData.left - (drawWidth - cellData.width) / 2;
             } else {
               // Video is taller than cell - fit width and crop height
-              drawWidth = cellRect.width;
+              drawWidth = cellData.width;
               drawHeight = drawWidth / videoAspectRatio;
-              offsetY = relativeTop - (drawHeight - cellRect.height) / 2;
+              offsetY = cellData.top - (drawHeight - cellData.height) / 2;
             }
 
             previewCtx.drawImage(videoElement, offsetX, offsetY, drawWidth, drawHeight);
             previewCtx.restore();
+            
+            // Reset filter after each cell to prevent interference
+            previewCtx.filter = "none";
           }
         });
 
-        // Draw overlay if available
+        // Draw overlay if available - Reset context state first
+        previewCtx.filter = "none";
+        previewCtx.globalCompositeOperation = "source-over";
         if (overlayImg && overlayValid && overlayImg.complete) {
           try {
-            previewCtx.globalCompositeOperation = "source-over";
-            previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
+            if (overlayImg.naturalWidth > 0 && overlayImg.naturalHeight > 0) {
+              previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
+              if (frameIndex % 4 === 0) {
+                console.log(`Overlay drawn for GIF frame ${frameIndex}`);
+              }
+            }
           } catch (e) {
             console.error("Error drawing overlay on GIF frame:", e);
           }
         }
 
         // Copy to output canvas with adjusted positioning
+        // Reset output context state
+        outputCtx.globalCompositeOperation = "source-over";
+        
         if (isCustomFrame) {
           const singleImageWidth = desiredWidth / 2;
           const singleImageHeight = desiredHeight;
@@ -1241,8 +1423,25 @@ export default function Step8() {
           delay: frameInterval * 2,
           copy: true
         });
+        
+        // Add one more duplicate frame to ensure smooth looping
+        gif.addFrame(outputCanvas, {
+          delay: frameInterval * 2,
+          copy: true
+        });
 
-        console.log("Added clean final frame for custom frame GIF");
+        console.log("Added clean final frames for custom frame GIF");
+      } else if (!isCustomFrame) {
+        // For regular frames, add a few extra frames with the last good state
+        // to ensure smooth looping
+        for (let i = 0; i < 3; i++) {
+          gif.addFrame(outputCanvas, {
+            delay: frameInterval * 1.5,
+            copy: true
+          });
+        }
+        
+        console.log("Added extra frames for regular GIF to ensure smooth looping");
       }
 
       console.log("Rendering GIF...");
