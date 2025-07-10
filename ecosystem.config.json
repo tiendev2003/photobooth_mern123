@@ -1,0 +1,30 @@
+{
+  "apps": [{
+    "name": "photobooth",
+    "script": "npm",
+    "args": "start",
+    "cwd": "/home/tiendev/photobooth",
+    "instances": 1,
+    "autorestart": true,
+    "watch": false,
+    "max_memory_restart": "1G",
+    "env": {
+      "NODE_ENV": "production",
+      "PORT": 3000
+    },
+    "log_file": "./logs/photobooth.log",
+    "out_file": "./logs/photobooth-out.log",
+    "error_file": "./logs/photobooth-error.log",
+    "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+    "ignore_watch": [
+      "node_modules",
+      ".git",
+      "*.log"
+    ],
+    "watch_options": {
+      "followSymlinks": false,
+      "usePolling": true,
+      "interval": 1000
+    }
+  }]
+}
