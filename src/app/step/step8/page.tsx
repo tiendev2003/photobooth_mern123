@@ -16,7 +16,7 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 
-// Enhanced filters for skin beautification with server-side processing support
+// Enhanced filters for skin beautification with
 const skinFilters = [
   { id: "none", name: "Bình thường", className: "", preview: "/anh/1.png", icon: "🌟" },
   {
@@ -377,146 +377,109 @@ export default function Step8() {
         (selectedFrame && selectedFrame.columns && selectedFrame.rows ?
           selectedFrame.columns > selectedFrame.rows : false);
 
+      // We'll process image generation first and then start video/GIF processing in parallel
+      setProcessingProgress(10);
+
+      // Step 1: Generate and upload image as the highest priority task
+      let imageUploadPromise;
       try {
-        setProcessingProgress(10);
-
-
-
-        setProcessingProgress(20);
-
-        // Process all media types in parallel với progress tracking
-        const processTasks = [];
-
-        // Generate and upload image - Task 1
-        const imageTask = (async () => {
-          try {
-            setProcessingProgress(30);
-            const imageDataUrl = await generateHighQualityImage(isLandscape);
-            if (!imageDataUrl) {
-              throw new Error("Không thể tạo ảnh");
-            }
-
-            setProcessingProgress(50);
-            // Convert and upload image to external API
-            const imageFile = dataURLtoFile(imageDataUrl, "photobooth.jpg");
-            const imageUrl = await uploadImage(imageFile);
-
-            console.log("Ảnh đã được tải lên thành công:", imageUrl);
-            setImageQrCode(imageUrl);
-            localStorage.setItem("imageQrCode", imageUrl);
-
-            // Update media session with image URL (non-blocking)
-            updateMediaSession(imageUrl).catch(err =>
-              console.error("Failed to update session with image:", err)
-            );
-
-            setProcessingProgress(60);
-
-            // Send to printer (non-blocking for better UX)
-            fetch("http://localhost:4000/api/print", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                "imageUrl": imageUrl,
-                "fileName": "photobooth.jpg",
-                "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
-                "quantity": selectedQuantity || 1,
-              }),
-            })
-              .then((response) => {
-                if (!response.ok) {
-                  throw new Error("Failed to print image");
-                }
-                return response.json();
-              })
-              .then((data) => {
-                console.log("Print job submitted successfully:", data);
-              })
-              .catch((error) => {
-                console.error("Error submitting print job:", error);
-              });
-          } catch (error) {
-            console.error("Error processing image:", error);
-          }
-        })();
-        processTasks.push(imageTask);
-
-        // Generate and upload video if videos are available - Task 2 (parallel)
-        if (videos && videos.length > 0) {
-          const videoTask = (async () => {
-            try {
-              console.log("Starting video generation...");
-              setProcessingProgress(70);
-
-              const videoUrl = await generateSmoothVideo(isLandscape);
-              if (videoUrl) {
-                console.log("Video generated successfully, uploading to server...");
-                const serverUrl = await uploadVideo(videoUrl);
-                setVideoQrCode(serverUrl);
-                localStorage.setItem("videoQrCode", serverUrl);
-
-                // Update media session with video URL (non-blocking)
-                updateMediaSession(undefined, serverUrl).catch(err =>
-                  console.error("Failed to update session with video:", err)
-                );
-
-                setProcessingProgress(80);
-                console.log("Video processed and uploaded successfully");
-              } else {
-                console.error("Failed to generate video - no URL returned");
-              }
-            } catch (error) {
-              console.error("Error processing video:", error);
-            }
-          })();
-          processTasks.push(videoTask);
-
-          // Generate and upload GIF from video - Task 3 (parallel với video)
-          const gifTask = (async () => {
-            try {
-              console.log("Starting GIF generation from video...");
-              setProcessingProgress(85);
-
-              const gifUrl = await generateGifFromVideo(isLandscape);
-              if (gifUrl) {
-                console.log("GIF generated successfully, uploading to server...");
-                const serverUrl = await uploadGif(gifUrl);
-                setGifQrCode(serverUrl);
-                localStorage.setItem("gifQrCode", serverUrl);
-
-                // Update media session with GIF URL (non-blocking)
-                updateMediaSession(undefined, undefined, serverUrl).catch(err =>
-                  console.error("Failed to update session with GIF:", err)
-                );
-
-                setProcessingProgress(95);
-                console.log("GIF processed and uploaded successfully");
-              } else {
-                console.error("Failed to generate GIF - no URL returned");
-              }
-            } catch (error) {
-              console.error("Error processing GIF:", error);
-            }
-          })();
-          processTasks.push(gifTask);
+        setProcessingProgress(30);
+        const imageDataUrl = await generateHighQualityImage(isLandscape);
+        if (!imageDataUrl) {
+          throw new Error("Không thể tạo ảnh");
         }
 
-        // Wait for all tasks to complete
-        await Promise.all(processTasks);
-        setProcessingProgress(100);
+        setProcessingProgress(50);
+        // Convert and upload image to external API
+        const imageFile = dataURLtoFile(imageDataUrl, "photobooth.jpg");
+        imageUploadPromise = uploadImage(imageFile).then(imageUrl => {
+          console.log("Ảnh đã được tải lên thành công:", imageUrl);
+          setImageQrCode(imageUrl);
+          localStorage.setItem("imageQrCode", imageUrl);
 
-        // Ngắn delay trước khi chuyển trang để user thấy progress hoàn thành
-        setTimeout(() => {
-          router.push("/step/step9");
-        }, 500);
+          // Update media session with image URL (non-blocking)
+          updateMediaSession(imageUrl).catch(err =>
+            console.error("Failed to update session with image:", err)
+          );
+
+          // Send to printer (non-blocking for better UX)
+          return fetch("http://localhost:4000/api/print", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              "imageUrl": imageUrl,
+              "fileName": "photobooth.jpg",
+              "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
+              "quantity": selectedQuantity || 1,
+            }),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Failed to print image");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              console.log("Print job submitted successfully:", data);
+              return imageUrl;
+            })
+            .catch((error) => {
+              console.error("Error submitting print job:", error);
+              return imageUrl; // Still return the URL even if printing fails
+            });
+        });
+
+        // Wait for image upload and print job submission before navigating to step9
+        // This ensures the main task is completed before transition
+        await imageUploadPromise;
+        
+        // Set progress to 60 and immediately navigate to step9
+        setProcessingProgress(60);
+        
+        // Start background processes for video and GIF
+        if (videos && videos.length > 0) {
+          // Run these in the background without waiting
+          // Step 2: Process video in the background (after transition to step9)
+          setTimeout(() => {
+            generateSmoothVideo(isLandscape).then(videoUrl => {
+              if (videoUrl) {
+                uploadVideo(videoUrl).then(serverUrl => {
+                  setVideoQrCode(serverUrl);
+                  localStorage.setItem("videoQrCode", serverUrl);
+                  updateMediaSession(undefined, serverUrl).catch(err =>
+                    console.error("Failed to update session with video:", err)
+                  );
+                }).catch(err => console.error("Failed to upload video:", err));
+              }
+            }).catch(err => console.error("Failed to generate video:", err));
+          }, 100);
+
+          // Step 3: Process GIF in the background (after transition to step9)
+          setTimeout(() => {
+            generateGifFromVideo(isLandscape).then(gifUrl => {
+              if (gifUrl) {
+                uploadGif(gifUrl).then(serverUrl => {
+                  setGifQrCode(serverUrl);
+                  localStorage.setItem("gifQrCode", serverUrl);
+                  updateMediaSession(undefined, undefined, serverUrl).catch(err =>
+                    console.error("Failed to update session with GIF:", err)
+                  );
+                }).catch(err => console.error("Failed to upload GIF:", err));
+              }
+            }).catch(err => console.error("Failed to generate GIF:", err));
+          }, 200);
+        }
+
+        // Navigate to step9 immediately after image is processed
+        router.push("/step/step9");
 
       } catch (error) {
-        console.error("Lỗi khi xử lý và tải lên:", error);
-        alert(`Có lỗi xảy ra: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
+        console.error("Error processing image:", error);
         setIsPrinting(false);
         setIsProcessing(false);
+        alert(`Có lỗi xảy ra khi xử lý ảnh: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
       }
     } catch (error) {
       console.error("Lỗi khi xử lý:", error);
@@ -526,17 +489,52 @@ export default function Step8() {
     }
   };
   const preloadImages = async (images: HTMLImageElement[]): Promise<void> => {
+    // Using Promise.allSettled to handle all images regardless of success/failure
+    // This prevents one bad image from blocking the entire preload process
     const promises = Array.from(images).map((img) => {
-      if (img.complete && img.naturalWidth !== 0) {
-        return Promise.resolve();
-      }
       return new Promise<void>((resolve) => {
-        img.onload = () => resolve();
-        img.onerror = () => resolve(); // Xử lý lỗi để không bị treo
-        if (img.src) img.src = img.src; // Kích hoạt tải lại nếu cần
+        // Skip if image is already loaded
+        if (img.complete && img.naturalWidth !== 0) {
+          resolve();
+          return;
+        }
+        
+        // Set handlers for load and error events
+        const handleLoad = () => {
+          img.removeEventListener('load', handleLoad);
+          img.removeEventListener('error', handleError);
+          resolve();
+        };
+        
+        const handleError = () => {
+          console.warn(`Failed to preload image: ${img.src}`);
+          img.removeEventListener('load', handleLoad);
+          img.removeEventListener('error', handleError);
+          resolve(); // Resolve anyway to not block the process
+        };
+        
+        // Add event listeners
+        img.addEventListener('load', handleLoad);
+        img.addEventListener('error', handleError);
+        
+        // Set a timeout to avoid infinite waiting
+        setTimeout(() => {
+          img.removeEventListener('load', handleLoad);
+          img.removeEventListener('error', handleError);
+          console.warn(`Timeout preloading image: ${img.src}`);
+          resolve();
+        }, 5000);
+        
+        // Force reload if needed
+        if (img.src) {
+          const currentSrc = img.src;
+          img.src = currentSrc; // Trigger reload
+        }
       });
     });
-    await Promise.all(promises);
+    
+    // Wait for all promises to settle (both fulfilled and rejected)
+    await Promise.allSettled(promises);
   };
 
   // Optimized video generation with smooth playback
@@ -1551,17 +1549,18 @@ export default function Step8() {
       const scaleFactor = Math.max(
         desiredWidth / rect.width,
         desiredHeight / rect.height,
-        3
-      ); // Ensure at least 3x scaling for quality
+        2.5
+      ); // Lower scale factor for faster processing while maintaining quality
 
       // Pre-load and optimize all images to ensure high-quality rendering
+      // This step can be optimized by using a single promise instead of waiting for each image
       const images = previewContent.querySelectorAll("img");
-      await preloadImages(Array.from(images));
-
-      console.log("Starting high-quality image generation with HTML2Canvas");
+      const preloadPromise = preloadImages(Array.from(images));
 
       // Create QR code element if session URL exists
       let qrCodeElement: HTMLElement | null = null;
+      let qrCodePromise = Promise.resolve();
+      
       if (sessionUrl) {
         console.log('Creating QR code for URL:', sessionUrl);
         qrCodeElement = document.createElement('div');
@@ -1578,37 +1577,50 @@ export default function Step8() {
 
         // Create QR code canvas
         const qrCanvas = document.createElement('canvas');
-        try {
-          await QRCode.toCanvas(qrCanvas, sessionUrl, {
-            width: 45,
-            margin: 0,
-            color: {
-              dark: '#000000',
-              light: '#FFFFFF'
-            },
-            errorCorrectionLevel: 'M' // Medium error correction
-          });
-          qrCanvas.style.width = '50px';
-          qrCanvas.style.height = '50px';
-          qrCodeElement.appendChild(qrCanvas);
-          console.log('QR code created successfully');
-        } catch (error) {
-          console.error('Error generating QR code:', error);
-          // Fallback for QR code errors
-          const fallbackText = document.createElement('div');
-          fallbackText.innerText = 'QR';
-          fallbackText.style.fontSize = '10px';
-          fallbackText.style.textAlign = 'center';
-          fallbackText.style.lineHeight = '50px';
-          fallbackText.style.color = '#000';
-          qrCodeElement.appendChild(fallbackText);
-        }
-
-        previewContent.appendChild(qrCodeElement);
-      } else {
-        console.log('No session URL available for QR code');
+        qrCodePromise = new Promise<void>((resolve) => {
+          try {
+            QRCode.toCanvas(qrCanvas, sessionUrl, {
+              width: 45,
+              margin: 0,
+              color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+              },
+              errorCorrectionLevel: 'M' // Medium error correction
+            }).then(() => {
+              qrCanvas.style.width = '50px';
+              qrCanvas.style.height = '50px';
+              qrCodeElement!.appendChild(qrCanvas);
+              console.log('QR code created successfully');
+              resolve();
+            }).catch(error => {
+              console.error('Error generating QR code:', error);
+              // Fallback for QR code errors
+              const fallbackText = document.createElement('div');
+              fallbackText.innerText = 'QR';
+              fallbackText.style.fontSize = '10px';
+              fallbackText.style.textAlign = 'center';
+              fallbackText.style.lineHeight = '50px';
+              fallbackText.style.color = '#000';
+              qrCodeElement!.appendChild(fallbackText);
+              resolve();
+            });
+          } catch (error) {
+            console.error('Error generating QR code:', error);
+            resolve();
+          }
+        });
       }
 
+      // Wait for both the image preloading and QR code generation in parallel
+      await Promise.all([preloadPromise, qrCodePromise]);
+
+      // Append QR code element after preloading is complete
+      if (qrCodeElement) {
+        previewContent.appendChild(qrCodeElement);
+      }
+
+      console.log("Starting high-quality image generation with HTML2Canvas");
       const html2canvas = (await import("html2canvas-pro")).default;
 
       // Enhanced HTML2Canvas configuration for better quality
@@ -1620,7 +1632,7 @@ export default function Step8() {
         height: rect.height,
         scale: scaleFactor,
         logging: false,
-        imageTimeout: 30000,
+        imageTimeout: 15000, // Reduced timeout for faster processing
         removeContainer: true,
         foreignObjectRendering: false,
         ignoreElements: (element) =>
@@ -1628,11 +1640,7 @@ export default function Step8() {
           element.classList?.contains("no-print"),
         onclone: (clonedDoc) => {
           console.log("HTML2Canvas clone started with template:", selectedTemplate);
-          if (selectedTemplate) {
-            console.log("Template details - Background:", selectedTemplate.background ? "Yes" : "No",
-              "Overlay:", selectedTemplate.overlay ? "Yes" : "No");
-          }
-
+          
           const container = clonedDoc.querySelector("[data-preview]") as HTMLElement;
           if (container && container.style) {
             // Apply optimized styles to container
@@ -1683,8 +1691,32 @@ export default function Step8() {
             }
           }
 
-          // Process all images for optimal quality
+          // Process all images for optimal quality - do this in batch rather than individual
           const images = clonedDoc.querySelectorAll("img");
+          const filterValues = selectedFilter?.className ? 
+            selectedFilter.className
+              .split(" ")
+              .filter((cls) => cls.includes("-"))
+              .map((cls) => {
+                const [prop, val] = cls.split("-");
+                if (["brightness", "contrast", "saturate"].includes(prop)) {
+                  return `${prop}(${val}%)`;
+                } else if (prop === "blur") {
+                  return `${prop}(${val}px)`;
+                } else if (prop === "sepia") {
+                  return `${prop}(1)`;
+                } else if (prop === "grayscale") {
+                  return `${prop}(1)`;
+                } else if (prop === "invert") {
+                  return `${prop}(1)`;
+                } else if (prop === "hue-rotate") {
+                  return `hue-rotate(${val}deg)`;
+                }
+                return "";
+              })
+              .filter(Boolean)
+              .join(" ") : "";
+
           images.forEach((img) => {
             // Ensure high-quality rendering
             img.style.imageRendering = "crisp-edges";
@@ -1697,99 +1729,59 @@ export default function Step8() {
             imgStyle.printColorAdjust = "exact";
 
             // Apply filter effects if selected
-            if (selectedFilter?.className) {
-              // Parse CSS class names into proper filter string
-              const filterClasses = selectedFilter.className.split(" ");
-              const filterValues = filterClasses
-                .filter((cls) => cls.includes("-"))
-                .map((cls) => {
-                  const [prop, val] = cls.split("-");
-                  if (["brightness", "contrast", "saturate"].includes(prop)) {
-                    return `${prop}(${val}%)`;
-                  } else if (prop === "blur") {
-                    return `${prop}(${val}px)`;
-                  } else if (prop === "sepia") {
-                    return `${prop}(1)`;
-                  } else if (prop === "grayscale") {
-                    return `${prop}(1)`;
-                  } else if (prop === "invert") {
-                    return `${prop}(1)`;
-                  } else if (prop === "hue-rotate") {
-                    return `hue-rotate(${val}deg)`;
-                  }
-                  return "";
-                })
-                .filter(Boolean)
-                .join(" ");
-
-              if (filterValues) {
-                img.style.filter = filterValues;
-                img.style.webkitFilter = filterValues; // Webkit compatibility
-                // Force filter application
-                img.setAttribute('data-filter-applied', 'true');
-              }
+            if (filterValues) {
+              img.style.filter = filterValues;
+              img.style.webkitFilter = filterValues; // Webkit compatibility
+              // Force filter application
+              img.setAttribute('data-filter-applied', 'true');
             }
 
-            // Ensure filter is applied to photo-booth-image class specifically
-            if (img.classList.contains('photo-booth-image')) {
-              // Apply the selected filter class directly to maintain consistency
-              if (selectedFilter?.className) {
-                const existingClasses = img.className;
-                // Remove any existing filter classes
-                const cleanClasses = existingClasses.split(' ').filter(cls =>
-                  !cls.includes('brightness-') &&
-                  !cls.includes('contrast-') &&
-                  !cls.includes('saturate-') &&
-                  !cls.includes('blur-') &&
-                  !cls.includes('sepia') &&
-                  !cls.includes('grayscale') &&
-                  !cls.includes('invert') &&
-                  !cls.includes('hue-rotate-')
-                ).join(' ');
+            // Apply the filter class directly to photo-booth-image class
+            if (img.classList.contains('photo-booth-image') && selectedFilter?.className) {
+              const existingClasses = img.className;
+              // Remove existing filter classes efficiently
+              const cleanClasses = existingClasses.split(' ').filter(cls =>
+                !cls.includes('brightness-') &&
+                !cls.includes('contrast-') &&
+                !cls.includes('saturate-') &&
+                !cls.includes('blur-') &&
+                !cls.includes('sepia') &&
+                !cls.includes('grayscale') &&
+                !cls.includes('invert') &&
+                !cls.includes('hue-rotate-')
+              ).join(' ');
 
-                img.className = `${cleanClasses} ${selectedFilter.className}`;
+              img.className = `${cleanClasses} ${selectedFilter.className}`;
+            }
+          });
+
+          // Apply filter to the main preview container
+          if (selectedFilter?.className) {
+            const previewContainer = clonedDoc.querySelector('#photobooth-print-preview');
+            if (previewContainer) {
+              previewContainer.classList.add(...selectedFilter.className.split(' '));
+            }
+          }
+
+          // Optimize frame background and overlay rendering
+          ["z-0", "z-20"].forEach((zIndex) => {
+            const container = clonedDoc.querySelector(`.pointer-events-none.absolute.inset-0.${zIndex}`);
+            if (container) {
+              const imgElement = container.querySelector("img");
+              if (imgElement) {
+                (imgElement as HTMLElement).style.objectFit = "contain";
+                (imgElement as HTMLElement).style.width = "100%";
+                (imgElement as HTMLElement).style.height = "100%";
               }
             }
           });
 
-          // Also apply filter to the main preview container if needed
-          const previewContainer = clonedDoc.querySelector('#photobooth-print-preview');
-          if (previewContainer && selectedFilter?.className) {
-            // Apply filter class to the container level as well
-            previewContainer.classList.add(...selectedFilter.className.split(' '));
-          }
-
-          // Optimize frame background rendering
-          const backgroundContainer = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-0");
-          if (backgroundContainer) {
-            const backgroundElement = backgroundContainer.querySelector("img");
-            if (backgroundElement) {
-              (backgroundElement as HTMLElement).style.objectFit = "contain";
-              (backgroundElement as HTMLElement).style.width = "100%";
-              (backgroundElement as HTMLElement).style.height = "100%";
-            }
-          }
-
-          // Optimize frame overlay rendering
-          const overlayContainer = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-20");
-          if (overlayContainer) {
-            const overlayElement = overlayContainer.querySelector("img");
-            if (overlayElement) {
-              (overlayElement as HTMLElement).style.objectFit = "contain";
-              (overlayElement as HTMLElement).style.width = "100%";
-              (overlayElement as HTMLElement).style.height = "100%";
-            }
-          }
-
           // Configure grid layout based on frame type
-          if (isCustomFrame) {
-            const gridElement = clonedDoc.querySelector(".grid");
-            if (gridElement) {
+          const gridElement = clonedDoc.querySelector(".grid");
+          if (gridElement) {
+            if (isCustomFrame) {
               gridElement.className = "relative z-10 grid grid-cols-1 gap-[20px]";
-            }
-          } else {
-            const gridElement = clonedDoc.querySelector(".grid");
-            if (gridElement && selectedFrame) {
+            } else if (selectedFrame) {
               gridElement.className = "relative z-10 grid gap-[20px]";
               (gridElement as HTMLElement).style.gridTemplateColumns = `repeat(${selectedFrame.columns}, 1fr)`;
             }

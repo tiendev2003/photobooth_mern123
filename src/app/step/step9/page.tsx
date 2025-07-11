@@ -3,7 +3,6 @@
 import StoreBackground from "@/app/components/StoreBackground";
 import StoreHeader from "@/app/components/StoreHeader";
 import { useBooth } from "@/lib/context/BoothContext";
-import { getStorePrimaryColor } from "@/lib/storeUtils";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from 'qrcode.react';
@@ -11,29 +10,90 @@ import { useEffect, useState } from "react";
 
 export default function Step9() {
   const router = useRouter();
-  const {  clearAllBoothData, currentStore } = useBooth();
+  const { clearAllBoothData, currentStore, imageQrCode, videoQrCode, gifQrCode } = useBooth();
 
-  // State for media session
+  // State for media session and processing status
   const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [sessionUrl, setSessionUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // State to track the background processing of video and GIF
+  const [videoProcessing, setVideoProcessing] = useState<boolean>(true);
+  const [gifProcessing, setGifProcessing] = useState<boolean>(true);
+  const [mediaStatus, setMediaStatus] = useState<{
+    image: boolean,
+    video: boolean,
+    gif: boolean
+  }>({
+    image: false,
+    video: false,
+    gif: false
+  });
+  console.log("Step9 component rendered", videoProcessing, gifProcessing, imageQrCode, videoQrCode, mediaStatus);
+  // Monitor the status of media processing
+  useEffect(() => {
+    // Check for image QR code
+    const storedImageUrl = localStorage.getItem("imageQrCode");
+    if (imageQrCode || storedImageUrl) {
+      setMediaStatus(prev => ({ ...prev, image: true }));
+    }
+
+    // Set up interval to check for video and GIF QR codes
+    const checkInterval = setInterval(() => {
+      // Check for video QR code
+      const storedVideoUrl = localStorage.getItem("videoQrCode");
+      if (videoQrCode || storedVideoUrl) {
+        setMediaStatus(prev => ({ ...prev, video: true }));
+        setVideoProcessing(false);
+      }
+
+      // Check for GIF QR code
+      const storedGifUrl = localStorage.getItem("gifQrCode");
+      if (gifQrCode || storedGifUrl) {
+        setMediaStatus(prev => ({ ...prev, gif: true }));
+        setGifProcessing(false);
+      }
+
+      // If both video and GIF are done, clear the interval
+      if ((videoQrCode || storedVideoUrl) && (gifQrCode || storedGifUrl)) {
+        clearInterval(checkInterval);
+      }
+    }, 1000);
+
+    // Cleanup on component unmount
+    return () => clearInterval(checkInterval);
+  }, [imageQrCode, videoQrCode, gifQrCode]);
 
   useEffect(() => {
     const getMediaSessionCode = () => {
       try {
         // Lấy session code từ localStorage hoặc từ step8
         const storedSessionCode = localStorage.getItem("mediaSessionCode");
-        
+
         if (storedSessionCode) {
           setSessionCode(storedSessionCode);
-          
+
           // Tạo session URL
           const baseUrl = typeof window !== 'undefined' ?
             `${window.location.protocol}//${window.location.host}` : '';
           setSessionUrl(`${baseUrl}/session/${storedSessionCode}`);
-          
+
           console.log('Using stored session code:', storedSessionCode);
+
+          // Also check for media URLs in localStorage
+          const storedImageUrl = localStorage.getItem("imageQrCode");
+          const storedVideoUrl = localStorage.getItem("videoQrCode");
+          const storedGifUrl = localStorage.getItem("gifQrCode");
+
+          setMediaStatus({
+            image: !!storedImageUrl,
+            video: !!storedVideoUrl,
+            gif: !!storedGifUrl
+          });
+
+          if (storedVideoUrl) setVideoProcessing(false);
+          if (storedGifUrl) setGifProcessing(false);
         } else {
           setError("Không tìm thấy session code");
         }
@@ -46,7 +106,7 @@ export default function Step9() {
     };
 
     // Đợi một chút để step8 hoàn thành việc tạo session
-    const timer = setTimeout(getMediaSessionCode, 1000);
+    const timer = setTimeout(getMediaSessionCode, 500); // Reduced from 1000 to 500ms for faster load
     return () => clearTimeout(timer);
   }, []);
 
@@ -55,6 +115,9 @@ export default function Step9() {
     const timer = setTimeout(() => {
       clearAllBoothData();
       localStorage.removeItem("mediaSessionCode");
+      localStorage.removeItem("imageQrCode");
+      localStorage.removeItem("videoQrCode");
+      localStorage.removeItem("gifQrCode");
       router.push("/");
     }, 60000);
 
@@ -63,7 +126,7 @@ export default function Step9() {
 
   return (
     <StoreBackground currentStore={currentStore}>
-      <StoreHeader 
+      <StoreHeader
         currentStore={currentStore}
         title="ẢNH CỦA BẠN ĐÃ SẴN SÀNG!"
       />
@@ -77,7 +140,7 @@ export default function Step9() {
         <div className="flex flex-wrap justify-center gap-8 w-full mb-8">
           {/* QR Code for All Media Session */}
           <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg">
-             {isLoading ? (
+            {isLoading ? (
               <div className="w-[250px] h-[250px] flex items-center justify-center bg-black/20 rounded-lg">
                 <div className="flex flex-col items-center">
                   <Loader2 className="w-16 h-16 text-pink-400 animate-spin mb-4" />
@@ -100,26 +163,17 @@ export default function Step9() {
               />
             ) : (
               <div className="w-[250px] h-[250px] flex items-center justify-center bg-black/20 rounded-lg">
-                <p className="text-white text-sm text-center px-4">Đang chuẩn bị...</p>
+                <p className="text-white text-center">QR code không khả dụng</p>
               </div>
             )}
+
           </div>
         </div>
 
-
+        <div className="text-center p-4 bg-white/10 rounded-lg">
+          <p className="text-white">Chúng tôi đang hoàn tất video và GIF của bạn. <br />Tất cả đều sẽ có sẵn khi bạn quét mã QR!</p>
+        </div>
       </main>
-
-      <div className="flex justify-center w-full px-16 pb-20 z-10">
-        <h1 
-          className="text-white text-2xl md:text-3xl lg:text-4xl font-bold text-center tracking-wide"
-          style={{ color: getStorePrimaryColor(currentStore) }}
-        >
-          {currentStore?.name ? 
-            `Cảm ơn quý khách đã ghé thăm ${currentStore.name}` : 
-            "Cảm ơn quý khách đã ghé thăm S Photobooth"
-          }
-        </h1>
-      </div>
     </StoreBackground>
   );
 }
