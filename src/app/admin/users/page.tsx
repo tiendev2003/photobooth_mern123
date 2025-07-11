@@ -27,6 +27,7 @@ export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -111,6 +112,8 @@ export default function UserManagement() {
   };
   
   const handleCreateUser = () => {
+    setError(null); // Clear any previous errors
+    setSuccessMessage(null); // Clear any previous success messages
     setIsEditing(false);
     setFormData({
       id: '',
@@ -128,6 +131,8 @@ export default function UserManagement() {
   };
   
   const handleEditUser = (user: User) => {
+    setError(null); // Clear any previous errors
+    setSuccessMessage(null); // Clear any previous success messages
     setIsEditing(true);
     setFormData({
       id: user.id,
@@ -167,20 +172,47 @@ export default function UserManagement() {
       });
       
       if (!response.ok) {
-        throw new Error(`Không thể ${isEditing ? 'cập nhật' : 'tạo'} người dùng`);
+        // Parse error response to get detailed error message
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Không thể ${isEditing ? 'cập nhật' : 'tạo'} người dùng`;
+        
+        // Handle specific error cases
+        if (response.status === 409) {
+          if (errorMessage.includes('username')) {
+            setError('Tên đăng nhập đã tồn tại. Vui lòng chọn tên đăng nhập khác.');
+          } else if (errorMessage.includes('email')) {
+            setError('Email đã được sử dụng. Vui lòng chọn email khác.');
+          } else {
+            setError('Dữ liệu đã tồn tại. Vui lòng kiểm tra lại thông tin.');
+          }
+        } else if (response.status === 400) {
+          setError(`Dữ liệu không hợp lệ: ${errorMessage}`);
+        } else if (response.status === 403) {
+          setError('Bạn không có quyền thực hiện thao tác này.');
+        } else if (response.status === 500) {
+          setError('Lỗi hệ thống. Vui lòng thử lại sau.');
+        } else {
+          setError(errorMessage);
+        }
+        return;
       }
       
       setIsFormOpen(false);
+      setError(null); // Clear any previous errors
       fetchUsers(); // Refresh user list
+      
+      // Show success message
+      setSuccessMessage(`${isEditing ? 'Cập nhật' : 'Tạo'} người dùng thành công`);
+      setTimeout(() => setSuccessMessage(null), 3000); // Clear success message after 3 seconds
       
     } catch (err) {
       console.error('Error submitting form:', err);
-      setError(`Không thể ${isEditing ? 'cập nhật' : 'tạo'} người dùng`);
+      setError(`Lỗi kết nối: Không thể ${isEditing ? 'cập nhật' : 'tạo'} người dùng. Vui lòng thử lại.`);
     }
   };
   
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+    if (!confirm('Bạn có chắc chắn muốn xóa người dùng này?')) return;
     
     try {
       const response = await fetch(`/api/users/${userId}`, {
@@ -191,14 +223,35 @@ export default function UserManagement() {
       });
       
       if (!response.ok) {
-        throw new Error('Không thể xóa người dùng');
+        // Parse error response to get detailed error message
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'Không thể xóa người dùng';
+        
+        // Handle specific error cases
+        if (response.status === 403) {
+          setError('Bạn không có quyền xóa người dùng này.');
+        } else if (response.status === 404) {
+          setError('Không tìm thấy người dùng cần xóa.');
+        } else if (response.status === 409) {
+          setError('Không thể xóa người dùng vì có dữ liệu liên quan. Vui lòng liên hệ admin.');
+        } else if (response.status === 500) {
+          setError('Lỗi hệ thống khi xóa người dùng. Vui lòng thử lại sau.');
+        } else {
+          setError(errorMessage);
+        }
+        return;
       }
       
+      setError(null); // Clear any previous errors
       fetchUsers(); // Refresh user list
+      
+      // Show success message
+      setSuccessMessage('Xóa người dùng thành công');
+      setTimeout(() => setSuccessMessage(null), 3000); // Clear success message after 3 seconds
       
     } catch (err) {
       console.error('Error deleting user:', err);
-      setError('Không thể xóa người dùng');
+      setError('Lỗi kết nối: Không thể xóa người dùng. Vui lòng thử lại.');
     }
   };
   
@@ -209,17 +262,61 @@ export default function UserManagement() {
       </div>
     );
   }
-  
-  if (error) {
-    return (
-      <div className="bg-red-50 border-l-4 border-red-400 p-4 mx-4">
-        <p className="text-red-700">{error}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="px-4 sm:px-6 lg:px-8">
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={() => setError(null)}
+                className="inline-flex text-red-400 hover:text-red-600"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-green-700">{successMessage}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={() => setSuccessMessage(null)}
+                className="inline-flex text-green-400 hover:text-green-600"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
           Quản lý người dùng

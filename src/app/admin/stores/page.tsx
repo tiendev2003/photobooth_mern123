@@ -30,6 +30,8 @@ interface Store {
   };
   _count: {
     employees: number;
+    employeesOnly?: number;
+    machines?: number;
   };
 }
 
@@ -45,6 +47,8 @@ export default function StoresPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [managers, setManagers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [formData, setFormData] = useState({
@@ -140,6 +144,8 @@ export default function StoresPage() {
 
   const handleCreateStore = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null); // Clear any previous errors
+    setSuccessMessage(null); // Clear any previous success messages
     setUploading(true);
     try {
       let logoUrl = formData.logo;
@@ -177,16 +183,33 @@ export default function StoresPage() {
       if (response.ok) {
         const message = data.message || 'Store created successfully';
         const createdUsersCount = data.createdUsers || 0;
-        alert(`${message}${createdUsersCount > 0 ? ` (${createdUsersCount} nhân viên đã được tạo tự động)` : ''}`);
+        const createdEmployees = data.createdEmployees || 0;
+        const createdMachines = data.createdMachines || 0;
+
+        setSuccessMessage(`${message}\n\nTạo thành công:\n- ${createdEmployees} tài khoản nhân viên\n- ${createdMachines} tài khoản máy\n- Tổng cộng: ${createdUsersCount} tài khoản`);
+        setTimeout(() => setSuccessMessage(null), 5000); // Clear success message after 5 seconds
         setStores([data.store, ...stores]);
         setShowCreateForm(false);
         resetForm();
       } else {
-        alert(data.error || 'Failed to create store');
+        // Handle specific error cases
+        if (response.status === 400) {
+          if (data.error.includes('MANAGER') || data.error.includes('STORE_OWNER')) {
+            setError('Người dùng được chọn phải có vai trò MANAGER hoặc STORE_OWNER để có thể quản lý cửa hàng.');
+          } else {
+            setError(`Dữ liệu không hợp lệ: ${data.error}`);
+          }
+        } else if (response.status === 404) {
+          setError('Không tìm thấy manager được chọn.');
+        } else if (response.status === 500) {
+          setError('Lỗi hệ thống: Vui lòng thử lại sau.');
+        } else {
+          setError(data.error || 'Không thể tạo cửa hàng');
+        }
       }
     } catch (error) {
       console.error('Error creating store:', error);
-      alert('Failed to create store');
+      setError('Lỗi kết nối: Không thể tạo cửa hàng. Vui lòng kiểm tra kết nối mạng và thử lại.');
     } finally {
       setUploading(false);
     }
@@ -196,6 +219,8 @@ export default function StoresPage() {
     e.preventDefault();
     if (!selectedStore) return;
 
+    setError(null); // Clear any previous errors
+    setSuccessMessage(null); // Clear any previous success messages
     setUploading(true);
     try {
       let logoUrl = formData.logo;
@@ -230,40 +255,117 @@ export default function StoresPage() {
       });
       const data = await response.json();
       if (response.ok) {
-        alert('Store updated successfully');
+        setSuccessMessage(`Cập nhật cửa hàng "${selectedStore.name}" thành công`);
+        setTimeout(() => setSuccessMessage(null), 3000);
         setStores(stores.map(s => s.id === selectedStore.id ? data.store : s));
         setSelectedStore(null);
         setShowCreateForm(false);
         resetForm();
       } else {
-        alert(data.error || 'Failed to update store');
+        if (response.status === 404) {
+          setError('Không tìm thấy cửa hàng cần cập nhật.');
+        } else if (response.status === 400) {
+          setError(`Dữ liệu không hợp lệ: ${data.error}`);
+        } else if (response.status === 500) {
+          setError('Lỗi hệ thống khi cập nhật cửa hàng. Vui lòng thử lại sau.');
+        } else {
+          setError(data.error || 'Không thể cập nhật cửa hàng');
+        }
       }
     } catch (error) {
       console.error('Error updating store:', error);
-      alert('Failed to update store');
+      setError('Lỗi kết nối: Không thể cập nhật cửa hàng. Vui lòng thử lại.');
     } finally {
       setUploading(false);
     }
   };
 
   const handleDeleteStore = async (storeId: string) => {
-    if (!confirm('Are you sure you want to delete this store?')) return;
+    // Tìm thông tin store để hiển thị tên
+    const store = stores.find(s => s.id === storeId);
+    const storeName = store?.name || 'cửa hàng này';
+
+    if (!confirm(`Bạn có chắc chắn muốn xóa ${storeName}? Hành động này không thể hoàn tác.`)) return;
 
     try {
       const response = await fetch(`/api/stores/${storeId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await response.json();
-      if (response.ok) {
-        alert('Store deleted successfully');
-        setStores(stores.filter(s => s.id !== storeId));
-      } else {
-        alert(data.error || 'Failed to delete store');
+
+      if (!response.ok) {
+        // Parse error response to get detailed error message
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'Không thể xóa cửa hàng';
+
+        // Handle specific error cases
+        if (response.status === 404) {
+          setError('Không tìm thấy cửa hàng cần xóa.');
+        } else if (response.status === 400 && errorData.canForceDelete) {
+          // Hiển thị thông tin chi tiết về dữ liệu liên quan
+          const relatedData = errorData.relatedData || {};
+          const details = [];
+          if (relatedData.employees > 0) details.push(`${relatedData.employees} nhân viên`);
+          if (relatedData.frameTemplates > 0) details.push(`${relatedData.frameTemplates} template khung ảnh`);
+          if (relatedData.coupons > 0) details.push(`${relatedData.coupons} mã giảm giá`);
+          if (relatedData.revenues > 0) details.push(`${relatedData.revenues} bản ghi doanh thu`);
+
+          // Hỏi user có muốn xóa toàn bộ không
+          const confirmDeleteAll = confirm(
+            `Cửa hàng "${storeName}" vẫn còn dữ liệu liên quan:\n- ${details.join('\n- ')}\n\nBạn có muốn xóa toàn bộ cửa hàng và tất cả dữ liệu liên quan không?\n\n⚠️ Hành động này không thể hoàn tác!`
+          );
+
+          if (confirmDeleteAll) {
+            // Gọi API xóa với tham số force
+            const forceResponse = await fetch(`/api/stores/${storeId}?force=true`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (forceResponse.ok) {
+              const forceData = await forceResponse.json();
+              const deletedData = forceData.deletedData || {};
+
+              setError(null);
+              setStores(stores.filter(s => s.id !== storeId));
+
+              const successDetails = [];
+              if (deletedData.employees > 0) successDetails.push(`${deletedData.employees} nhân viên`);
+              if (deletedData.frameTemplates > 0) successDetails.push(`${deletedData.frameTemplates} template`);
+              if (deletedData.coupons > 0) successDetails.push(`${deletedData.coupons} mã giảm giá`);
+              if (deletedData.revenues > 0) successDetails.push(`${deletedData.revenues} bản ghi doanh thu`);
+
+              const message = successDetails.length > 0
+                ? `Đã xóa cửa hàng "${storeName}" và ${successDetails.join(', ')} thành công`
+                : `Đã xóa cửa hàng "${storeName}" thành công`;
+
+              setSuccessMessage(message);
+              setTimeout(() => setSuccessMessage(null), 5000);
+            } else {
+              const forceErrorData = await forceResponse.json().catch(() => ({}));
+              setError(forceErrorData.error || 'Không thể xóa cửa hàng và dữ liệu liên quan');
+            }
+          }
+        } else if (response.status === 403) {
+          setError('Bạn không có quyền xóa cửa hàng này.');
+        } else if (response.status === 500) {
+          setError('Lỗi hệ thống khi xóa cửa hàng. Vui lòng thử lại sau.');
+        } else {
+          setError(errorMessage);
+        }
+        return;
       }
+
+      // Xóa thành công
+      const data = await response.json();
+      setError(null);
+      setStores(stores.filter(s => s.id !== storeId));
+      setSuccessMessage(data.message || `Đã xóa cửa hàng "${storeName}" thành công`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+
     } catch (error) {
       console.error('Error deleting store:', error);
-      alert('Failed to delete store');
+      setError('Lỗi kết nối: Không thể xóa cửa hàng. Vui lòng thử lại.');
     }
   };
 
@@ -332,6 +434,38 @@ export default function StoresPage() {
         )}
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-green-700">{successMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Store List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stores.map((store) => (
@@ -359,7 +493,14 @@ export default function StoresPage() {
 
             <div className="p-4">
               <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-semibold text-gray-800">{store.name}</h3>
+                <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                  {store.name}
+                  {store._count.employees > 0 && (
+                    <span className="text-orange-500 text-sm" title="Cửa hàng có dữ liệu liên quan">
+                      ⚠️
+                    </span>
+                  )}
+                </h3>
                 <span className={`px-2 py-1 rounded-full text-xs ${store.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                   }`}>
                   {store.isActive ? 'Hoạt động' : 'Tạm dừng'}
@@ -383,14 +524,17 @@ export default function StoresPage() {
               )}
 
               <p className="text-sm text-gray-600 mb-2">
-                <span className="font-medium">Nhân viên:</span> {store._count.employees}/{store.maxEmployees}
+                <span className="font-medium">Tổng tài khoản:</span> {store._count.employees}
               </p>
-              
-              {store.maxAccounts && (
-                <p className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Tài khoản máy:</span> {store.maxAccounts}
-                </p>
-              )}
+
+              <div className="text-sm text-gray-600 mb-2 grid grid-cols-2 gap-2">
+                <div>
+                  <span className="font-medium">Nhân viên:</span> {store._count.employeesOnly || 0}/{store.maxEmployees}
+                </div>
+                <div>
+                  <span className="font-medium">Máy:</span> {store._count.machines || 0}/{store.maxAccounts || 20}
+                </div>
+              </div>
 
               {store.address && (
                 <p className="text-sm text-gray-600 mb-2">
@@ -420,9 +564,17 @@ export default function StoresPage() {
                 {user?.role === 'ADMIN' && (
                   <button
                     onClick={() => handleDeleteStore(store.id)}
-                    className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded text-sm"
+                    className={`py-2 px-4 rounded text-sm text-white ${store._count.employees > 0
+                        ? 'bg-orange-500 hover:bg-orange-600'
+                        : 'bg-red-500 hover:bg-red-600'
+                      }`}
+                    title={
+                      store._count.employees > 0
+                        ? 'Cửa hàng có dữ liệu liên quan - cần xác nhận xóa'
+                        : 'Xóa cửa hàng'
+                    }
                   >
-                    Xóa
+                    {store._count.employees > 0 ? '⚠️ Xóa' : 'Xóa'}
                   </button>
                 )}
               </div>
@@ -495,13 +647,17 @@ export default function StoresPage() {
               </div>
 
               {!selectedStore && (
-                <div className="bg-green-50 p-4 rounded-md">
-                  <p className="text-sm text-green-800">
-                    <span className="font-medium">Số tài khoản sẽ được tự động tạo:</span> ST{Date.now().toString().slice(-6)}xxx
-                  </p>
-                  <p className="text-xs text-green-600 mt-1">Số tài khoản chính xác sẽ được tạo khi lưu cửa hàng</p>
+                <div className="bg-blue-50 p-4 rounded-md">
+                  <h4 className="font-medium text-blue-900 mb-2">📋 Thông tin tạo tài khoản tự động</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Tài khoản nhân viên: {formData.maxEmployees} tài khoản (role: USER)</li>
+                    <li>• Tài khoản máy: {formData.maxAccounts} tài khoản (role: MACHINE)</li>
+                    <li>• Mật khẩu mặc định: <code className="bg-blue-100 px-1 rounded">123456</code></li>
+                    <li>• Username tự động: <code className="bg-blue-100 px-1 rounded">[tênstore]_nv[số]_[random]</code></li>
+                  </ul>
                 </div>
               )}
+
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -611,10 +767,14 @@ export default function StoresPage() {
                   <input
                     type="number"
                     min="1"
+                    max="100"
                     value={formData.maxEmployees}
                     onChange={(e) => setFormData({ ...formData, maxEmployees: parseInt(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Số lượng tài khoản nhân viên sẽ được tạo tự động
+                  </p>
                 </div>
 
                 <div>
@@ -624,10 +784,14 @@ export default function StoresPage() {
                   <input
                     type="number"
                     min="1"
+                    max="100"
                     value={formData.maxAccounts}
                     onChange={(e) => setFormData({ ...formData, maxAccounts: parseInt(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Số lượng tài khoản máy chụp ảnh sẽ được tạo tự động
+                  </p>
                 </div>
 
                 {user?.role === 'ADMIN' && (

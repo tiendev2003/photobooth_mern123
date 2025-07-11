@@ -99,7 +99,11 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingUser) {
-      return NextResponse.json({ error: 'User with this username already exists' }, { status: 409 });
+      return NextResponse.json({ 
+        error: 'Tên đăng nhập đã tồn tại', 
+        details: 'Username này đã được sử dụng, vui lòng chọn tên đăng nhập khác',
+        field: 'username'
+      }, { status: 409 });
     }
 
     // Hash the password
@@ -132,6 +136,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(newUser, { status: 201 });
   } catch (error) {
     console.error('Error creating user:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    
+    // Handle specific Prisma errors
+    if (error instanceof Error) {
+      if (error.message.includes('Unique constraint failed')) {
+        if (error.message.includes('username')) {
+          return NextResponse.json({ 
+            error: 'Tên đăng nhập đã tồn tại', 
+            details: 'Username này đã được sử dụng, vui lòng chọn tên đăng nhập khác',
+            field: 'username'
+          }, { status: 409 });
+        }
+      }
+      
+      if (error.message.includes('Invalid input')) {
+        return NextResponse.json({ 
+          error: 'Dữ liệu không hợp lệ', 
+          details: 'Vui lòng kiểm tra lại các thông tin đã nhập',
+          originalError: error.message
+        }, { status: 400 });
+      }
+    }
+    
+    return NextResponse.json({ 
+      error: 'Lỗi hệ thống', 
+      details: 'Đã xảy ra lỗi không mong muốn khi tạo người dùng. Vui lòng thử lại sau.'
+    }, { status: 500 });
   }
 }

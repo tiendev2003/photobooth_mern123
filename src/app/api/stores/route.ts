@@ -10,12 +10,38 @@ export async function GET(request: NextRequest) {
     const stores = await prisma.store.findMany({
       include: {
         manager: { select: { id: true, name: true, email: true } },
-        _count: { select: { employees: true } },
+        _count: { 
+          select: { 
+            employees: true 
+          } 
+        },
+        employees: {
+          select: {
+            id: true,
+            role: true
+          }
+        }
       },
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ stores });
+    // Tính toán số lượng nhân viên và máy cho mỗi store
+    const storesWithCounts = stores.map(store => {
+      const employeeCount = store.employees.filter(emp => emp.role === 'USER').length;
+      const machineCount = store.employees.filter(emp => emp.role === 'MACHINE').length;
+      
+      return {
+        ...store,
+        _count: {
+          employees: store._count.employees,
+          employeesOnly: employeeCount,
+          machines: machineCount
+        },
+        employees: undefined // Remove detailed employee data from response
+      };
+    });
+
+    return NextResponse.json({ stores: storesWithCounts });
   } catch (error) {
     console.error("Error fetching stores:", error);
     return NextResponse.json(
@@ -25,7 +51,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Tạo cửa hàng mới
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -42,6 +67,7 @@ export async function POST(request: NextRequest) {
       primaryColor,
       secondaryColor,
       maxEmployees,
+      maxAccounts,
       managerId,
     } = body;
 
@@ -55,9 +81,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Manager not found" }, { status: 404 });
     }
 
-    if (manager.role !== "MANAGER") {
+    if (manager.role !== "MANAGER" && manager.role !== "STORE_OWNER") {
       return NextResponse.json(
-        { error: "User is not a store manager" },
+        { error: "User must be a MANAGER or STORE_OWNER to manage a store" },
         { status: 400 }
       );
     }
@@ -77,6 +103,7 @@ export async function POST(request: NextRequest) {
         primaryColor,
         secondaryColor,
         maxEmployees: maxEmployees || 10,
+        maxAccounts: maxAccounts || 20,
         managerId,
       },
       include: {
@@ -85,14 +112,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Tự động tạo 10 user ngẫu nhiên cho store
-    const numberOfUsers = 10;
+    // Tự động tạo tài khoản nhân viên theo số lượng maxEmployees
+    const numberOfEmployees = maxEmployees || 10;
+    const numberOfMachineAccounts = maxAccounts || 20;
     const users = [];
+    const storeCode = name.toLowerCase().replace(/\s+/g, '').substring(0, 10);
     
-    for (let i = 1; i <= numberOfUsers; i++) {
+    // Tạo tài khoản nhân viên (USER role)
+    for (let i = 1; i <= numberOfEmployees; i++) {
       const randomId = Math.floor(Math.random() * 10000);
       const hashedPassword = await bcrypt.hash('123456', 10);
-      const storeCode = name.toLowerCase().replace(/\s+/g, '').substring(0, 10);
+      
       const userData = {
         name: `Nhân viên ${i}`,
         username: `${storeCode}_nv${i}_${randomId}`,
@@ -109,7 +139,7 @@ export async function POST(request: NextRequest) {
         });
         users.push(user);
       } catch (error) {
-        console.error(`Error creating user ${i}:`, error);
+        console.error(`Error creating employee ${i}:`, error);
         // Nếu username trùng thì thử lại với random id khác
         const newRandomId = Math.floor(Math.random() * 10000);
         userData.username = `${storeCode}_nv${i}_${newRandomId}`;
@@ -120,17 +150,59 @@ export async function POST(request: NextRequest) {
           });
           users.push(user);
         } catch (retryError) {
-          console.error(`Error creating user ${i} on retry:`, retryError);
+          console.error(`Error creating employee ${i} on retry:`, retryError);
         }
       }
     }
 
-    console.log(`Created ${users.length} users for store ${store.name}`);
+    // Tạo tài khoản máy (MACHINE role)
+    for (let i = 1; i <= numberOfMachineAccounts; i++) {
+      const randomId = Math.floor(Math.random() * 10000);
+      const hashedPassword = await bcrypt.hash('123456', 10);
+      const machineCode = `${storeCode.toUpperCase()}-M${i.toString().padStart(2, '0')}`;
+      
+      const machineData = {
+        name: `Máy chụp ảnh ${i}`,
+        username: `${storeCode}_may${i}_${randomId}`,
+        email: `may${i}_${randomId}@${storeCode}.com`,
+        password: hashedPassword,
+        role: Role.MACHINE,
+        storeId: store.id,
+        machineCode: machineCode,
+        location: `Vị trí máy ${i}`,
+        isActive: true,
+      };
+      
+      try {
+        const machine = await prisma.user.create({
+          data: machineData,
+        });
+        users.push(machine);
+      } catch (error) {
+        console.error(`Error creating machine account ${i}:`, error);
+        // Nếu username trùng thì thử lại với random id khác
+        const newRandomId = Math.floor(Math.random() * 10000);
+        machineData.username = `${storeCode}_may${i}_${newRandomId}`;
+        machineData.email = `may${i}_${newRandomId}@${storeCode}.com`;
+        try {
+          const machine = await prisma.user.create({
+            data: machineData,
+          });
+          users.push(machine);
+        } catch (retryError) {
+          console.error(`Error creating machine account ${i} on retry:`, retryError);
+        }
+      }
+    }
+
+    console.log(`Created ${users.length} accounts for store ${store.name} (${numberOfEmployees} employees + ${numberOfMachineAccounts} machines)`);
 
     return NextResponse.json({ 
       store, 
-      message: `Store created successfully with ${users.length} employees`,
-      createdUsers: users.length
+      message: `Store created successfully with ${numberOfEmployees} employees and ${numberOfMachineAccounts} machine accounts`,
+      createdUsers: users.length,
+      createdEmployees: numberOfEmployees,
+      createdMachines: numberOfMachineAccounts
     });
   } catch (error) {
     console.error("Error creating store:", error);
