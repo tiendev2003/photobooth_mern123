@@ -100,7 +100,7 @@ export default function Step8() {
 
   console.log("Step 8 - Session state:", { mediaSessionCode, mediaSessionUrl, sessionReady });
 
- 
+
   const printPreviewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -112,7 +112,7 @@ export default function Step8() {
           if (response.ok) {
             const data = await response.json();
             console.log("Templates response:", data);
-            
+
             if (data.data && Array.isArray(data.data)) {
               setFrameTemplates(data.data);
               console.log("Set frame templates from data.data:", data.data);
@@ -179,7 +179,7 @@ export default function Step8() {
           if (existingSessionCode) {
             console.log("Using existing media session code:", existingSessionCode);
             setMediaSessionCode(existingSessionCode);
-            
+
             // Create URL for existing session
             const baseUrl = typeof window !== 'undefined' ?
               `${window.location.protocol}//${window.location.host}` : '';
@@ -277,7 +277,7 @@ export default function Step8() {
   const updateMediaSession = async (imageUrl?: string, videoUrl?: string, gifUrl?: string) => {
     // Try to get session code from localStorage as backup
     const currentSessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
-    
+
     if (!currentSessionCode) {
       console.error("No media session code available");
       return;
@@ -356,13 +356,13 @@ export default function Step8() {
             const session = await response.json();
             setMediaSessionCode(session.sessionCode);
             localStorage.setItem("mediaSessionCode", session.sessionCode);
-            
+
             const baseUrl = typeof window !== 'undefined' ?
               `${window.location.protocol}//${window.location.host}` : '';
             const sessionUrl = `${baseUrl}/session/${session.sessionCode}`;
             setMediaSessionUrl(sessionUrl);
             setSessionReady(true);
-            
+
             console.log("Emergency media session created:", session.sessionCode);
           } else {
             console.error("Failed to create emergency media session");
@@ -380,7 +380,7 @@ export default function Step8() {
       try {
         setProcessingProgress(10);
 
- 
+
 
         setProcessingProgress(20);
 
@@ -647,7 +647,7 @@ export default function Step8() {
             videoElement.playsInline = true;
             videoElement.preload = 'auto'; // Preload for smoother playback
             videoElement.setAttribute('playsinline', ''); // iOS support
-            
+
             // Add crossorigin for better handling of video sources
             videoElement.crossOrigin = "anonymous";
 
@@ -659,7 +659,7 @@ export default function Step8() {
                   console.log(`Video ${photoIndex} fully loaded and ready for smooth playback`);
                   resolve();
                 };
-                
+
                 // Set a timeout in case canplaythrough never fires
                 setTimeout(() => {
                   console.log(`Video ${photoIndex} loaded metadata, duration: ${videoElement.duration}`);
@@ -778,10 +778,10 @@ export default function Step8() {
       const targetFPS = 24;
       const frameInterval = 1000 / targetFPS;
       let lastTime = performance.now();
-      
+
       // Store initial positions and dimensions for consistency
       const cellPositions = new Map();
-      
+
       // Calculate and store all cell positions once to ensure consistency
       const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
       cells.forEach((cell, idx) => {
@@ -789,7 +789,7 @@ export default function Step8() {
           const cellRect = cell.getBoundingClientRect();
           const relativeLeft = cellRect.left - rect.left;
           const relativeTop = cellRect.top - rect.top;
-          
+
           // Store position and dimension data
           cellPositions.set(idx, {
             left: relativeLeft,
@@ -809,7 +809,7 @@ export default function Step8() {
           return;
         }
         lastTime = now;
-        
+
         // Check if we've been recording too long to prevent memory issues
         if (frameCount > targetFPS * TIMEOUT_DURATION) {
           console.log("Reached maximum frame count, stopping recording");
@@ -828,7 +828,7 @@ export default function Step8() {
           mediaRecorder.stop();
           return;
         }
-        
+
         // Always draw the background regardless of video state
         // Clear canvases efficiently with white background
         previewCtx.fillStyle = "#FFFFFF";
@@ -929,7 +929,7 @@ export default function Step8() {
             );
 
             previewCtx.restore(); // Restore context (removes clipping and filter)
-            
+
             // Reset filter after each cell to prevent interference
             previewCtx.filter = "none";
           }
@@ -1009,20 +1009,20 @@ export default function Step8() {
           ...Array.from(cellVideoMap.values()).map(v => v.duration || 0)
         ) + 1 // Add one second to the longest video to ensure we capture everything
       );
-      
+
       // Use the defined timeout or the calculated video duration
       const recordingTimeout = Math.min(
         TIMEOUT_DURATION || 10, // Use full TIMEOUT_DURATION (10 seconds)
         videoDuration
       );
-      
+
       console.log(`Setting video recording timeout to ${recordingTimeout} seconds`);
-      
+
       // Force loop videos to ensure content plays throughout the recording time
       Array.from(cellVideoMap.values()).forEach(video => {
         video.loop = true; // Set videos to loop so they don't end prematurely
       });
-      
+
       setTimeout(() => {
         console.log("Video recording timeout reached, stopping...");
         mediaRecorder.stop();
@@ -1237,21 +1237,21 @@ export default function Step8() {
       const maxVideoDuration = Math.max(
         ...Array.from(cellVideoMap.values()).map(v => v.duration || 0)
       );
-      
+
       // Use shorter duration for custom frames to prevent glitches
       const frameRate = 8; // 8 FPS for reasonable file size
       const frameInterval = 1000 / frameRate;
-      
+
       const adjustedGifDuration = Math.min(
         isCustomFrame ? 2 : 3, // Default durations
         maxVideoDuration + 0.5 // Actual max video duration plus half a second buffer
       );
-      
+
       console.log(`Using adjusted GIF duration of ${adjustedGifDuration} seconds`);
-      
+
       // Recalculate frames based on adjusted duration
       const totalFrames = Math.ceil(adjustedGifDuration * frameRate);
-      
+
       // Store cell positions once for consistency
       const cellPositions = new Map();
       const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
@@ -1260,7 +1260,7 @@ export default function Step8() {
           const cellRect = cell.getBoundingClientRect();
           const relativeLeft = cellRect.left - rect.left;
           const relativeTop = cellRect.top - rect.top;
-          
+
           // Store position and dimension data
           cellPositions.set(idx, {
             left: relativeLeft,
@@ -1270,7 +1270,7 @@ export default function Step8() {
           });
         }
       });
-      
+
       // Store first frame data for custom frames (to ensure we can restore it if needed)
       let firstFrameData = null;
 
@@ -1303,7 +1303,7 @@ export default function Step8() {
         cells.forEach((cell, idx) => {
           if (!cellVideoMap.has(idx)) return;
 
- 
+
           const videoElement = cellVideoMap.get(idx)!;
           const cellData = cellPositions.get(idx);
 
@@ -1374,7 +1374,7 @@ export default function Step8() {
 
             previewCtx.drawImage(videoElement, offsetX, offsetY, drawWidth, drawHeight);
             previewCtx.restore();
-            
+
             // Reset filter after each cell to prevent interference
             previewCtx.filter = "none";
           }
@@ -1397,7 +1397,7 @@ export default function Step8() {
         // Copy to output canvas with adjusted positioning
         // Reset output context state
         outputCtx.globalCompositeOperation = "source-over";
-        
+
         if (isCustomFrame) {
           const singleImageWidth = desiredWidth / 2;
           const singleImageHeight = desiredHeight;
@@ -1477,7 +1477,7 @@ export default function Step8() {
           delay: frameInterval * 2,
           copy: true
         });
-        
+
         // Add one more duplicate frame to ensure smooth looping
         gif.addFrame(outputCanvas, {
           delay: frameInterval * 2,
@@ -1494,7 +1494,7 @@ export default function Step8() {
             copy: true
           });
         }
-        
+
         console.log("Added extra frames for regular GIF to ensure smooth looping");
       }
 
@@ -1537,7 +1537,7 @@ export default function Step8() {
           sessionUrl = `${baseUrl}/session/${sessionCode}`;
         }
       }
-      
+
       console.log("Using media session URL:", sessionUrl);
       const isCustomFrame = selectedFrame?.isCustom === true;
       const isSquare = selectedFrame?.columns === selectedFrame?.rows;
@@ -1627,6 +1627,12 @@ export default function Step8() {
           element.tagName === "SCRIPT" ||
           element.classList?.contains("no-print"),
         onclone: (clonedDoc) => {
+          console.log("HTML2Canvas clone started with template:", selectedTemplate);
+          if (selectedTemplate) {
+            console.log("Template details - Background:", selectedTemplate.background ? "Yes" : "No",
+              "Overlay:", selectedTemplate.overlay ? "Yes" : "No");
+          }
+
           const container = clonedDoc.querySelector("[data-preview]") as HTMLElement;
           if (container && container.style) {
             // Apply optimized styles to container
@@ -1754,19 +1760,25 @@ export default function Step8() {
           }
 
           // Optimize frame background rendering
-          const backgroundElement = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-0 img");
-          if (backgroundElement) {
-            (backgroundElement as HTMLElement).style.objectFit = "contain";
-            (backgroundElement as HTMLElement).style.width = "100%";
-            (backgroundElement as HTMLElement).style.height = "100%";
+          const backgroundContainer = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-0");
+          if (backgroundContainer) {
+            const backgroundElement = backgroundContainer.querySelector("img");
+            if (backgroundElement) {
+              (backgroundElement as HTMLElement).style.objectFit = "contain";
+              (backgroundElement as HTMLElement).style.width = "100%";
+              (backgroundElement as HTMLElement).style.height = "100%";
+            }
           }
 
           // Optimize frame overlay rendering
-          const overlayElement = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-20 img");
-          if (overlayElement) {
-            (overlayElement as HTMLElement).style.objectFit = "contain";
-            (overlayElement as HTMLElement).style.width = "100%";
-            (overlayElement as HTMLElement).style.height = "100%";
+          const overlayContainer = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-20");
+          if (overlayContainer) {
+            const overlayElement = overlayContainer.querySelector("img");
+            if (overlayElement) {
+              (overlayElement as HTMLElement).style.objectFit = "contain";
+              (overlayElement as HTMLElement).style.width = "100%";
+              (overlayElement as HTMLElement).style.height = "100%";
+            }
           }
 
           // Configure grid layout based on frame type
@@ -1939,7 +1951,6 @@ export default function Step8() {
     const previewWidth = isLandscape ? "10.8in" : "7.2in";
     const aspectRatio = isLandscape ? "3/2" : "2/3";
 
-    // Frame background (ở phía sau - z-index thấp)
     const frameBackground = selectedTemplate?.background ? (
       <div className="pointer-events-none absolute inset-0 z-0">
         <Image
@@ -1949,18 +1960,10 @@ export default function Step8() {
           fill
           unoptimized
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          onError={(e) => {
-            console.error("Background image failed to load:", selectedTemplate.background);
-            e.currentTarget.style.display = 'none';
-          }}
-          onLoad={() => {
-            console.log("Background image loaded successfully:", selectedTemplate.background);
-          }}
         />
       </div>
     ) : null;
 
-    // Frame overlay (ở phía trước - z-index cao)
     const frameOverlay = selectedTemplate?.overlay ? (
       <div className="pointer-events-none absolute inset-0 z-20">
         <Image
@@ -1970,28 +1973,15 @@ export default function Step8() {
           fill
           unoptimized
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          onError={(e) => {
-            console.error("Overlay image failed to load:", selectedTemplate.overlay);
-            e.currentTarget.style.display = 'none';
-          }}
-          onLoad={() => {
-            console.log("Overlay image loaded successfully:", selectedTemplate.overlay);
-          }}
         />
       </div>
     ) : null;
 
+
     return (
       <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "3.6in" : previewWidth }} >
-        {/* Debug information */}
-        {selectedTemplate && (
-          <div className="absolute -top-12 left-0 text-xs bg-black/50 text-white px-2 py-1 rounded z-50">
-            Template: {selectedTemplate.name} | 
-            BG: {selectedTemplate.background ? '✓' : '✗'} | 
-            Overlay: {selectedTemplate.overlay ? '✓' : '✗'}
-          </div>
-        )}
-        
+
+
         <div
           ref={printPreviewRef}
           data-preview
