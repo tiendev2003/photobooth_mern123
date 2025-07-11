@@ -1,22 +1,29 @@
-import { prisma } from '@/lib/prisma';
-import jwt from 'jsonwebtoken';
-import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from "@/lib/prisma";
+import jwt from "jsonwebtoken";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string; email: string; role: string };
-    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+      id: string;
+      email: string;
+      role: string;
+    };
+
     // Validate decoded token has required fields
     if (!decoded.id) {
-      return NextResponse.json({ error: 'Invalid token payload' }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid token payload" },
+        { status: 401 }
+      );
     }
-    
+
     // Get user with store information
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
@@ -26,36 +33,39 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Allow STORE_OWNER and store employees (USER, MACHINE) to access
-    if (!['STORE_OWNER', 'USER', 'MACHINE'].includes(user.role)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    if (!["STORE_OWNER", "USER", "MACHINE"].includes(user.role)) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     // For employees, check if they belong to a store
-    if (user.role !== 'STORE_OWNER' && !user.storeId) {
-      return NextResponse.json({ error: 'Employee not assigned to any store' }, { status: 403 });
+    if (user.role !== "STORE_OWNER" && !user.storeId) {
+      return NextResponse.json(
+        { error: "Employee not assigned to any store" },
+        { status: 403 }
+      );
     }
 
     // Get store information based on user role
     let store;
     let storeId;
-    
-    if (user.role === 'STORE_OWNER') {
+    console.log("User role:", user.store);
+
+    if (user.role == "STORE_OWNER") {
       if (!user.store) {
-        return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+        return NextResponse.json({ error: "Store not found" }, { status: 404 });
       }
       store = user.store;
       storeId = user.store.id;
     } else {
-      // For employees, get store information
       store = await prisma.store.findUnique({
-        where: { id: user.storeId! }
+        where: { id: user.storeId! },
       });
       if (!store) {
-        return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+        return NextResponse.json({ error: "Store not found" }, { status: 404 });
       }
       storeId = store.id;
     }
@@ -65,8 +75,8 @@ export async function GET(request: NextRequest) {
       where: {
         storeId: storeId,
         role: {
-          in: ['USER', 'MACHINE']
-        }
+          in: ["USER", "MACHINE"],
+        },
       },
       select: {
         id: true,
@@ -78,7 +88,7 @@ export async function GET(request: NextRequest) {
         isActive: true,
         createdAt: true,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     // Get today's date range
@@ -89,7 +99,11 @@ export async function GET(request: NextRequest) {
 
     // Get this month's date range
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const startOfNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const startOfNextMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      1
+    );
 
     // Get revenue data
     const [revenues, todayRevenue, monthRevenue] = await Promise.all([
@@ -97,8 +111,8 @@ export async function GET(request: NextRequest) {
       prisma.revenue.findMany({
         where: {
           user: {
-            storeId: storeId
-          }
+            storeId: storeId,
+          },
         },
         include: {
           user: {
@@ -106,50 +120,50 @@ export async function GET(request: NextRequest) {
               name: true,
               role: true,
               machineCode: true,
-            }
+            },
           },
           coupon: {
             select: {
               code: true,
               discount: true,
-            }
-          }
+            },
+          },
         },
-        orderBy: { createdAt: 'desc' },
-        take: 20
+        orderBy: { createdAt: "desc" },
+        take: 20,
       }),
-      
+
       // Today's revenue sum
       prisma.revenue.aggregate({
         where: {
           user: {
-            storeId: storeId
+            storeId: storeId,
           },
           createdAt: {
             gte: today,
-            lt: tomorrow
-          }
+            lt: tomorrow,
+          },
         },
         _sum: {
-          amount: true
-        }
+          amount: true,
+        },
       }),
-      
+
       // This month's revenue sum
       prisma.revenue.aggregate({
         where: {
           user: {
-            storeId: storeId
+            storeId: storeId,
           },
           createdAt: {
             gte: startOfMonth,
-            lt: startOfNextMonth
-          }
+            lt: startOfNextMonth,
+          },
         },
         _sum: {
-          amount: true
-        }
-      })
+          amount: true,
+        },
+      }),
     ]);
 
     // Prepare store data
@@ -175,9 +189,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ store: storeData });
   } catch (error) {
-    console.error('Store dashboard error:', error);
+    console.error("Store dashboard error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
@@ -185,29 +199,36 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string; email: string; role: string };
-    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+      id: string;
+      email: string;
+      role: string;
+    };
+
     // Validate decoded token has required fields
     if (!decoded.id) {
-      return NextResponse.json({ error: 'Invalid token payload' }, { status: 401 });
+      return NextResponse.json(
+        { error: "Invalid token payload" },
+        { status: 401 }
+      );
     }
-    
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
     });
 
-    if (!user || user.role !== 'STORE_OWNER') {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+    if (!user || user.role !== "STORE_OWNER") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     if (!user.storeId) {
-      return NextResponse.json({ error: 'Store not found' }, { status: 404 });
+      return NextResponse.json({ error: "Store not found" }, { status: 404 });
     }
 
     const body = await request.json();
@@ -243,9 +264,9 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(updatedStore);
   } catch (error) {
-    console.error('Store update error:', error);
+    console.error("Store update error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

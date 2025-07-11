@@ -53,7 +53,14 @@ export async function GET(req: NextRequest) {
         phone: true,
         address: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        storeId: true,
+        store: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       },
       skip,
       take: limit,

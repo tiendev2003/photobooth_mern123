@@ -67,6 +67,14 @@ export async function findUserByUsername(username: string): Promise<User | null>
 export async function findUserById(id: string): Promise<User | null> {
   return prisma.user.findUnique({
     where: { id },
+    include: {
+      store: {
+        select: {
+          id: true,
+          name: true
+        }
+      }
+    }
   });
 }
 

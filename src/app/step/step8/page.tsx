@@ -107,29 +107,38 @@ export default function Step8() {
     const fetchTemplates = async () => {
       if (selectedFrame?.id) {
         try {
+          console.log("Fetching templates for frame:", selectedFrame.id);
           const response = await fetch(`/api/frame-templates?frameTypeId=${selectedFrame.id}`);
           if (response.ok) {
             const data = await response.json();
+            console.log("Templates response:", data);
+            
             if (data.data && Array.isArray(data.data)) {
               setFrameTemplates(data.data);
+              console.log("Set frame templates from data.data:", data.data);
 
               // Select first template by default if available
               if (data.data.length > 0) {
                 setSelectedTemplate(data.data[0]);
+                console.log("Selected default template:", data.data[0]);
               }
             } else if (data.templates && Array.isArray(data.templates)) {
               setFrameTemplates(data.templates);
+              console.log("Set frame templates from data.templates:", data.templates);
 
               // Select first template by default if available
               if (data.templates.length > 0) {
                 setSelectedTemplate(data.templates[0]);
+                console.log("Selected default template:", data.templates[0]);
               }
             } else if (data && Array.isArray(data)) {
               setFrameTemplates(data);
+              console.log("Set frame templates from data:", data);
 
               // Select first template by default if available
               if (data.length > 0) {
                 setSelectedTemplate(data[0]);
+                console.log("Selected default template:", data[0]);
               }
             } else {
               console.error("Invalid response format:", data);
@@ -147,6 +156,18 @@ export default function Step8() {
 
     fetchTemplates();
   }, [selectedFrame, setSelectedTemplate]);
+
+  // Log selected template changes
+  useEffect(() => {
+    if (selectedTemplate) {
+      console.log("Selected template changed:", {
+        id: selectedTemplate.id,
+        name: selectedTemplate.name,
+        background: selectedTemplate.background,
+        overlay: selectedTemplate.overlay
+      });
+    }
+  }, [selectedTemplate]);
 
   // Create media session on component mount
   useEffect(() => {
@@ -661,26 +682,34 @@ export default function Step8() {
       let backgroundImg: HTMLImageElement | null = null;
       let backgroundValid = false;
       if (selectedTemplate?.background) {
+        console.log("Loading background image:", selectedTemplate.background);
         backgroundImg = document.createElement('img');
         backgroundImg.crossOrigin = "anonymous";
 
         await new Promise<void>((resolve) => {
           backgroundImg!.onload = () => {
             backgroundValid = true;
+            console.log("Background image loaded successfully");
             resolve();
           };
-          backgroundImg!.onerror = () => {
+          backgroundImg!.onerror = (error) => {
             backgroundValid = false;
+            console.error("Failed to load background image:", error);
             resolve();
           };
           setTimeout(() => {
-            backgroundValid = false;
+            if (!backgroundValid) {
+              backgroundValid = false;
+              console.error("Background image load timeout");
+            }
             resolve();
-          }, 5000);
+          }, 10000); // Increase timeout to 10 seconds
 
-          backgroundImg!.src = `${selectedTemplate.background}?v=${Date.now()}`;
-          if (backgroundImg!.complete) {
-            backgroundValid = backgroundImg!.naturalWidth > 0 && backgroundImg!.naturalHeight > 0;
+          // Try with and without cache busting
+          backgroundImg!.src = selectedTemplate.background;
+          if (backgroundImg!.complete && backgroundImg!.naturalWidth > 0) {
+            backgroundValid = true;
+            console.log("Background image already cached");
             resolve();
           }
         });
@@ -690,26 +719,34 @@ export default function Step8() {
       let overlayImg: HTMLImageElement | null = null;
       let overlayValid = false;
       if (selectedTemplate?.overlay) {
+        console.log("Loading overlay image:", selectedTemplate.overlay);
         overlayImg = document.createElement('img');
         overlayImg.crossOrigin = "anonymous";
 
         await new Promise<void>((resolve) => {
           overlayImg!.onload = () => {
             overlayValid = true;
+            console.log("Overlay image loaded successfully");
             resolve();
           };
-          overlayImg!.onerror = () => {
+          overlayImg!.onerror = (error) => {
             overlayValid = false;
+            console.error("Failed to load overlay image:", error);
             resolve();
           };
           setTimeout(() => {
-            overlayValid = false;
+            if (!overlayValid) {
+              overlayValid = false;
+              console.error("Overlay image load timeout");
+            }
             resolve();
-          }, 5000);
+          }, 10000); // Increase timeout to 10 seconds
 
-          overlayImg!.src = `${selectedTemplate.overlay}?v=${Date.now()}`;
-          if (overlayImg!.complete) {
-            overlayValid = overlayImg!.naturalWidth > 0 && overlayImg!.naturalHeight > 0;
+          // Try with and without cache busting
+          overlayImg!.src = selectedTemplate.overlay;
+          if (overlayImg!.complete && overlayImg!.naturalWidth > 0) {
+            overlayValid = true;
+            console.log("Overlay image already cached");
             resolve();
           }
         });
@@ -804,11 +841,10 @@ export default function Step8() {
         previewCtx.globalCompositeOperation = "source-over";
 
         // Draw background image first if available - ALWAYS draw this
-        if (backgroundImg && backgroundValid && backgroundImg.complete) {
+        if (backgroundImg && backgroundValid) {
           try {
-            if (backgroundImg.naturalWidth > 0 && backgroundImg.naturalHeight > 0) {
-              previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
-            }
+            console.log(`Drawing background for frame ${frameCount}`);
+            previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
           } catch (e) {
             console.error("Error drawing background image in video:", e);
           }
@@ -902,15 +938,13 @@ export default function Step8() {
         // Draw overlay if available - Reset context state first
         previewCtx.filter = "none";
         previewCtx.globalCompositeOperation = "source-over";
-        if (overlayImg && overlayValid && overlayImg.complete) {
+        if (overlayImg && overlayValid) {
           try {
-            if (overlayImg.naturalWidth > 0 && overlayImg.naturalHeight > 0) {
-              // Draw overlay at the top layer to ensure it's always visible
-              previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
-              // For debugging
-              if (frameCount % 24 === 0) {
-                console.log(`Overlay drawn for frame ${frameCount}`);
-              }
+            // Draw overlay at the top layer to ensure it's always visible
+            previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
+            // For debugging
+            if (frameCount % 24 === 0) {
+              console.log(`Overlay drawn for frame ${frameCount}`);
             }
           } catch (e) {
             console.error("Error drawing overlay image:", e);
@@ -1113,26 +1147,34 @@ export default function Step8() {
       let backgroundImg: HTMLImageElement | null = null;
       let backgroundValid = false;
       if (selectedTemplate?.background) {
+        console.log("Loading background image for GIF:", selectedTemplate.background);
         backgroundImg = document.createElement('img');
         backgroundImg.crossOrigin = "anonymous";
 
         await new Promise<void>((resolve) => {
           backgroundImg!.onload = () => {
             backgroundValid = true;
+            console.log("Background image loaded successfully for GIF");
             resolve();
           };
-          backgroundImg!.onerror = () => {
+          backgroundImg!.onerror = (error) => {
             backgroundValid = false;
+            console.error("Failed to load background image for GIF:", error);
             resolve();
           };
           setTimeout(() => {
-            backgroundValid = false;
+            if (!backgroundValid) {
+              backgroundValid = false;
+              console.error("Background image timeout for GIF");
+            }
             resolve();
-          }, 5000);
+          }, 10000); // Increase timeout to 10 seconds
 
-          backgroundImg!.src = `${selectedTemplate.background}?v=${Date.now()}`;
-          if (backgroundImg!.complete) {
-            backgroundValid = backgroundImg!.naturalWidth > 0 && backgroundImg!.naturalHeight > 0;
+          // Try with and without cache busting
+          backgroundImg!.src = selectedTemplate.background;
+          if (backgroundImg!.complete && backgroundImg!.naturalWidth > 0) {
+            backgroundValid = true;
+            console.log("Background image already cached for GIF");
             resolve();
           }
         });
@@ -1244,10 +1286,10 @@ export default function Step8() {
         previewCtx.globalCompositeOperation = "source-over";
 
         // Draw background image first if available
-        if (backgroundImg && backgroundValid && backgroundImg.complete) {
+        if (backgroundImg && backgroundValid) {
           try {
-            if (backgroundImg.naturalWidth > 0 && backgroundImg.naturalHeight > 0) {
-              previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
+            previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
+            if (frameIndex % 8 === 0) {
               console.log(`Background drawn for GIF frame ${frameIndex}`);
             }
           } catch (e) {
@@ -1341,13 +1383,11 @@ export default function Step8() {
         // Draw overlay if available - Reset context state first
         previewCtx.filter = "none";
         previewCtx.globalCompositeOperation = "source-over";
-        if (overlayImg && overlayValid && overlayImg.complete) {
+        if (overlayImg && overlayValid) {
           try {
-            if (overlayImg.naturalWidth > 0 && overlayImg.naturalHeight > 0) {
-              previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
-              if (frameIndex % 4 === 0) {
-                console.log(`Overlay drawn for GIF frame ${frameIndex}`);
-              }
+            previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
+            if (frameIndex % 8 === 0) {
+              console.log(`Overlay drawn for GIF frame ${frameIndex}`);
             }
           } catch (e) {
             console.error("Error drawing overlay on GIF frame:", e);
@@ -1909,6 +1949,13 @@ export default function Step8() {
           fill
           unoptimized
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          onError={(e) => {
+            console.error("Background image failed to load:", selectedTemplate.background);
+            e.currentTarget.style.display = 'none';
+          }}
+          onLoad={() => {
+            console.log("Background image loaded successfully:", selectedTemplate.background);
+          }}
         />
       </div>
     ) : null;
@@ -1923,12 +1970,28 @@ export default function Step8() {
           fill
           unoptimized
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          onError={(e) => {
+            console.error("Overlay image failed to load:", selectedTemplate.overlay);
+            e.currentTarget.style.display = 'none';
+          }}
+          onLoad={() => {
+            console.log("Overlay image loaded successfully:", selectedTemplate.overlay);
+          }}
         />
       </div>
     ) : null;
 
     return (
       <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "3.6in" : previewWidth }} >
+        {/* Debug information */}
+        {selectedTemplate && (
+          <div className="absolute -top-12 left-0 text-xs bg-black/50 text-white px-2 py-1 rounded z-50">
+            Template: {selectedTemplate.name} | 
+            BG: {selectedTemplate.background ? '✓' : '✗'} | 
+            Overlay: {selectedTemplate.overlay ? '✓' : '✗'}
+          </div>
+        )}
+        
         <div
           ref={printPreviewRef}
           data-preview

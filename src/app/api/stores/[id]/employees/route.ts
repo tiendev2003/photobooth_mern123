@@ -68,13 +68,10 @@ export async function POST(
       return NextResponse.json({ error: "Store not found" }, { status: 404 });
     }
 
+    // Thông báo nếu vượt quá giới hạn nhưng vẫn cho phép thêm
+    let warning = null;
     if (store._count.employees >= store.maxEmployees) {
-      return NextResponse.json(
-        {
-          error: `Store has reached maximum employees limit (${store.maxEmployees})`,
-        },
-        { status: 400 }
-      );
+      warning = `Cửa hàng đã đạt giới hạn nhân viên (${store.maxEmployees}). Vẫn thêm nhân viên này nhưng nên cân nhắc tăng giới hạn.`;
     }
 
     // Kiểm tra username đã tồn tại
@@ -115,7 +112,10 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ employee });
+    return NextResponse.json({ 
+      employee,
+      warning
+    });
   } catch (error) {
     console.error("Error creating employee:", error);
     return NextResponse.json(

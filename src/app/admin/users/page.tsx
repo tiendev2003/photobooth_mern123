@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/lib/context/AuthContext';
 import { useCallback, useEffect, useState } from 'react';
+import { UserStoreAssignment } from '../components/UserStoreAssignment';
 
 interface User {
   id: string;
@@ -54,6 +55,11 @@ export default function UserManagement() {
     machineCode: '',
     location: ''
   });
+  
+  // User details state
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showUserDetails, setShowUserDetails] = useState(false);
+  const [storeAssignmentMessage, setStoreAssignmentMessage] = useState<{type: 'success' | 'error', message: string} | null>(null);
   
   // Define fetchUsers with useCallback
   const fetchUsers = useCallback(async (page = pagination.page, limit = pagination.limit) => {
@@ -254,6 +260,31 @@ export default function UserManagement() {
       setError('Lỗi kết nối: Không thể xóa người dùng. Vui lòng thử lại.');
     }
   };
+  
+  // Handle opening user details modal
+  const handleViewUserDetails = (user: User) => {
+    setSelectedUser(user);
+    setShowUserDetails(true);
+  };
+
+  // Handle store assignment completion
+  const handleStoreAssignmentComplete = (success: boolean, message: string) => {
+    setStoreAssignmentMessage({
+      type: success ? 'success' : 'error',
+      message
+    });
+    
+    if (success) {
+      // Refresh the users list to show updated assignments
+      fetchUsers();
+    }
+    
+    // Clear message after 5 seconds
+    setTimeout(() => {
+      setStoreAssignmentMessage(null);
+    }, 5000);
+  };
+   
   
   if (loading) {
     return (
@@ -499,6 +530,79 @@ export default function UserManagement() {
         </div>
       )}
       
+      {/* User details modal */}
+      {showUserDetails && selectedUser && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="userDetailsModal">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div className="flex justify-between items-center pb-4 border-b">
+              <h3 className="text-xl font-semibold">Chi tiết người dùng</h3>
+              <button 
+                onClick={() => setShowUserDetails(false)} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Tên người dùng</p>
+                  <p className="text-lg">{selectedUser.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Username</p>
+                  <p className="text-lg">{selectedUser.username}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Email</p>
+                  <p className="text-lg">{selectedUser.email || '(Không có)'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Vai trò</p>
+                  <p className="text-lg">{selectedUser.role}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Số điện thoại</p>
+                  <p className="text-lg">{selectedUser.phone || '(Không có)'}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Cửa hàng hiện tại</p>
+                  <p className="text-lg">{selectedUser.store?.name || '(Không thuộc cửa hàng nào)'}</p>
+                </div>
+              </div>
+              
+              {/* Notification message for store assignment */}
+              {storeAssignmentMessage && (
+                <div className={`mt-4 p-3 rounded-md ${storeAssignmentMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {storeAssignmentMessage.message}
+                </div>
+              )}
+              
+              {/* Only show store assignment for USER role */}
+              {selectedUser.role === 'USER' && (
+                <UserStoreAssignment 
+                  userId={selectedUser.id} 
+                    storeId={selectedUser.store?.id || null}
+                    onAssignmentComplete={handleStoreAssignmentComplete} 
+                />
+              )}
+              
+              <div className="mt-6 flex justify-end">
+                <button
+                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded mr-2"
+                  onClick={() => setShowUserDetails(false)}
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* User Table - Desktop View */}
       <div className="hidden md:block bg-white dark:bg-gray-800 shadow overflow-hidden rounded-lg">
         <div className="overflow-x-auto">
@@ -507,10 +611,17 @@ export default function UserManagement() {
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tên</th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tên tài khoản</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Vai trò</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ngày tạo</th>
-                <th scope="col" className="relative px-6 py-3">
-                  <span className="sr-only">Actions</span>
+                <th className="p-2 whitespace-nowrap">
+                  <div className="font-semibold text-left">Email</div>
+                </th>
+                <th className="p-2 whitespace-nowrap">
+                  <div className="font-semibold text-left">Vai trò</div>
+                </th>
+                <th className="p-2 whitespace-nowrap">
+                  <div className="font-semibold text-left">Cửa hàng</div>
+                </th>
+                <th className="p-2 whitespace-nowrap">
+                  <div className="font-semibold text-center">Thao tác</div>
                 </th>
               </tr>
             </thead>
@@ -520,6 +631,9 @@ export default function UserManagement() {
                   <tr key={user.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{user.name}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{user.username}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      {user.email || '(Không có)'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         user.role === 'ADMIN'
@@ -563,12 +677,21 @@ export default function UserManagement() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                       </button>
+                      <button
+                        onClick={() => handleViewUserDetails(user)}
+                        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-200 p-1 rounded-full hover:bg-green-100 dark:hover:bg-green-900"
+                        title="Xem chi tiết người dùng"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H4a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-4m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-300">
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-300">
                     Không tìm thấy người dùng
                   </td>
                 </tr>
@@ -605,6 +728,15 @@ export default function UserManagement() {
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleViewUserDetails(user)}
+                    className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-200 p-2 rounded-full hover:bg-green-100 dark:hover:bg-green-900"
+                    title="Xem chi tiết người dùng"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H4a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-4m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </button>
                 </div>

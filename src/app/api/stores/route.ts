@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     console.log("Fetching stores...",request.url);
     const stores = await prisma.store.findMany({
       include: {
-        manager: { select: { id: true, name: true, email: true } },
+        manager: true,
         _count: { 
           select: { 
             employees: true 
@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: "desc" },
     });
-
+console.log("Fetched stores:", stores.length);
     // Tính toán số lượng nhân viên và máy cho mỗi store
     const storesWithCounts = stores.map(store => {
-      const employeeCount = store.employees.filter(emp => emp.role === 'USER').length;
-      const machineCount = store.employees.filter(emp => emp.role === 'MACHINE').length;
+      const employeeCount = store.employees.filter(emp => emp.role === Role.USER).length;
+      const machineCount = store.employees.filter(emp => emp.role === Role.MACHINE).length;
       
       return {
         ...store,
@@ -194,7 +194,11 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-
+    await prisma.user.update({
+      where: { id: managerId },
+      data: { storeId: store.id },
+    });
+    
     console.log(`Created ${users.length} accounts for store ${store.name} (${numberOfEmployees} employees + ${numberOfMachineAccounts} machines)`);
 
     return NextResponse.json({ 
