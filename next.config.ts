@@ -1,14 +1,14 @@
-const withPWA = require('next-pwa')({
-  dest: 'public',
+const withPWA = require("next-pwa")({
+  dest: "public",
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === 'development' ? false : false, // Set to true in dev if needed
+  disable: process.env.NODE_ENV === "development" ? false : false, // Set to true in dev if needed
   runtimeCaching: [
     {
       urlPattern: /^https:\/\/fonts\.(?:gstatic|googleapis)\.com\/.*/i,
-      handler: 'CacheFirst',
+      handler: "CacheFirst",
       options: {
-        cacheName: 'google-fonts-cache',
+        cacheName: "google-fonts-cache",
         expiration: {
           maxEntries: 10,
           maxAgeSeconds: 60 * 60 * 24 * 365, // 365 days
@@ -17,9 +17,9 @@ const withPWA = require('next-pwa')({
     },
     {
       urlPattern: /\.(?:eot|otf|ttc|ttf|woff|woff2|font.css)$/i,
-      handler: 'StaleWhileRevalidate',
+      handler: "StaleWhileRevalidate",
       options: {
-        cacheName: 'static-font-assets',
+        cacheName: "static-font-assets",
         expiration: {
           maxEntries: 4,
           maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
@@ -28,9 +28,9 @@ const withPWA = require('next-pwa')({
     },
     {
       urlPattern: /\/uploads\/.*\.(jpg|jpeg|gif|png|svg|ico|webp)$/i,
-      handler: 'NetworkFirst', // Always try network first for uploads
+      handler: "NetworkFirst", // Always try network first for uploads
       options: {
-        cacheName: 'uploaded-images',
+        cacheName: "uploaded-images",
         expiration: {
           maxEntries: 10,
           maxAgeSeconds: 60 * 5, // 5 minutes only
@@ -43,9 +43,9 @@ const withPWA = require('next-pwa')({
     },
     {
       urlPattern: /\.(?:jpg|jpeg|gif|png|svg|ico|webp)$/i,
-      handler: 'StaleWhileRevalidate',
+      handler: "StaleWhileRevalidate",
       options: {
-        cacheName: 'static-image-assets',
+        cacheName: "static-image-assets",
         expiration: {
           maxEntries: 64,
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
@@ -54,9 +54,9 @@ const withPWA = require('next-pwa')({
     },
     {
       urlPattern: /\.(?:mp3|wav|ogg)$/i,
-      handler: 'CacheFirst',
+      handler: "CacheFirst",
       options: {
-        cacheName: 'static-audio-assets',
+        cacheName: "static-audio-assets",
         expiration: {
           maxEntries: 32,
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
@@ -65,9 +65,9 @@ const withPWA = require('next-pwa')({
     },
     {
       urlPattern: /\.(?:mp4|webm)$/i,
-      handler: 'CacheFirst',
+      handler: "CacheFirst",
       options: {
-        cacheName: 'static-video-assets',
+        cacheName: "static-video-assets",
         expiration: {
           maxEntries: 32,
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
@@ -76,9 +76,9 @@ const withPWA = require('next-pwa')({
     },
     {
       urlPattern: /\.(?:js)$/i,
-      handler: 'StaleWhileRevalidate',
+      handler: "StaleWhileRevalidate",
       options: {
-        cacheName: 'static-js-assets',
+        cacheName: "static-js-assets",
         expiration: {
           maxEntries: 32,
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
@@ -87,9 +87,9 @@ const withPWA = require('next-pwa')({
     },
     {
       urlPattern: /\.(?:css|less)$/i,
-      handler: 'StaleWhileRevalidate',
+      handler: "StaleWhileRevalidate",
       options: {
-        cacheName: 'static-style-assets',
+        cacheName: "static-style-assets",
         expiration: {
           maxEntries: 32,
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
@@ -98,9 +98,9 @@ const withPWA = require('next-pwa')({
     },
     {
       urlPattern: /\/_next\/data\/.+\/.+\.json$/i,
-      handler: 'StaleWhileRevalidate',
+      handler: "StaleWhileRevalidate",
       options: {
-        cacheName: 'next-data',
+        cacheName: "next-data",
         expiration: {
           maxEntries: 32,
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
@@ -109,9 +109,9 @@ const withPWA = require('next-pwa')({
     },
     {
       urlPattern: /\.(?:json|xml|csv)$/i,
-      handler: 'NetworkFirst',
+      handler: "NetworkFirst",
       options: {
-        cacheName: 'static-data-assets',
+        cacheName: "static-data-assets",
         expiration: {
           maxEntries: 32,
           maxAgeSeconds: 24 * 60 * 60, // 24 hours
@@ -123,62 +123,57 @@ const withPWA = require('next-pwa')({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: process.env.NODE_ENV === 'development',
-  output: 'standalone',
-  
-  // Disable static optimization for uploads
-  experimental: {
-    isrMemoryCacheSize: 0, // Disable ISR memory cache
-  },
-  
+  reactStrictMode: process.env.NODE_ENV === "development",
+  output: "standalone",
+
   // Headers for better cache control
   async headers() {
     return [
       {
-        source: '/uploads/:path*',
+        source: "/uploads/:path*",
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate, max-age=0',
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate, max-age=0",
           },
           {
-            key: 'Pragma',
-            value: 'no-cache',
+            key: "Pragma",
+            value: "no-cache",
           },
           {
-            key: 'Expires',
-            value: '0',
+            key: "Expires",
+            value: "0",
           },
         ],
       },
     ];
   },
-  
+
   images: {
-    unoptimized: true,  
-    domains: ['localhost'],
+    unoptimized: true,
+    domains: ["localhost"],
     remotePatterns: [
       {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '3000',
-        pathname: '/uploads/**',
+        protocol: "http",
+        hostname: "localhost",
+        port: "3000",
+        pathname: "/uploads/**",
       },
       {
-        protocol: 'https',
-        hostname: 'localhost',
-        pathname: '/uploads/**',
+        protocol: "https",
+        hostname: "localhost",
+        pathname: "/uploads/**",
       },
       {
-        protocol: 'http',
-        hostname: '127.0.0.1',
-        port: '3000',
-        pathname: '/uploads/**',
+        protocol: "http",
+        hostname: "127.0.0.1",
+        port: "3000",
+        pathname: "/uploads/**",
       },
       {
-        protocol: 'https',
-        hostname: '**',
-        pathname: '/uploads/**',
+        protocol: "https",
+        hostname: "**",
+        pathname: "/uploads/**",
       },
     ],
   },
