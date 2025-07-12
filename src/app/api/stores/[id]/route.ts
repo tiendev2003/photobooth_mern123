@@ -208,18 +208,36 @@ export async function DELETE(
           }
         });
 
-        // Xóa nhân viên
+        // Xóa nhân viên (trừ manager)
         const deletedEmployees = await prisma.user.deleteMany({
-          where: { storeId: storeId }
+          where: { 
+            storeId: storeId,
+            id: { not: store.managerId } // Không xóa manager ở đây
+          }
         });
         console.log(`Deleted ${deletedEmployees.count} employees and machine accounts`);
       }
     }
 
+    // Lưu thông tin manager trước khi xóa store
+    const managerId = store.managerId;
+    const manager = await prisma.user.findUnique({
+      where: { id: managerId },
+      select: { id: true, name: true, storeId: true }
+    });
+
     // Xóa cửa hàng
     await prisma.store.delete({
       where: { id: storeId },
     });
+
+    // Xóa manager nếu manager thuộc về store này
+    if (manager && manager.storeId === storeId) {
+      await prisma.user.delete({
+        where: { id: managerId }
+      });
+      console.log(`Deleted manager: ${manager.name}`);
+    }
 
     const message = force && totalRelatedData > 0 
       ? `Đã xóa cửa hàng "${store.name}" và toàn bộ dữ liệu liên quan thành công`

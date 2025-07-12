@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { uploadImageWithStore } from '@/lib/utils/uploadApi';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -120,26 +121,14 @@ export default function StoresPage() {
     return `ST${timestamp.slice(-6)}${random}`;
   };
 
-  // Upload file function
+  // Upload file function using external API
   const uploadFile = async (file: File, type: 'logo' | 'background'): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-
-    const response = await fetch('/api/upload/store-images', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to upload file');
+    try {
+      return await uploadImageWithStore(file);
+    } catch (error) {
+      console.error(`Error uploading ${type}:`, error);
+      throw new Error(`Failed to upload ${type}`);
     }
-
-    const data = await response.json();
-    return data.url;
   };
 
   const handleCreateStore = async (e: React.FormEvent) => {

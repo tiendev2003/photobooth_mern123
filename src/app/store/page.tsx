@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { uploadImageWithStore } from '@/lib/utils/uploadApi';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -431,27 +432,7 @@ export default function StoreDashboard() {
 
     try {
       setLogoUploading(true);
-      const formData = new FormData();
-      formData.append('file', logoFile);
-      formData.append('type', 'logo');
-
-      const response = await fetch('/api/upload/store-images', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Upload error:', errorData);
-        throw new Error(errorData.error || 'Failed to upload logo');
-      }
-
-      const data = await response.json();
-      console.log('Upload success:', data);
-      return data.url;
+      return await uploadImageWithStore(logoFile);
     } catch (error) {
       console.error('Error uploading logo:', error);
       showToast('Không thể tải lên logo', 'error');
@@ -466,27 +447,7 @@ export default function StoreDashboard() {
 
     try {
       setBackgroundUploading(true);
-      const formData = new FormData();
-      formData.append('file', backgroundFile);
-      formData.append('type', 'background');
-
-      const response = await fetch('/api/upload/store-images', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Upload background error:', errorData);
-        throw new Error(errorData.error || 'Failed to upload background');
-      }
-
-      const data = await response.json();
-      console.log('Upload background success:', data);
-      return data.url;
+      return await uploadImageWithStore(backgroundFile);
     } catch (error) {
       console.error('Error uploading background:', error);
       showToast('Không thể tải lên hình nền', 'error');
