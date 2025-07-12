@@ -82,6 +82,7 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
                 <li key={item.href} className="mb-1">
                   <Link
                     href={item.href}
+                    onClick={toggleSidebar}
                     className={`
                       flex items-center px-4 py-3 text-sm rounded-lg
                       ${pathname === item.href
