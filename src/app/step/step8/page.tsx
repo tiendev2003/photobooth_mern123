@@ -4,6 +4,7 @@ import StoreBackground from "@/app/components/StoreBackground";
 import StoreHeader from "@/app/components/StoreHeader";
 import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useBooth } from "@/lib/context/BoothContext";
+import { createGifWithFallback, validateGifWorker } from "@/lib/gif-utils";
 import { FrameTemplate } from "@/lib/models/FrameTemplate";
 import { cn, TIMEOUT_DURATION } from "@/lib/utils";
 import { uploadGif, uploadImage, uploadVideo } from "@/lib/utils/universalUpload";
@@ -467,8 +468,17 @@ export default function Step8() {
                     console.error("Failed to update session with GIF:", err)
                   );
                 }).catch(err => console.error("Failed to upload GIF:", err));
+              } else {
+                // GIF creation failed but don't block the process
+                console.warn("GIF creation failed, continuing without GIF");
               }
-            }).catch(err => console.error("Failed to generate GIF:", err));
+            }).catch(err => {
+              console.error("Failed to generate GIF:", err);
+              // Don't show alert in production
+              if (process.env.NODE_ENV === 'development') {
+                console.error("GIF generation failed:", err);
+              }
+            });
           }, 200);
         }
 
@@ -1034,9 +1044,10 @@ export default function Step8() {
     }
   };
 
-  // Generate GIF from video with optimized settings
+  // Generate GIF from video with optimized settings and production safety
   const generateGifFromVideo = async (isLandscape: boolean): Promise<string | void> => {
     try {
+      console.log(isLandscape)
       const previewContent = printPreviewRef.current;
       if (!previewContent) {
         alert('Không tìm thấy nội dung để xử lý GIF');
@@ -1048,475 +1059,44 @@ export default function Step8() {
         return;
       }
 
-      // Import gif.js library dynamically
-      const GIF = (await import('gif.js')).default;
-
-      const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 2400 : 1600;
-      const desiredHeight = isLandscape ? 1600 : 2400;
-      const rect = previewContent.getBoundingClientRect();
-
-      // Create output canvas for GIF
-      const outputCanvas = document.createElement('canvas');
-      outputCanvas.width = desiredWidth;
-      outputCanvas.height = desiredHeight;
-      const outputCtx = outputCanvas.getContext('2d');
-
-      if (!outputCtx) {
-        throw new Error("Không thể tạo GIF canvas context");
+      // Check if GIF worker is available in production
+      const workerAvailable = await validateGifWorker();
+      if (!workerAvailable) {
+        console.warn("GIF worker not available, skipping GIF generation");
+        return;
       }
 
-      // Create preview canvas
-      const previewCanvas = document.createElement('canvas');
-      previewCanvas.width = rect.width;
-      previewCanvas.height = rect.height;
-      const previewCtx = previewCanvas.getContext('2d');
-
-      if (!previewCtx) {
-        throw new Error("Không thể tạo preview canvas context");
+      // Use the first video for GIF generation
+      const firstVideoUrl = videos[0];
+      if (!firstVideoUrl) {
+        throw new Error("No video URL available");
       }
 
-      // Initialize GIF encoder with optimized settings
-      const gif = new GIF({
-        workers: 2,
-        quality: 10, // Lower quality for smaller file size
-        width: desiredWidth,
-        height: desiredHeight,
-        workerScript: '/gif.worker.js' // Make sure this file exists in public folder
-      });
-
-      // Load and prepare all videos
-      const cellIndices = selectedFrame?.isCustom
-        ? Array.from({ length: selectedFrame.rows }, (_, i) => i)
-        : Array.from({ length: selectedFrame!.columns * selectedFrame!.rows }, (_, i) => i);
-
-      const cellVideoMap = new Map<number, HTMLVideoElement>();
-      const photoToVideoMap = new Map<number, string>();
-
-      // Create video mapping
-      if (videos.length > 0) {
-        const selectedPhotoIndices = selectedIndices.filter(idx => idx !== undefined) as number[];
-
-        for (let i = 0; i < selectedPhotoIndices.length; i++) {
-          const photoIndex = selectedPhotoIndices[i];
-          if (photoIndex < videos.length) {
-            photoToVideoMap.set(photoIndex, videos[photoIndex]);
-          }
-        }
-      }
-
-      // Load all video elements
-      for (const idx of cellIndices) {
-        if (selectedIndices[idx] !== undefined) {
-          const photoIndex = selectedIndices[idx]!;
-          let videoUrl: string | undefined = undefined;
-
-          if (photoToVideoMap.has(photoIndex)) {
-            videoUrl = photoToVideoMap.get(photoIndex);
-          } else if (photoIndex < videos.length) {
-            videoUrl = videos[photoIndex];
-          }
-
-          if (videoUrl) {
-            const videoElement = document.createElement('video');
-            videoElement.src = videoUrl;
-            videoElement.muted = true;
-            videoElement.playsInline = true;
-            videoElement.preload = 'auto';
-
-            await new Promise<void>((resolve) => {
-              videoElement.onloadedmetadata = () => {
-                console.log(`Video ${photoIndex} loaded for GIF creation, duration: ${videoElement.duration}`);
-                resolve();
-              };
-              videoElement.onerror = () => {
-                console.error(`Error loading video ${photoIndex} for GIF`);
-                resolve();
-              };
-              setTimeout(() => resolve(), 5000);
-            });
-
-            cellVideoMap.set(idx, videoElement);
-          }
-        }
-      }
-
-      // Prepare background image if needed
-      let backgroundImg: HTMLImageElement | null = null;
-      let backgroundValid = false;
-      if (selectedTemplate?.background) {
-        console.log("Loading background image for GIF:", selectedTemplate.background);
-        backgroundImg = document.createElement('img');
-        backgroundImg.crossOrigin = "anonymous";
-
-        await new Promise<void>((resolve) => {
-          backgroundImg!.onload = () => {
-            backgroundValid = true;
-            console.log("Background image loaded successfully for GIF");
-            resolve();
-          };
-          backgroundImg!.onerror = (error) => {
-            backgroundValid = false;
-            console.error("Failed to load background image for GIF:", error);
-            resolve();
-          };
-          setTimeout(() => {
-            if (!backgroundValid) {
-              backgroundValid = false;
-              console.error("Background image timeout for GIF");
-            }
-            resolve();
-          }, 10000); // Increase timeout to 10 seconds
-
-          // Try with and without cache busting
-          backgroundImg!.src = selectedTemplate.background;
-          if (backgroundImg!.complete && backgroundImg!.naturalWidth > 0) {
-            backgroundValid = true;
-            console.log("Background image already cached for GIF");
-            resolve();
-          }
-        });
-      }
-
-      // Prepare overlay if needed
-      let overlayImg: HTMLImageElement | null = null;
-      let overlayValid = false;
-      if (selectedTemplate?.overlay) {
-        console.log("Loading overlay image for GIF:", selectedTemplate.overlay);
-        overlayImg = document.createElement('img');
-        overlayImg.crossOrigin = "anonymous";
-
-        await new Promise<void>((resolve) => {
-          overlayImg!.onload = () => {
-            overlayValid = true;
-            console.log("Overlay image loaded successfully for GIF");
-            resolve();
-          };
-          overlayImg!.onerror = () => {
-            overlayValid = false;
-            console.error("Failed to load overlay image for GIF");
-            resolve();
-          };
-          setTimeout(() => {
-            overlayValid = false;
-            console.error("Overlay image timeout for GIF");
-            resolve();
-          }, 5000);
-
-          overlayImg!.src = `${selectedTemplate.overlay}?v=${Date.now()}`;
-          if (overlayImg!.complete) {
-            overlayValid = overlayImg!.naturalWidth > 0 && overlayImg!.naturalHeight > 0;
-            console.log("Overlay image already cached for GIF:", overlayValid);
-            resolve();
-          }
-        });
-      }
-
-      // Start all videos
-      console.log("Starting videos for GIF creation...");
-      const videoStartPromises = Array.from(cellVideoMap.values()).map(async (video) => {
-        try {
-          // Set videos to loop to prevent them from ending during GIF creation
-          video.loop = true;
-          await video.play();
-          return true;
-        } catch (e) {
-          console.error("Error starting video for GIF:", e);
-          return false;
-        }
-      });
-
-      await Promise.all(videoStartPromises);
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      console.log("Starting GIF frame capture with background:", backgroundValid, "overlay:", overlayValid);
-
-      // Calculate actual GIF duration based on video durations
-      const maxVideoDuration = Math.max(
-        ...Array.from(cellVideoMap.values()).map(v => v.duration || 0)
+      console.log("Starting production-safe GIF creation...");
+      
+      // Use the production-safe GIF creation function
+      const gifUrl = await createGifWithFallback(
+        firstVideoUrl,
+        selectedTemplate?.background || "#ffffff",
+        undefined, // frameGradient
+        undefined, // selectedFrame
+        4, // layoutType
+        "4x1" // frameLayoutType
       );
 
-      // Use shorter duration for custom frames to prevent glitches
-      const frameRate = 8; // 8 FPS for reasonable file size
-      const frameInterval = 1000 / frameRate;
-
-      const adjustedGifDuration = Math.min(
-        isCustomFrame ? 2 : 3, // Default durations
-        maxVideoDuration + 0.5 // Actual max video duration plus half a second buffer
-      );
-
-      console.log(`Using adjusted GIF duration of ${adjustedGifDuration} seconds`);
-
-      // Recalculate frames based on adjusted duration
-      const totalFrames = Math.ceil(adjustedGifDuration * frameRate);
-
-      // Store cell positions once for consistency
-      const cellPositions = new Map();
-      const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
-      cells.forEach((cell, idx) => {
-        if (cellVideoMap.has(idx)) {
-          const cellRect = cell.getBoundingClientRect();
-          const relativeLeft = cellRect.left - rect.left;
-          const relativeTop = cellRect.top - rect.top;
-
-          // Store position and dimension data
-          cellPositions.set(idx, {
-            left: relativeLeft,
-            top: relativeTop,
-            width: cellRect.width,
-            height: cellRect.height
-          });
-        }
-      });
-
-      // Store first frame data for custom frames (to ensure we can restore it if needed)
-      let firstFrameData = null;
-
-      for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-        // Clear canvases with white background
-        previewCtx.fillStyle = "#FFFFFF";
-        previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
-        outputCtx.fillStyle = "#FFFFFF";
-        outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
-
-        // Reset context state before drawing
-        previewCtx.filter = "none";
-        previewCtx.globalCompositeOperation = "source-over";
-
-        // Draw background image first if available
-        if (backgroundImg && backgroundValid) {
-          try {
-            previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
-            if (frameIndex % 8 === 0) {
-              console.log(`Background drawn for GIF frame ${frameIndex}`);
-            }
-          } catch (e) {
-            console.error("Error drawing background image in GIF:", e);
-          }
-        }
-
-        const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
-
-        // Render each cell
-        cells.forEach((cell, idx) => {
-          if (!cellVideoMap.has(idx)) return;
-
-
-          const videoElement = cellVideoMap.get(idx)!;
-          const cellData = cellPositions.get(idx);
-
-          if (videoElement.readyState >= 2) {
-            // Apply filter
-            if (selectedFilter?.className) {
-              const filterString = selectedFilter.className
-                .split(" ")
-                .filter((cls) => cls.includes("-"))
-                .map((cls) => {
-                  const [prop, val] = cls.split("-");
-                  if (["brightness", "contrast", "saturate"].includes(prop)) {
-                    return `${prop}(${val}%)`;
-                  } else if (prop === "blur") {
-                    return `${prop}(${val}px)`;
-                  } else if (prop === "sepia") {
-                    return `${prop}(1)`;
-                  } else if (prop === "grayscale") {
-                    return `${prop}(1)`;
-                  } else if (prop === "invert") {
-                    return `${prop}(1)`;
-                  } else if (prop === "hue-rotate") {
-                    return `hue-rotate(${val}deg)`;
-                  }
-                  return "";
-                })
-                .filter(Boolean)
-                .join(" ");
-
-              previewCtx.filter = filterString;
-            } else {
-              previewCtx.filter = "none";
-            }
-
-            // Draw video frame
-            previewCtx.save();
-            previewCtx.beginPath();
-            if (selectedFrame?.isCircle) {
-              const centerX = cellData.left + cellData.width / 2;
-              const centerY = cellData.top + cellData.height / 2;
-              const radius = Math.min(cellData.width, cellData.height) / 2;
-              previewCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            } else {
-              previewCtx.rect(cellData.left, cellData.top, cellData.width, cellData.height);
-            }
-            previewCtx.clip();
-
-            // Calculate aspect ratio for video
-            const videoAspectRatio = videoElement.videoWidth / videoElement.videoHeight;
-            const cellAspectRatio = cellData.width / cellData.height;
-
-            let drawWidth = cellData.width;
-            let drawHeight = cellData.height;
-            let offsetX = cellData.left;
-            let offsetY = cellData.top;
-
-            if (videoAspectRatio > cellAspectRatio) {
-              // Video is wider than cell - fit height and crop width
-              drawHeight = cellData.height;
-              drawWidth = drawHeight * videoAspectRatio;
-              offsetX = cellData.left - (drawWidth - cellData.width) / 2;
-            } else {
-              // Video is taller than cell - fit width and crop height
-              drawWidth = cellData.width;
-              drawHeight = drawWidth / videoAspectRatio;
-              offsetY = cellData.top - (drawHeight - cellData.height) / 2;
-            }
-
-            previewCtx.drawImage(videoElement, offsetX, offsetY, drawWidth, drawHeight);
-            previewCtx.restore();
-
-            // Reset filter after each cell to prevent interference
-            previewCtx.filter = "none";
-          }
-        });
-
-        // Draw overlay if available - Reset context state first
-        previewCtx.filter = "none";
-        previewCtx.globalCompositeOperation = "source-over";
-        if (overlayImg && overlayValid) {
-          try {
-            previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
-            if (frameIndex % 8 === 0) {
-              console.log(`Overlay drawn for GIF frame ${frameIndex}`);
-            }
-          } catch (e) {
-            console.error("Error drawing overlay on GIF frame:", e);
-          }
-        }
-
-        // Copy to output canvas with adjusted positioning
-        // Reset output context state
-        outputCtx.globalCompositeOperation = "source-over";
-
-        if (isCustomFrame) {
-          const singleImageWidth = desiredWidth / 2;
-          const singleImageHeight = desiredHeight;
-          const aspectRatio = previewCanvas.width / previewCanvas.height;
-          const targetAspectRatio = singleImageWidth / singleImageHeight;
-
-          let drawWidth = singleImageWidth;
-          let drawHeight = singleImageHeight;
-          let offsetX = 0;
-          let offsetY = 0;
-
-          if (aspectRatio > targetAspectRatio) {
-            drawHeight = singleImageWidth / aspectRatio;
-            offsetY = (singleImageHeight - drawHeight) / 2;
-          } else {
-            drawWidth = singleImageHeight * aspectRatio;
-            offsetX = (singleImageWidth - drawWidth) / 2;
-          }
-
-          // Draw the same content twice side by side (left and right)
-          outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, offsetX, offsetY, drawWidth, drawHeight);
-          outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, singleImageWidth + offsetX, offsetY, drawWidth, drawHeight);
-
-          // Save first frame for custom frames to use later if needed
-          if (frameIndex === 0) {
-            firstFrameData = outputCtx.getImageData(0, 0, outputCanvas.width, outputCanvas.height);
-          }
-        } else {
-          const aspectRatio = previewCanvas.width / previewCanvas.height;
-          const targetAspectRatio = desiredWidth / desiredHeight;
-
-          let drawWidth = desiredWidth;
-          let drawHeight = desiredHeight;
-          let offsetX = 0;
-          let offsetY = 0;
-
-          if (aspectRatio > targetAspectRatio) {
-            drawHeight = desiredWidth / aspectRatio;
-            offsetY = (desiredHeight - drawHeight) / 2;
-          } else {
-            drawWidth = desiredHeight * aspectRatio;
-            offsetX = (desiredWidth - drawWidth) / 2;
-          }
-
-          outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, offsetX, offsetY, drawWidth, drawHeight);
-        }
-
-        // Add frame to GIF with proper delay
-        gif.addFrame(outputCanvas, {
-          delay: frameInterval,
-          copy: true,
-          // For custom frames, use shorter delay at the end to reduce glitching
-          dispose: isCustomFrame && frameIndex > totalFrames * 0.8 ? 1 : 2
-        });
-
-        // Ensure we're showing progress throughout the GIF
-        if (frameIndex % Math.floor(totalFrames / 4) === 0) {
-          console.log(`GIF progress: ${Math.round((frameIndex / totalFrames) * 100)}%`);
-        }
-
-        // Wait between frames - IMPORTANT: Need to wait for any async operations
-        await new Promise(resolve => setTimeout(resolve, frameInterval));
-      }
-
-      // For custom frames, add one final static frame that's a duplicate of an early frame
-      // This ensures a clean loop without the glitch at the end
-      if (isCustomFrame && firstFrameData) {
-        // Ensure our final frame is clear
-        outputCtx.fillStyle = "#FFFFFF";
-        outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
-
-        // Apply the first frame data to ensure a perfect duplicate
-        outputCtx.putImageData(firstFrameData, 0, 0);
-
-        // Add this frame with a slightly longer duration to pause on this good frame
-        gif.addFrame(outputCanvas, {
-          delay: frameInterval * 2,
-          copy: true
-        });
-
-        // Add one more duplicate frame to ensure smooth looping
-        gif.addFrame(outputCanvas, {
-          delay: frameInterval * 2,
-          copy: true
-        });
-
-        console.log("Added clean final frames for custom frame GIF");
-      } else if (!isCustomFrame) {
-        // For regular frames, add a few extra frames with the last good state
-        // to ensure smooth looping
-        for (let i = 0; i < 3; i++) {
-          gif.addFrame(outputCanvas, {
-            delay: frameInterval * 1.5,
-            copy: true
-          });
-        }
-
-        console.log("Added extra frames for regular GIF to ensure smooth looping");
-      }
-
-      console.log("Rendering GIF...");
-
-      // Render GIF and return as blob URL
-      return new Promise<string>((resolve, reject) => {
-        gif.on('finished', (blob: Blob) => {
-          const gifUrl = URL.createObjectURL(blob);
-          console.log("GIF creation completed successfully");
-          resolve(gifUrl);
-        });
-
-        gif.on('error', (...args: unknown[]) => {
-          console.error("Error creating GIF:", args);
-          reject(new Error("Failed to create GIF"));
-        });
-
-        gif.render();
-      });
+      console.log("GIF created successfully:", gifUrl);
+      return gifUrl;
 
     } catch (error) {
       console.error("Lỗi khi tạo GIF:", error);
-      alert("❌ Có lỗi xảy ra khi tạo GIF. Vui lòng thử lại.");
+      
+      // Don't show alert in production - just log the error
+      if (process.env.NODE_ENV === 'development') {
+        alert("❌ Có lỗi xảy ra khi tạo GIF. Vui lòng thử lại.");
+      }
+      
+      // Return undefined to indicate failure but allow process to continue
+      return undefined;
     }
   };
 

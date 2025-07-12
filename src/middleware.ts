@@ -47,15 +47,37 @@ const publicPaths = [
   "/api/upload/store-image",  
 ];
 
+// Helper function to handle static files
+function handleStaticFiles(request: NextRequest) {
+  // Handle gif.worker.js requests
+  if (request.nextUrl.pathname === '/gif.worker.js') {
+    const response = NextResponse.next();
+    response.headers.set('Content-Type', 'application/javascript');
+    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+    return response;
+  }
+
+  // Handle uploads with proper headers
+  if (request.nextUrl.pathname.startsWith('/uploads/')) {
+    const response = NextResponse.next();
+    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
+  }
+
+  return null;
+}
+
 // Middleware function
 export async function middleware(request: NextRequest) {
   // Check if the path is public
   const path = request.nextUrl.pathname;
 
   // Handle static files with higher priority
-  if (path.startsWith('/uploads/')) {
-    console.log(`Static file request bypassing middleware: ${path}`);
-    return NextResponse.next();
+  const staticFileResponse = handleStaticFiles(request);
+  if (staticFileResponse) {
+    return staticFileResponse;
   }
 
   // Allow public paths and static assets
@@ -150,7 +172,11 @@ export const config = {
     "/admin/:path*",
     "/store/:path*",
     
-    // Explicitly exclude static file paths
-    "/((?!uploads|public|_next/static|_next/image|favicon.ico).*)"
+    // Include static files for header handling
+    "/gif.worker.js",
+    "/uploads/:path*",
+    
+    // Explicitly exclude other static file paths
+    "/((?!public|_next/static|_next/image|favicon.ico).*)"
   ],
 };

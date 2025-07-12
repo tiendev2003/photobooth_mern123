@@ -8,7 +8,9 @@
     "start": "next start",
     "vercel-build": "prisma generate && next build",
     "lint": "next lint",
-    "db:seed": "npx tsx prisma/seed.ts"
+    "db:seed": "npx tsx prisma/seed.ts",
+    "validate-production": "bash scripts/validate-production.sh",
+    "build:production": "npm run validate-production && npm run build"
   },
   "dependencies": {
     "@ffmpeg/ffmpeg": "^0.12.15",

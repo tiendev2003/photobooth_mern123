@@ -31,18 +31,14 @@ export default function Step9() {
     gif: false
   });
   console.log("Step9 component rendered", videoProcessing, gifProcessing, imageQrCode, videoQrCode, mediaStatus);
-  // Monitor the status of media processing
   useEffect(() => {
-    // Check for image QR code
     const storedImageUrl = localStorage.getItem("imageQrCode");
     if (imageQrCode || storedImageUrl) {
       setMediaStatus(prev => ({ ...prev, image: true }));
     }
 
-    // Set up interval to check for video and GIF QR codes
-    const checkInterval = setInterval(() => {
-      // Check for video QR code
-      const storedVideoUrl = localStorage.getItem("videoQrCode");
+     const checkInterval = setInterval(() => {
+       const storedVideoUrl = localStorage.getItem("videoQrCode");
       if (videoQrCode || storedVideoUrl) {
         setMediaStatus(prev => ({ ...prev, video: true }));
         setVideoProcessing(false);

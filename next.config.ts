@@ -128,7 +128,7 @@ const nextConfig = {
   
   // Disable static optimization for uploads
   experimental: {
-    isrMemoryCacheSize: 0, // Disable ISR memory cache
+    
   },
   
   // Headers for better cache control
@@ -148,6 +148,28 @@ const nextConfig = {
           {
             key: 'Expires',
             value: '0',
+          },
+        ],
+      },
+      {
+        source: '/gif.worker.js',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/javascript',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },
