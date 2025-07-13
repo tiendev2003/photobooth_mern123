@@ -2,12 +2,11 @@
 
 import StoreBackground from "@/app/components/StoreBackground";
 import StoreHeader from "@/app/components/StoreHeader";
-import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useBooth } from "@/lib/context/BoothContext";
 import { FrameTemplate } from "@/lib/models/FrameTemplate";
 import { cn, TIMEOUT_DURATION } from "@/lib/utils";
 import { uploadGif, uploadImage, uploadVideo } from "@/lib/utils/universalUpload";
-import { ChevronLeft, ChevronRight, ImageIcon, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageIcon, Loader2, Printer, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import QRCode from 'qrcode';
@@ -100,6 +99,27 @@ export default function Step8() {
 
   console.log("Step 8 - Session state:", { mediaSessionCode, mediaSessionUrl, sessionReady });
 
+  // Ref to track active video elements for cleanup
+  const activeVideoElementsRef = useRef<Set<HTMLVideoElement>>(new Set());
+
+  // Helper function to cleanup video elements
+  const cleanupVideoElement = (video: HTMLVideoElement) => {
+    try {
+      video.pause();
+      video.removeAttribute('src');
+      video.load(); // Reset the video element
+      // Remove all event listeners
+      video.onloadedmetadata = null;
+      video.oncanplaythrough = null;
+      video.onerror = null;
+      video.onended = null;
+      video.onplay = null;
+      video.onpause = null;
+      activeVideoElementsRef.current.delete(video);
+    } catch (error) {
+      console.warn("Error cleaning up video element:", error);
+    }
+  };
 
   const printPreviewRef = useRef<HTMLDivElement>(null);
 
@@ -228,6 +248,18 @@ export default function Step8() {
 
     initializeMediaSession();
   }, [photos, currentStore]);
+
+  // Cleanup effect - Stop all video elements when component unmounts
+  useEffect(() => {
+    return () => {
+      console.log("Step 8 cleanup: Stopping all active video elements");
+      // Stop and cleanup all active video elements
+      activeVideoElementsRef.current.forEach(video => {
+        cleanupVideoElement(video);
+      });
+      activeVideoElementsRef.current.clear();
+    };
+  }, []);
 
   // Slick carousel settings and refs
   const skinFilterSliderRef = useRef<Slider | null>(null);
@@ -387,7 +419,9 @@ export default function Step8() {
         const imageTask = (async () => {
           try {
             setProcessingProgress(30);
+            console.time('Tạo ảnh');
             const imageDataUrl = await generateHighQualityImage(isLandscape);
+            console.timeEnd('Tạo ảnh');
             if (!imageDataUrl) {
               throw new Error("Không thể tạo ảnh");
             }
@@ -646,6 +680,9 @@ export default function Step8() {
 
             // Add crossorigin for better handling of video sources
             videoElement.crossOrigin = "anonymous";
+
+            // Track this video element for cleanup
+            activeVideoElementsRef.current.add(videoElement);
 
             // Preload content for smoother playback
             await new Promise<void>((resolve) => {
@@ -1024,10 +1061,37 @@ export default function Step8() {
         mediaRecorder.stop();
       }, recordingTimeout * 1000);
 
-      return processedVideoPromise;
+      const result = await processedVideoPromise;
+      
+      // Cleanup video elements after processing
+      Array.from(cellVideoMap.values()).forEach(video => {
+        try {
+          video.pause();
+          video.removeAttribute('src');
+          video.load();
+          activeVideoElementsRef.current.delete(video);
+        } catch (error) {
+          console.warn("Error cleaning up video after smooth video generation:", error);
+        }
+      });
+
+      return result;
 
     } catch (error) {
       console.error("Lỗi khi tạo video chất lượng cao:", error);
+      
+      // Cleanup any video elements that were created
+      activeVideoElementsRef.current.forEach(video => {
+        try {
+          video.pause();
+          video.removeAttribute('src');
+          video.load();
+        } catch (cleanupError) {
+          console.warn("Error cleaning up video after smooth video error:", cleanupError);
+        }
+      });
+      activeVideoElementsRef.current.clear();
+      
       alert("❌ Có lỗi xảy ra khi tạo video. Vui lòng thử lại.");
     }
   };
@@ -1121,6 +1185,9 @@ export default function Step8() {
             videoElement.muted = true;
             videoElement.playsInline = true;
             videoElement.preload = 'auto';
+
+            // Track this video element for cleanup
+            activeVideoElementsRef.current.add(videoElement);
 
             await new Promise<void>((resolve) => {
               videoElement.onloadedmetadata = () => {
@@ -1501,11 +1568,37 @@ export default function Step8() {
         gif.on('finished', (blob: Blob) => {
           const gifUrl = URL.createObjectURL(blob);
           console.log("GIF creation completed successfully");
+          
+          // Cleanup video elements after GIF creation
+          Array.from(cellVideoMap.values()).forEach(video => {
+            try {
+              video.pause();
+              video.removeAttribute('src');
+              video.load();
+              activeVideoElementsRef.current.delete(video);
+            } catch (error) {
+              console.warn("Error cleaning up video after GIF generation:", error);
+            }
+          });
+          
           resolve(gifUrl);
         });
 
         gif.on('error', (...args: unknown[]) => {
           console.error("Error creating GIF:", args);
+          
+          // Cleanup video elements on error too
+          Array.from(cellVideoMap.values()).forEach(video => {
+            try {
+              video.pause();
+              video.removeAttribute('src');
+              video.load();
+              activeVideoElementsRef.current.delete(video);
+            } catch (error) {
+              console.warn("Error cleaning up video after GIF error:", error);
+            }
+          });
+          
           reject(new Error("Failed to create GIF"));
         });
 
@@ -1514,6 +1607,19 @@ export default function Step8() {
 
     } catch (error) {
       console.error("Lỗi khi tạo GIF:", error);
+      
+      // Cleanup any video elements that were created
+      activeVideoElementsRef.current.forEach(video => {
+        try {
+          video.pause();
+          video.removeAttribute('src');
+          video.load();
+        } catch (cleanupError) {
+          console.warn("Error cleaning up video after GIF error:", cleanupError);
+        }
+      });
+      activeVideoElementsRef.current.clear();
+      
       alert("❌ Có lỗi xảy ra khi tạo GIF. Vui lòng thử lại.");
     }
   };
@@ -1590,7 +1696,6 @@ export default function Step8() {
           console.log('QR code created successfully');
         } catch (error) {
           console.error('Error generating QR code:', error);
-          // Fallback for QR code errors
           const fallbackText = document.createElement('div');
           fallbackText.innerText = 'QR';
           fallbackText.style.fontSize = '10px';
@@ -1887,53 +1992,53 @@ export default function Step8() {
     setSelectedFilter(convertedFilter);
   };
 
-  const renderCell = (idx: number) => {
-    const photoIndex = selectedIndices[idx];
-    console.log(`Rendering cell ${idx} with photo index:`, selectedIndices);
-
-    const cellContent = photoIndex !== undefined ? (
-      <Image
-        src={photos[photoIndex].image || "/placeholder.svg"}
-        alt={`Slot ${idx}`}
-        className={cn(
-          "h-full w-full object-cover photo-booth-image",
-          selectedFilter.className,
-          selectedFrame?.isCircle && "rounded-full"
-        )}
-        fill
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw"
-      />
-    ) : (
-      <div className={cn(
-        "flex h-full w-full flex-col items-center justify-center text-gray-400",
-        selectedFrame?.isCircle && "rounded-full"
-      )}
-      >
-        <span className="text-xs">{"Empty"}</span>
-      </div>
-    );
-
-    const baseClass =
-      "relative w-full flex items-center justify-center transition-all duration-200 overflow-hidden border border-transparent";
-    const emptyClass = "border-dashed border-gray-200 bg-gray-50/50";
-    const hasPhoto = selectedIndices[idx] !== undefined;
-    const isLandscape = (selectedFrame?.columns ?? 0) > (selectedFrame?.rows ?? 0) && !selectedFrame?.isCustom;
-    const isSquare = selectedFrame?.columns === selectedFrame?.rows;
-    return (
-      <div
-        key={idx}
-        className={cn(
-          baseClass,
-          !hasPhoto && emptyClass,
-          hasPhoto && "cursor-pointer",
-          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? " aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 || selectedFrame?.isCircle ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]",
-          selectedFrame?.columns === 2 && selectedFrame?.rows === 3 ? "aspect-[13/12]" : "",)}
-      // No click handler needed in step8
-      >
-        {cellContent}
-      </div>
-    );
-  };
+ const renderCell = (idx: number) => {
+     const photoIndex = selectedIndices[idx];
+ 
+     const cellContent = photoIndex !== undefined ? (
+       <Image
+         src={photos[photoIndex].image || "/placeholder.svg"}
+         alt={`Slot ${idx}`}
+         className={cn(
+           "h-full w-full object-cover photo-booth-image",
+           selectedFrame?.isCircle && "rounded-full"
+         )}
+         fill
+         sizes="(max-width: 768px) 100vw, 50vw"
+       />
+     ) : (
+       <div className={cn(
+         "flex h-full w-full flex-col items-center justify-center text-gray-400",
+         selectedFrame?.isCircle && "rounded-full"
+       )}
+ 
+       >
+         <span className="text-xs">{"Empty"}</span>
+       </div>
+     );
+ 
+     const baseClass =
+       "relative w-full flex items-center justify-center transition-all duration-200 overflow-hidden border border-transparent";
+     const emptyClass = "border-dashed border-gray-200 bg-gray-50/50";
+     const hasPhoto = selectedIndices[idx] !== undefined;
+     const isLandscape = (selectedFrame?.columns ?? 0) > (selectedFrame?.rows ?? 0) && !selectedFrame?.isCustom;
+     const isSquare = selectedFrame?.columns === selectedFrame?.rows;
+     return (
+       <div
+         key={idx}
+         className={cn(
+           baseClass,
+           !hasPhoto && emptyClass,
+           hasPhoto && "cursor-pointer",
+           selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? " aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 || selectedFrame?.isCircle ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]",
+           selectedFrame?.columns === 2 && selectedFrame?.rows === 3 ? "aspect-[13/12]" : "",
+         )}
+        
+       >
+         {cellContent}
+       </div>
+     );
+   };
 
   const renderPreview = () => {
     if (!selectedFrame) return null;
@@ -1942,12 +2047,10 @@ export default function Step8() {
     const isLandscape = selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom;
     const isSquare = selectedFrame.columns === selectedFrame.rows;
 
-    // Set dimensions based on orientation
-    const previewHeight = isLandscape ? "7.2in" : "10.8in";
-    const previewWidth = isLandscape ? "10.8in" : "7.2in";
+    const previewHeight = isLandscape ? "4.8in" : "7.2in";
+    const previewWidth = isLandscape ? "7.2in" : "4.8in";
     const aspectRatio = isLandscape ? "3/2" : "2/3";
-
-    const frameBackground = selectedTemplate?.background ? (
+     const frameBackground = selectedTemplate?.background ? (
       <div className="pointer-events-none absolute inset-0 z-0">
         <Image
           src={selectedTemplate.background}
@@ -1972,16 +2075,11 @@ export default function Step8() {
         />
       </div>
     ) : null;
-
-
+    console.log("isLandscape:", isLandscape);
     return (
-      <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "3.6in" : previewWidth }} >
-
-
+      <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "2.4in" : previewWidth }} >
         <div
-          ref={printPreviewRef}
           data-preview
-          id="photobooth-print-preview"
           className={cn(
             "flex flex-col gap-4 print-preview photo-booth-preview bg-white px-[5%] ",
             selectedFrame.isCustom ? "pb-[10%] pt-[10%] px-[10%]" :
@@ -2064,7 +2162,7 @@ export default function Step8() {
 
       <div className="grid grid-cols-2 gap-6 mx-32 z-30">
 
-        <div className="lg:col-span-1 flex flex-col gap-6">
+        <div className="lg:col-span-1 flex flex-col gap-6 ">
           {renderPreview()}
         </div>
 
@@ -2283,39 +2381,19 @@ export default function Step8() {
           </div>
         </div>
       </div>
-
-      <StoreNavigationButtons
-        currentStore={currentStore}
-        nextLabel={!sessionReady ? "Đang tạo phiên..." : "In ảnh"}
-        onNext={handlePrint}
-        nextDisabled={isPrinting || !sessionReady}
-      >
-        {isPrinting && (
-          <div className="flex flex-col items-center justify-center text-white">
-            <div className="flex items-center mb-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-pink-500 mr-2"></div>
-              {isProcessing ? 'Đang xử lý media...' : 'Đang in...'}
+      <div className="flex justify-end w-full px-16 pb-12 z-10 items-center">
+        <div className="rounded-full p-6 bg-transparent border-2">
+          {isProcessing ? (
+            <div className="w-12 h-12 flex items-center justify-center text-4xl">
+              <Loader2 className="animate-spin text-indigo-500" />
             </div>
-            {isProcessing && (
-              <div className="w-48 bg-gray-200 rounded-full h-2 mb-2">
-                <div
-                  className="bg-pink-500 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${processingProgress}%` }}
-                ></div>
-              </div>
-            )}
-            {isProcessing && (
-              <p className="text-sm opacity-75">{processingProgress}% hoàn thành</p>
-            )}
-          </div>
-        )}
-        {!sessionReady && !isPrinting && (
-          <div className="flex items-center justify-center text-white text-sm">
-            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-            Đang khởi tạo phiên làm việc...
-          </div>
-        )}
-      </StoreNavigationButtons>
+          ) : (
+            <Printer className="w-12 h-12 text-indigo-500" onClick={handlePrint} />
+          )}
+        </div>
+      </div>
+
+
     </StoreBackground>
   );
 }

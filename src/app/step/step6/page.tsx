@@ -31,7 +31,7 @@ export default function Step6() {
 
   const maxShots: number =
     (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) >= 4
-      ? (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) + 4
+      ? 9
       : (selectedFrame?.columns ?? 1) * (selectedFrame?.rows ?? 1) + 3;
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -251,14 +251,7 @@ export default function Step6() {
 
   return (
     <StoreBackground currentStore={currentStore}>
-      {storeLoading && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="flex flex-col items-center text-white">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mb-4"></div>
-            <p className="text-lg">Đang tải thông tin cửa hàng...</p>
-          </div>
-        </div>
-      )}
+       
 
       {storeError && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-500 bg-opacity-90 text-white px-4 py-2 rounded-lg z-50">
@@ -273,7 +266,7 @@ export default function Step6() {
 
       {/* Main content */}
       <main className="flex flex-row items-center justify-center flex-grow z-10 gap-8 px-4 min-h-0 overflow-hidden">
-        <div className="flex-1 max-w-5xl h-full flex items-center justify-center">
+        <div className="flex-1 max-w-4xl h-full flex items-center justify-center">
           <div className="w-full max-h-full aspect-[4/3] bg-black bg-opacity-70 rounded-2xl border shadow-lg overflow-hidden relative"
 
           >

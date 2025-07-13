@@ -125,18 +125,15 @@ export default function Step7() {
     if (!selectedFrame) return null;
     const commonClasses = "mx-auto overflow-hidden shadow-md";
 
-    // Determine if the frame is landscape based on its columns and rows
-    // For a landscape frame, columns > rows (e.g., 3x2 is landscape)
     const isLandscape = selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom;
     const isSquare = selectedFrame.columns === selectedFrame.rows;
 
-    // Set dimensions based on orientation
-    const previewHeight = isLandscape ? "7.2in" : "10.8in";
-    const previewWidth = isLandscape ? "10.8in" : "7.2in";
+    const previewHeight = isLandscape ? "4.8in" : "7.2in";
+    const previewWidth = isLandscape ? "7.2in" : "4.8in";
     const aspectRatio = isLandscape ? "3/2" : "2/3";
     console.log("isLandscape:", isLandscape);
     return (
-      <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "3.6in" : previewWidth }} >
+      <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "2.4in" : previewWidth }} >
         <div
           data-preview
           className={cn(
@@ -187,14 +184,14 @@ export default function Step7() {
 
   return (
     <StoreBackground currentStore={currentStore}>
-      <StoreHeader 
+      <StoreHeader
         currentStore={currentStore}
         title="HOÀN THIỆN ẢNH CỦA BẠN"
       />
 
       <div className="grid grid-cols-2 gap-6 mx-32 z-30">
         <div className="lg:col-span-1 flex flex-col gap-6">
-          <div className="bg-black bg-opacity-50 rounded-lg p-4 flex flex-col items-center justify-center">
+          <div className="bg-black bg-opacity-50 rounded-lg p-4 flex flex-col items-center justify-center mt-10">
             <h3 className="text-5xl font-bold mb-4">
               Ảnh đã chụp ({photos.length})
             </h3>
@@ -253,7 +250,7 @@ export default function Step7() {
         </div>
       </div>
 
-      <StoreNavigationButtons 
+      <StoreNavigationButtons
         onBack={handleBack}
         onNext={handleNext}
         currentStore={currentStore}
