@@ -150,7 +150,7 @@ export default function Step7() {
           }}
         >
           {selectedFrame.isCustom ? (
-            <div className="relative z-10 grid grid-cols-1 gap-[20px]">
+            <div className="relative z-10 grid grid-cols-1 gap-[10px]">
               {Array.from({ length: selectedFrame.rows }, (_, idx) => renderCell(idx))}
             </div>
           ) : (

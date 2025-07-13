@@ -449,7 +449,7 @@ export default function Step8() {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                "imageUrl": imageUrl,
+                "filePath": imageUrl,
                 "fileName": "photobooth.jpg",
                 "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
                 "quantity": selectedQuantity || 1,
@@ -1062,7 +1062,7 @@ export default function Step8() {
       }, recordingTimeout * 1000);
 
       const result = await processedVideoPromise;
-      
+
       // Cleanup video elements after processing
       Array.from(cellVideoMap.values()).forEach(video => {
         try {
@@ -1079,7 +1079,7 @@ export default function Step8() {
 
     } catch (error) {
       console.error("Lỗi khi tạo video chất lượng cao:", error);
-      
+
       // Cleanup any video elements that were created
       activeVideoElementsRef.current.forEach(video => {
         try {
@@ -1091,7 +1091,7 @@ export default function Step8() {
         }
       });
       activeVideoElementsRef.current.clear();
-      
+
       alert("❌ Có lỗi xảy ra khi tạo video. Vui lòng thử lại.");
     }
   };
@@ -1568,7 +1568,7 @@ export default function Step8() {
         gif.on('finished', (blob: Blob) => {
           const gifUrl = URL.createObjectURL(blob);
           console.log("GIF creation completed successfully");
-          
+
           // Cleanup video elements after GIF creation
           Array.from(cellVideoMap.values()).forEach(video => {
             try {
@@ -1580,13 +1580,13 @@ export default function Step8() {
               console.warn("Error cleaning up video after GIF generation:", error);
             }
           });
-          
+
           resolve(gifUrl);
         });
 
         gif.on('error', (...args: unknown[]) => {
           console.error("Error creating GIF:", args);
-          
+
           // Cleanup video elements on error too
           Array.from(cellVideoMap.values()).forEach(video => {
             try {
@@ -1598,7 +1598,7 @@ export default function Step8() {
               console.warn("Error cleaning up video after GIF error:", error);
             }
           });
-          
+
           reject(new Error("Failed to create GIF"));
         });
 
@@ -1607,7 +1607,7 @@ export default function Step8() {
 
     } catch (error) {
       console.error("Lỗi khi tạo GIF:", error);
-      
+
       // Cleanup any video elements that were created
       activeVideoElementsRef.current.forEach(video => {
         try {
@@ -1619,7 +1619,7 @@ export default function Step8() {
         }
       });
       activeVideoElementsRef.current.clear();
-      
+
       alert("❌ Có lỗi xảy ra khi tạo GIF. Vui lòng thử lại.");
     }
   };
@@ -1992,53 +1992,53 @@ export default function Step8() {
     setSelectedFilter(convertedFilter);
   };
 
- const renderCell = (idx: number) => {
-     const photoIndex = selectedIndices[idx];
- 
-     const cellContent = photoIndex !== undefined ? (
-       <Image
-         src={photos[photoIndex].image || "/placeholder.svg"}
-         alt={`Slot ${idx}`}
-         className={cn(
-           "h-full w-full object-cover photo-booth-image",
-           selectedFrame?.isCircle && "rounded-full"
-         )}
-         fill
-         sizes="(max-width: 768px) 100vw, 50vw"
-       />
-     ) : (
-       <div className={cn(
-         "flex h-full w-full flex-col items-center justify-center text-gray-400",
-         selectedFrame?.isCircle && "rounded-full"
-       )}
- 
-       >
-         <span className="text-xs">{"Empty"}</span>
-       </div>
-     );
- 
-     const baseClass =
-       "relative w-full flex items-center justify-center transition-all duration-200 overflow-hidden border border-transparent";
-     const emptyClass = "border-dashed border-gray-200 bg-gray-50/50";
-     const hasPhoto = selectedIndices[idx] !== undefined;
-     const isLandscape = (selectedFrame?.columns ?? 0) > (selectedFrame?.rows ?? 0) && !selectedFrame?.isCustom;
-     const isSquare = selectedFrame?.columns === selectedFrame?.rows;
-     return (
-       <div
-         key={idx}
-         className={cn(
-           baseClass,
-           !hasPhoto && emptyClass,
-           hasPhoto && "cursor-pointer",
-           selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? " aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 || selectedFrame?.isCircle ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]",
-           selectedFrame?.columns === 2 && selectedFrame?.rows === 3 ? "aspect-[13/12]" : "",
-         )}
-        
-       >
-         {cellContent}
-       </div>
-     );
-   };
+  const renderCell = (idx: number) => {
+    const photoIndex = selectedIndices[idx];
+    console.log(`Rendering cell ${idx} with photo index:`, selectedIndices);
+
+    const cellContent = photoIndex !== undefined ? (
+      <Image
+        src={photos[photoIndex].image || "/placeholder.svg"}
+        alt={`Slot ${idx}`}
+        className={cn(
+          "h-full w-full object-cover photo-booth-image",
+          selectedFilter.className,
+          selectedFrame?.isCircle && "rounded-full"
+        )}
+        fill
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw"
+      />
+    ) : (
+      <div className={cn(
+        "flex h-full w-full flex-col items-center justify-center text-gray-400",
+        selectedFrame?.isCircle && "rounded-full"
+      )}
+      >
+        <span className="text-xs">{"Empty"}</span>
+      </div>
+    );
+
+    const baseClass =
+      "relative w-full flex items-center justify-center transition-all duration-200 overflow-hidden border border-transparent";
+    const emptyClass = "border-dashed border-gray-200 bg-gray-50/50";
+    const hasPhoto = selectedIndices[idx] !== undefined;
+    const isLandscape = (selectedFrame?.columns ?? 0) > (selectedFrame?.rows ?? 0) && !selectedFrame?.isCustom;
+    const isSquare = selectedFrame?.columns === selectedFrame?.rows;
+    return (
+      <div
+        key={idx}
+        className={cn(
+          baseClass,
+          !hasPhoto && emptyClass,
+          hasPhoto && "cursor-pointer",
+          selectedFrame?.isCustom && selectedFrame?.rows == 4 ? "aspect-[4/3]" : selectedFrame?.isCustom && selectedFrame?.rows == 2 ? " aspect-[3/4]" : isSquare && selectedFrame?.columns == 2 ? "aspect-[3/4]" : selectedFrame?.columns == 2 || selectedFrame?.isCircle ? "aspect-square" : isLandscape ? "aspect-[5/4]" : "aspect-[3/4]",
+          selectedFrame?.columns === 2 && selectedFrame?.rows === 3 ? "aspect-[13/12]" : "",)}
+      // No click handler needed in step8
+      >
+        {cellContent}
+      </div>
+    );
+  };
 
   const renderPreview = () => {
     if (!selectedFrame) return null;
@@ -2047,10 +2047,12 @@ export default function Step8() {
     const isLandscape = selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom;
     const isSquare = selectedFrame.columns === selectedFrame.rows;
 
+
     const previewHeight = isLandscape ? "4.8in" : "7.2in";
     const previewWidth = isLandscape ? "7.2in" : "4.8in";
     const aspectRatio = isLandscape ? "3/2" : "2/3";
-     const frameBackground = selectedTemplate?.background ? (
+
+    const frameBackground = selectedTemplate?.background ? (
       <div className="pointer-events-none absolute inset-0 z-0">
         <Image
           src={selectedTemplate.background}
@@ -2075,15 +2077,20 @@ export default function Step8() {
         />
       </div>
     ) : null;
-    console.log("isLandscape:", isLandscape);
+
+
     return (
       <div className={cn("relative w-full", commonClasses)} style={{ height: previewHeight, width: selectedFrame.isCustom ? "2.4in" : previewWidth }} >
+
+
         <div
+          ref={printPreviewRef}
           data-preview
+          id="photobooth-print-preview"
           className={cn(
             "flex flex-col gap-4 print-preview photo-booth-preview bg-white px-[5%] ",
             selectedFrame.isCustom ? "pb-[10%] pt-[10%] px-[10%]" :
-              isSquare && (selectedFrame.columns == 2 || selectedFrame.columns == 1) && !selectedFrame.isCircle ? "pt-[5%]" :
+              isSquare && (selectedFrame.columns == 2 || selectedFrame.columns == 1) && !selectedFrame?.isCircle ? "pt-[5%]" :
                 selectedFrame.isCircle ? "pt-[20%]" :
                   isLandscape ? "px-[5%] pt-[5%]" : "px-[5%] pt-[5%]",
             selectedFrame?.isCircle && "px-[5%] pt-[20%]"
@@ -2095,7 +2102,7 @@ export default function Step8() {
         >
           {frameBackground}
           {selectedFrame.isCustom ? (
-            <div className="relative z-10 grid grid-cols-1 gap-[20px]">
+            <div className="relative z-10 grid grid-cols-1 gap-[10px]">
               {Array.from({ length: selectedFrame.rows }, (_, idx) => renderCell(idx))}
             </div>
           ) : (
@@ -2162,7 +2169,7 @@ export default function Step8() {
 
       <div className="grid grid-cols-2 gap-6 mx-32 z-30">
 
-        <div className="lg:col-span-1 flex flex-col gap-6 ">
+        <div className="lg:col-span-1 flex flex-col gap-6">
           {renderPreview()}
         </div>
 
@@ -2213,7 +2220,7 @@ export default function Step8() {
                         <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-purple-900/50 to-pink-900/50">
                           {photos && photos.length > 0 ? (
                             <Image
-                              src={photos[0].image || "/placeholder.svg"}
+                              src={"/preview.png"}
                               alt={filter.name}
                               fill
                               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -2222,7 +2229,7 @@ export default function Step8() {
                             />
                           ) : (
                             <Image
-                              src={filter.preview || "/placeholder.svg"}
+                              src={"/preview.png"}
                               alt={filter.name}
                               fill
                               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -2316,7 +2323,6 @@ export default function Step8() {
                             }`}
                         >
                           <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-indigo-900/50 to-purple-900/50">
-                            {/* Show background if available, otherwise show overlay */}
                             <Image
                               src={template.background || template.overlay || "/placeholder.svg"}
                               alt={template.name}
@@ -2326,7 +2332,6 @@ export default function Step8() {
                               unoptimized
                             />
 
-                            {/* Indicator for template type */}
                             <div className="absolute top-1 right-1 flex gap-1">
                               {template.background && (
                                 <div className="w-4 h-4 bg-blue-500/80 backdrop-blur-sm rounded-full flex items-center justify-center">
@@ -2381,7 +2386,7 @@ export default function Step8() {
           </div>
         </div>
       </div>
-      <div className="flex justify-end w-full px-16 pb-12 z-10 items-center">
+      <div className="flex justify-end w-full px-16 pb-20 z-10 items-center">
         <div className="rounded-full p-6 bg-transparent border-2">
           {isProcessing ? (
             <div className="w-12 h-12 flex items-center justify-center text-4xl">
