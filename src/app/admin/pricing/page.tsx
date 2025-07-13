@@ -12,10 +12,40 @@ interface Pricing {
   isDefault: boolean;
   createdAt: string;
   updatedAt: string;
+  userId?: string;
+  storeId?: string;
+  user?: {
+    id: string;
+    name: string;
+    username: string;
+  };
+  store?: {
+    id: string;
+    name: string;
+  };
+}
+
+interface User {
+  id: string;
+  name: string;
+  username: string;
+  role: string;
+  storeId?: string;
+  store?: {
+    name: string;
+  };
+}
+
+interface Store {
+  id: string;
+  name: string;
+  isActive: boolean;
 }
 
 export default function PricingAdminPage() {
   const [pricings, setPricings] = useState<Pricing[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingPricing, setEditingPricing] = useState<Pricing | null>(null);
@@ -24,11 +54,15 @@ export default function PricingAdminPage() {
     priceOnePhoto: 0,
     priceTwoPhoto: 0,
     priceThreePhoto: 0,
-    isDefault: false
+    isDefault: false,
+    assignType: 'global', // 'global', 'user', 'store'
+    userId: '',
+    storeId: ''
   });
 
   useEffect(() => {
     fetchPricings();
+    fetchAssignOptions();
   }, []);
 
   const fetchPricings = async () => {
@@ -53,15 +87,56 @@ export default function PricingAdminPage() {
     }
   };
 
+  const fetchAssignOptions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/pricing/assign-options', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data.users);
+        setStores(data.stores);
+      } else {
+        console.error('Failed to fetch assign options');
+      }
+    } catch (error) {
+      console.error('Error fetching assign options:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       const token = localStorage.getItem('token');
-      const payload = {
-        ...formData,
+      const payload: {
+        name: string;
+        priceOnePhoto: number;
+        priceTwoPhoto: number;
+        priceThreePhoto: number;
+        isDefault: boolean;
+        id?: string;
+        userId?: string;
+        storeId?: string;
+      } = {
+        name: formData.name,
+        priceOnePhoto: formData.priceOnePhoto,
+        priceTwoPhoto: formData.priceTwoPhoto,
+        priceThreePhoto: formData.priceThreePhoto,
+        isDefault: formData.isDefault,
         ...(editingPricing && { id: editingPricing.id })
       };
+
+      // Add assignment based on type
+      if (formData.assignType === 'user' && formData.userId) {
+        payload.userId = formData.userId;
+      } else if (formData.assignType === 'store' && formData.storeId) {
+        payload.storeId = formData.storeId;
+      }
 
       const response = await fetch('/api/pricing', {
         method: 'POST',
@@ -76,13 +151,7 @@ export default function PricingAdminPage() {
         await fetchPricings();
         setShowForm(false);
         setEditingPricing(null);
-        setFormData({
-          name: '',
-          priceOnePhoto: 0,
-          priceTwoPhoto: 0,
-          priceThreePhoto: 0,
-          isDefault: false
-        });
+        resetFormData();
       } else {
         const error = await response.json();
         alert(`Error: ${error.error}`);
@@ -93,14 +162,43 @@ export default function PricingAdminPage() {
     }
   };
 
+  const resetFormData = () => {
+    setFormData({
+      name: '',
+      priceOnePhoto: 0,
+      priceTwoPhoto: 0,
+      priceThreePhoto: 0,
+      isDefault: false,
+      assignType: 'global',
+      userId: '',
+      storeId: ''
+    });
+  };
+
   const handleEdit = (pricing: Pricing) => {
     setEditingPricing(pricing);
+    
+    let assignType = 'global';
+    let userId = '';
+    let storeId = '';
+    
+    if (pricing.userId) {
+      assignType = 'user';
+      userId = pricing.userId;
+    } else if (pricing.storeId) {
+      assignType = 'store';
+      storeId = pricing.storeId;
+    }
+    
     setFormData({
       name: pricing.name,
       priceOnePhoto: pricing.priceOnePhoto,
       priceTwoPhoto: pricing.priceTwoPhoto,
       priceThreePhoto: pricing.priceThreePhoto,
-      isDefault: pricing.isDefault
+      isDefault: pricing.isDefault,
+      assignType,
+      userId,
+      storeId
     });
     setShowForm(true);
   };
@@ -173,13 +271,7 @@ export default function PricingAdminPage() {
           onClick={() => {
             setShowForm(true);
             setEditingPricing(null);
-            setFormData({
-              name: '',
-              priceOnePhoto: 0,
-              priceTwoPhoto: 0,
-              priceThreePhoto: 0,
-              isDefault: false
-            });
+            resetFormData();
           }}
           className="w-full sm:w-auto bg-blue-600 text-white px-4 py-3 sm:py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
         >
@@ -251,7 +343,76 @@ export default function PricingAdminPage() {
                   />
                 </div>
 
+                {/* Assignment Type */}
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phạm vi áp dụng
+                  </label>
+                  <select
+                    value={formData.assignType}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      assignType: e.target.value,
+                      userId: '',
+                      storeId: ''
+                    })}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="global">Toàn hệ thống</option>
+                    <option value="store">Cửa hàng cụ thể</option>
+                    <option value="user">Người dùng cụ thể</option>
+                  </select>
+                </div>
+
+                {/* Store Selection */}
+                {formData.assignType === 'store' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Chọn cửa hàng
+                    </label>
+                    <select
+                      value={formData.storeId}
+                      onChange={(e) => setFormData({ ...formData, storeId: e.target.value })}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="">-- Chọn cửa hàng --</option>
+                      {stores.map((store) => (
+                        <option key={store.id} value={store.id}>
+                          {store.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* User Selection */}
+                {formData.assignType === 'user' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Chọn người dùng
+                    </label>
+                    <select
+                      value={formData.userId}
+                      onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="">-- Chọn người dùng --</option>
+                      {users.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name} ({user.username}) - {user.role}
+                          {user.store && ` - ${user.store.name}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Đặt làm bảng giá mặc định
+                  </label>
                   <label className="flex items-center">
                     <input
                       type="checkbox"
@@ -259,7 +420,7 @@ export default function PricingAdminPage() {
                       onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
                       className="mr-3 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-sm text-gray-700">
                       Đặt làm bảng giá mặc định
                     </span>
                   </label>
@@ -305,6 +466,9 @@ export default function PricingAdminPage() {
                   Giá 3 tấm
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Phạm vi áp dụng
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Trạng thái
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -334,6 +498,21 @@ export default function PricingAdminPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {pricing.priceThreePhoto} xu
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {pricing.userId ? (
+                        <span className="text-blue-600">
+                          👤 {pricing.user?.name} ({pricing.user?.username})
+                        </span>
+                      ) : pricing.storeId ? (
+                        <span className="text-green-600">
+                          🏪 {pricing.store?.name}
+                        </span>
+                      ) : (
+                        <span className="text-gray-600">🌐 Toàn hệ thống</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <label className="flex items-center">
@@ -421,6 +600,24 @@ export default function PricingAdminPage() {
               <div className="text-center">
                 <div className="text-xs text-gray-500 mb-1">3 tấm</div>
                 <div className="text-sm font-medium text-gray-900">{pricing.priceThreePhoto} xu</div>
+              </div>
+            </div>
+
+            {/* Assignment Info */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="text-xs text-gray-500 mb-1">Phạm vi áp dụng</div>
+              <div className="text-sm">
+                {pricing.userId ? (
+                  <span className="text-blue-600">
+                    👤 {pricing.user?.name} ({pricing.user?.username})
+                  </span>
+                ) : pricing.storeId ? (
+                  <span className="text-green-600">
+                    🏪 {pricing.store?.name}
+                  </span>
+                ) : (
+                  <span className="text-gray-600">🌐 Toàn hệ thống</span>
+                )}
               </div>
             </div>
 

@@ -3,6 +3,7 @@
 import StoreBackground from "@/app/components/StoreBackground";
 import StoreHeader from "@/app/components/StoreHeader";
 import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
+import { useAuth } from "@/lib/context/AuthContext";
 import { useBooth } from "@/lib/context/BoothContext";
 import { Pricing } from "@/lib/models";
 import { getStoreAccentColor, getStoreBorderColor, getStorePrimaryColor } from "@/lib/storeUtils";
@@ -16,11 +17,28 @@ export default function Step4() {
   const { setSelectedTotalAmount, setSelectedQuantity, currentStore } = useBooth();
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [loading, setLoading] = useState(true);
+  const {user} = useAuth();
 
   useEffect(() => {
     const fetchPricing = async () => {
       try {
-        const response = await fetch('/api/pricing/default');
+        let url = '/api/pricing/default';
+        const params = new URLSearchParams();
+        
+        // Thêm storeId nếu có currentStore
+        if (currentStore?.id) {
+          params.append('storeId', currentStore.id);
+        }
+        
+         if (user?.id) {
+          params.append('userId', user.id);
+        }
+        
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
+
+        const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
           setPricing(data);
@@ -33,7 +51,7 @@ export default function Step4() {
     };
 
     fetchPricing();
-  }, []);
+  }, [currentStore]);
 
   const getPriceForQuantity = (qty: number) => {
     if (!pricing) return 0;

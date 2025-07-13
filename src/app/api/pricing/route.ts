@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -9,9 +9,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const getAll = searchParams.get("all") === "true";
+    const storeId = searchParams.get("storeId");
+    const userId = searchParams.get("userId");
 
     if (getAll) {
-      // Chỉ admin mới có thể xem tất cả bảng giá
+      // Xác thực người dùng
       const authHeader = request.headers.get("Authorization");
       if (!authHeader) {
         return NextResponse.json(
@@ -29,16 +31,53 @@ export async function GET(request: NextRequest) {
 
       const user = await prisma.user.findUnique({
         where: { id: decoded.id },
+        include: { store: true }
       });
 
-      if (!user || user.role !== "ADMIN") {
+      if (!user) {
         return NextResponse.json(
-          { error: "Only admin can view all pricing" },
-          { status: 403 }
+          { error: "User not found" },
+          { status: 404 }
         );
       }
 
+      let whereClause: Prisma.PricingWhereInput = {};
+
+      // Admin có thể xem tất cả
+      if (user.role === "ADMIN") {
+        // Không cần filter gì cả
+      } 
+      // Store Owner/Manager chỉ xem pricing của store mình và global
+      else if (user.role === "STORE_OWNER" || user.role === "MANAGER") {
+        whereClause = {
+          OR: [
+            { storeId: user.storeId },
+            { userId: user.id },
+            { AND: [{ storeId: null }, { userId: null }] } // Global pricing
+          ]
+        };
+      }
+      // User/Machine chỉ xem pricing được gán cho mình hoặc global
+      else {
+        whereClause = {
+          OR: [
+            { userId: user.id },
+            { storeId: user.storeId },
+            { AND: [{ storeId: null }, { userId: null }] } // Global pricing
+          ]
+        };
+      }
+
       const pricings = await prisma.pricing.findMany({
+        where: whereClause,
+        include: {
+          user: {
+            select: { id: true, name: true, username: true }
+          },
+          store: {
+            select: { id: true, name: true }
+          }
+        },
         orderBy: [
           { isDefault: "desc" },
           { isActive: "desc" },
@@ -48,18 +87,49 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(pricings);
     } else {
-      // Lấy bảng giá mặc định hoặc bảng giá đang hoạt động
+      // Lấy bảng giá mặc định dựa trên context
+      const whereClause: Prisma.PricingWhereInput = {
+        isActive: true,
+      };
+
+      if (storeId) {
+        whereClause.OR = [
+          { storeId: storeId, isDefault: true },
+          { AND: [{ storeId: null }, { userId: null }, { isDefault: true }] }
+        ];
+      } else if (userId) {
+        whereClause.OR = [
+          { userId: userId, isDefault: true },
+          { AND: [{ storeId: null }, { userId: null }, { isDefault: true }] }
+        ];
+      } else {
+        whereClause.isDefault = true;
+      }
+
       const pricing = await prisma.pricing.findFirst({
-        where: {
-          isActive: true,
-          isDefault: true,
-        },
+        where: whereClause,
+        include: {
+          user: {
+            select: { id: true, name: true, username: true }
+          },
+          store: {
+            select: { id: true, name: true }
+          }
+        }
       });
 
       if (!pricing) {
         // Nếu không có bảng giá mặc định, lấy bảng giá hoạt động đầu tiên
         const activePricing = await prisma.pricing.findFirst({
           where: { isActive: true },
+          include: {
+            user: {
+              select: { id: true, name: true, username: true }
+            },
+            store: {
+              select: { id: true, name: true }
+            }
+          },
           orderBy: { createdAt: "asc" },
         });
 
@@ -84,7 +154,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Tạo hoặc cập nhật bảng giá (chỉ admin)
+// POST - Tạo hoặc cập nhật bảng giá
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get("Authorization");
@@ -101,15 +171,23 @@ export async function POST(request: NextRequest) {
       email: string;
       role: string;
     };
-    console.log("Decoded JWT:", decoded);
-    // Chỉ admin mới có quyền tạo/cập nhật bảng giá
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
+      include: { store: true }
     });
 
-    if (!user || user.role !== "ADMIN") {
+    if (!user) {
       return NextResponse.json(
-        { error: "Only admin can manage pricing" },
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    // Chỉ admin, store owner, và manager mới có quyền tạo/cập nhật bảng giá
+    if (!["ADMIN", "STORE_OWNER", "MANAGER"].includes(user.role)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
         { status: 403 }
       );
     }
@@ -122,6 +200,8 @@ export async function POST(request: NextRequest) {
       priceTwoPhoto,
       priceThreePhoto,
       isDefault,
+      userId,
+      storeId,
     } = body;
 
     // Validate required fields
@@ -148,14 +228,67 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Kiểm tra quyền assign pricing
+    if (user.role !== "ADMIN") {
+      // Store owner/manager chỉ có thể tạo pricing cho store của mình hoặc user trong store
+      if (storeId && storeId !== user.storeId) {
+        return NextResponse.json(
+          { error: "Can only create pricing for your own store" },
+          { status: 403 }
+        );
+      }
+      
+      if (userId) {
+        const targetUser = await prisma.user.findUnique({
+          where: { id: userId }
+        });
+        if (!targetUser || targetUser.storeId !== user.storeId) {
+          return NextResponse.json(
+            { error: "Can only assign pricing to users in your store" },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     let pricing;
 
     if (id) {
       // Cập nhật bảng giá hiện có
-      // Nếu đặt làm mặc định, bỏ mặc định của các bảng giá khác
+      const existingPricing = await prisma.pricing.findUnique({
+        where: { id }
+      });
+
+      if (!existingPricing) {
+        return NextResponse.json(
+          { error: "Pricing not found" },
+          { status: 404 }
+        );
+      }
+
+      // Kiểm tra quyền edit
+      if (user.role !== "ADMIN") {
+        if (existingPricing.storeId !== user.storeId && existingPricing.userId !== user.id) {
+          return NextResponse.json(
+            { error: "Can only edit your own pricing" },
+            { status: 403 }
+          );
+        }
+      }
+
+      // Nếu đặt làm mặc định, bỏ mặc định của các bảng giá khác trong cùng scope
       if (isDefault) {
+        const whereClause: Prisma.PricingWhereInput = { isDefault: true };
+        if (storeId) {
+          whereClause.storeId = storeId;
+        } else if (userId) {
+          whereClause.userId = userId;
+        } else {
+          whereClause.AND = [{ storeId: null }, { userId: null }];
+        }
+
         await prisma.pricing.updateMany({
-          where: { isDefault: true },
+          where: whereClause,
           data: { isDefault: false },
         });
       }
@@ -168,15 +301,34 @@ export async function POST(request: NextRequest) {
           priceTwoPhoto,
           priceThreePhoto,
           isDefault: !!isDefault,
+          userId: userId || null,
+          storeId: storeId || null,
           updatedAt: new Date(),
         },
+        include: {
+          user: {
+            select: { id: true, name: true, username: true }
+          },
+          store: {
+            select: { id: true, name: true }
+          }
+        }
       });
     } else {
       // Tạo bảng giá mới
-      // Nếu đặt làm mặc định, bỏ mặc định của các bảng giá khác
+      // Nếu đặt làm mặc định, bỏ mặc định của các bảng giá khác trong cùng scope
       if (isDefault) {
+        const whereClause: Prisma.PricingWhereInput = { isDefault: true };
+        if (storeId) {
+          whereClause.storeId = storeId;
+        } else if (userId) {
+          whereClause.userId = userId;
+        } else {
+          whereClause.AND = [{ storeId: null }, { userId: null }];
+        }
+
         await prisma.pricing.updateMany({
-          where: { isDefault: true },
+          where: whereClause,
           data: { isDefault: false },
         });
       }
@@ -188,7 +340,17 @@ export async function POST(request: NextRequest) {
           priceTwoPhoto,
           priceThreePhoto,
           isDefault: !!isDefault,
+          userId: userId || null,
+          storeId: storeId || null,
         },
+        include: {
+          user: {
+            select: { id: true, name: true, username: true }
+          },
+          store: {
+            select: { id: true, name: true }
+          }
+        }
       });
     }
 
@@ -220,14 +382,22 @@ export async function DELETE(request: NextRequest) {
       role: string;
     };
 
-    // Chỉ admin mới có quyền xóa
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
+      include: { store: true }
     });
 
-    if (!user || user.role !== "ADMIN") {
+    if (!user) {
       return NextResponse.json(
-        { error: "Only admin can delete pricing" },
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    // Chỉ admin, store owner, và manager mới có quyền xóa
+    if (!["ADMIN", "STORE_OWNER", "MANAGER"].includes(user.role)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
         { status: 403 }
       );
     }
@@ -240,6 +410,51 @@ export async function DELETE(request: NextRequest) {
         { error: "Pricing ID is required" },
         { status: 400 }
       );
+    }
+
+    // Kiểm tra pricing có tồn tại và quyền xóa
+    const existingPricing = await prisma.pricing.findUnique({
+      where: { id: pricingId }
+    });
+
+    if (!existingPricing) {
+      return NextResponse.json(
+        { error: "Pricing not found" },
+        { status: 404 }
+      );
+    }
+
+    // Kiểm tra quyền xóa
+    if (user.role !== "ADMIN") {
+      if (existingPricing.storeId !== user.storeId && existingPricing.userId !== user.id) {
+        return NextResponse.json(
+          { error: "Can only delete your own pricing" },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Không cho phép xóa pricing mặc định cuối cùng
+    if (existingPricing.isDefault) {
+      const whereClause: Prisma.PricingWhereInput = { isDefault: true, id: { not: pricingId } };
+      if (existingPricing.storeId) {
+        whereClause.storeId = existingPricing.storeId;
+      } else if (existingPricing.userId) {
+        whereClause.userId = existingPricing.userId;
+      } else {
+        whereClause.AND = [{ storeId: null }, { userId: null }];
+      }
+
+      const otherDefaultPricing = await prisma.pricing.findFirst({
+        where: whereClause
+      });
+
+      if (!otherDefaultPricing) {
+        return NextResponse.json(
+          { error: "Cannot delete the last default pricing" },
+          { status: 400 }
+        );
+      }
     }
 
     await prisma.pricing.delete({

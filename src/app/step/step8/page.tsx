@@ -379,11 +379,7 @@ export default function Step8() {
 
       try {
         setProcessingProgress(10);
-
-
-
         setProcessingProgress(20);
-
         // Process all media types in parallel với progress tracking
         const processTasks = [];
 

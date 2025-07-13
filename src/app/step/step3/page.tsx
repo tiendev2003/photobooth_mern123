@@ -3,6 +3,7 @@
 import StoreBackground from "@/app/components/StoreBackground";
 import StoreHeader from "@/app/components/StoreHeader";
 import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
+import { useAuth } from "@/lib/context/AuthContext";
 import { useBooth } from "@/lib/context/BoothContext";
 import { FrameType, Pricing } from "@/lib/models";
 import Image from "next/image";
@@ -14,11 +15,29 @@ export default function Step3() {
   const { selectedFrame, setSelectedFrame, currentStore } = useBooth();
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [loading, setLoading] = useState(true);
+  const {user} = useAuth();
 
   useEffect(() => {
     const fetchPricing = async () => {
       try {
-        const response = await fetch('/api/pricing/default');
+        let url = '/api/pricing/default';
+        const params = new URLSearchParams();
+        
+        // Thêm storeId nếu có currentStore
+        if (currentStore?.id) {
+          params.append('storeId', currentStore.id);
+        }
+        
+        // TODO: Thêm userId nếu có user đăng nhập (từ auth context)
+        if (user?.id) {
+          params.append('userId', user.id);
+        }
+        
+        if (params.toString()) {
+          url += `?${params.toString()}`;
+        }
+
+        const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
           setPricing(data);
@@ -31,7 +50,7 @@ export default function Step3() {
     };
 
     fetchPricing();
-  }, []);
+  }, [currentStore]);
   const [frameTypes] = useState<FrameType[]>([
     {
       id: "1",
