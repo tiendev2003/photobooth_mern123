@@ -12,6 +12,7 @@ import EmployeeWelcome from './components/EmployeeWelcome';
 import EmployeesTab from './components/EmployeesTab';
 import MachineRevenuesTab from './components/MachineRevenuesTab';
 import OverviewTab from './components/OverviewTab';
+import PricingTab from './components/PricingTab';
 import RevenuesTab from './components/RevenuesTab';
 import SettingsTab from './components/SettingsTab';
 import StoreSidebar from './components/StoreSidebar';
@@ -112,7 +113,7 @@ export default function StoreDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'revenues' | 'machine-revenues' | 'coupons' | 'settings' | 'edit' | 'templates'>('revenues');
+  const [activeTab, setActiveTab] = useState<'overview' | 'employees' | 'revenues' | 'machine-revenues' | 'pricing' | 'coupons' | 'settings' | 'edit' | 'templates'>('revenues');
   const [selectedMachine, setSelectedMachine] = useState<string | null>(null);
   const [machineRevenues, setMachineRevenues] = useState<MachineRevenue[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -165,15 +166,34 @@ export default function StoreDashboard() {
         console.log('Store data received:', data);
         setStore(data.store);
 
-        // Fetch default pricing
+        // Fetch default pricing with user and store context
         try {
-          const pricingResponse = await fetch('/api/pricing/default');
+          let pricingUrl = '/api/pricing/default';
+          const params = new URLSearchParams();
+          
+          // Add user ID to get user-specific pricing
+          if (user?.id) {
+            params.append('userId', user.id);
+          }
+          
+          // Add store ID to get store-specific pricing
+          if (data.store?.id) {
+            params.append('storeId', data.store.id);
+          }
+          
+          if (params.toString()) {
+            pricingUrl += `?${params.toString()}`;
+          }
+
+          const pricingResponse = await fetch(pricingUrl);
            if (!pricingResponse.ok) {
             const errorData = await pricingResponse.json();
             console.error('API Error:', errorData);
             throw new Error(errorData.error || 'Failed to fetch default pricing');
           }
-          setDefaultPricing(await pricingResponse.json());
+          const pricingData = await pricingResponse.json();
+          console.log('Pricing data received:', pricingData);
+          setDefaultPricing(pricingData);
         } catch (err) {
           console.error('Error fetching default pricing:', err);
         }
@@ -643,6 +663,7 @@ export default function StoreDashboard() {
               {activeTab === 'overview' && 'Tổng quan'}
               {activeTab === 'revenues' && 'Doanh thu'}
               {activeTab === 'machine-revenues' && 'Chi tiết máy'}
+              {activeTab === 'pricing' && 'Bảng giá'}
               {activeTab === 'coupons' && 'Mã giảm giá'}
               {activeTab === 'employees' && 'Nhân viên'}
               {activeTab === 'settings' && 'Thông tin cửa hàng'}
@@ -677,6 +698,12 @@ export default function StoreDashboard() {
               machineRevenues={machineRevenues}
               loading={machineRevenuesLoading}
               onRefresh={() => fetchMachineRevenues()}
+            />
+          )}
+
+          {activeTab === 'pricing' && (
+            <PricingTab
+              onShowToast={showToast}
             />
           )}
 

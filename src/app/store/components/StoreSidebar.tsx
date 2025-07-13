@@ -38,6 +38,7 @@ export default function StoreSidebar({
     { key: 'overview', label: 'Tổng quan', icon: BarChart2, roles: ['STORE_OWNER'] },
     { key: 'revenues', label: 'Doanh thu máy', icon: DollarSign, roles: ['STORE_OWNER', 'USER', 'MACHINE'] },
     { key: 'machine-revenues', label: 'Chi tiết máy', icon: DollarSign, roles: ['STORE_OWNER', 'USER', 'MACHINE'] },
+    { key: 'pricing', label: 'Bảng giá', icon: Tag, roles: ['STORE_OWNER', 'MANAGER'] },
     { key: 'coupons', label: 'Mã giảm giá', icon: Tag, roles: ['STORE_OWNER', 'USER'] },
     { key: 'templates', label: 'Mẫu khung ảnh', icon: Image, roles: ['STORE_OWNER'] },
     { key: 'employees', label: 'Nhân viên', icon: Users, roles: ['STORE_OWNER'] },
@@ -75,7 +76,7 @@ export default function StoreSidebar({
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="flex items-center flex-1 min-w-0">
             {store.logo && (
-              <img src={store.logo} alt="Logo" className="h-8 w-8 mr-3 rounded-lg object-cover" />
+              <Image src={store.logo ?? ""} alt="Logo" className="h-8 w-8 mr-3 rounded-lg object-cover" />
             )}
             <div className="flex-1 min-w-0">
               <h1 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{store.name}</h1>

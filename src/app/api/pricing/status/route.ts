@@ -57,7 +57,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Kiểm tra quyền update
-    if (user.role !== "ADMIN") {
+    if (user.role !== "ADMIN" && user.role !== "STORE_OWNER" && user.role !== "MANAGER") {
       if (existingPricing.storeId !== user.storeId && existingPricing.userId !== user.id) {
         return NextResponse.json(
           { error: "Can only update your own pricing" },

@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
 const prisma = new PrismaClient();
@@ -10,91 +10,35 @@ export async function GET(request: NextRequest) {
     const storeId = searchParams.get("storeId");
     const userId = searchParams.get("userId");
 
+    console.log('Fetching pricing with params:', { userId, storeId });
+
+    // Tạo where clause theo thứ tự ưu tiên
+    const whereClause: Prisma.PricingWhereInput = { isActive: true };
+
     // Tìm bảng giá theo thứ tự ưu tiên:
-    // 1. Pricing của user cụ thể (nếu có userId)
-    // 2. Pricing của store cụ thể (nếu có storeId)  
-    // 3. Pricing global mặc định
-
     if (userId) {
-      // Tìm pricing của user trước
-      const userPricing = await prisma.pricing.findFirst({
-        where: {
-          userId: userId,
-          isActive: true,
-          isDefault: true
-        },
-        include: {
-          user: {
-            select: { id: true, name: true, username: true }
-          },
-          store: {
-            select: { id: true, name: true }
-          }
-        }
-      });
-
-      if (userPricing) {
-        return NextResponse.json(userPricing);
-      }
-
-      // Nếu không có user pricing, tìm store pricing
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { storeId: true }
-      });
-
-      if (user?.storeId) {
-        const storePricing = await prisma.pricing.findFirst({
-          where: {
-            storeId: user.storeId,
-            isActive: true,
-            isDefault: true
-          },
-          include: {
-            user: {
-              select: { id: true, name: true, username: true }
-            },
-            store: {
-              select: { id: true, name: true }
-            }
-          }
-        });
-
-        if (storePricing) {
-          return NextResponse.json(storePricing);
-        }
-      }
+      // 1. Pricing của user cụ thể
+      whereClause.OR = [
+        { userId: userId, isDefault: true },
+        { userId: userId },
+        { storeId: null, userId: null, isDefault: true } // Global fallback
+      ];
     } else if (storeId) {
-      // Tìm pricing của store
-      const storePricing = await prisma.pricing.findFirst({
-        where: {
-          storeId: storeId,
-          isActive: true,
-          isDefault: true
-        },
-        include: {
-          user: {
-            select: { id: true, name: true, username: true }
-          },
-          store: {
-            select: { id: true, name: true }
-          }
-        }
-      });
-
-      if (storePricing) {
-        return NextResponse.json(storePricing);
-      }
+      // 2. Pricing của store cụ thể
+      whereClause.OR = [
+        { storeId: storeId, isDefault: true },
+        { storeId: storeId },
+        { storeId: null, userId: null, isDefault: true } // Global fallback
+      ];
+    } else {
+      // 3. Chỉ lấy global pricing
+      whereClause.storeId = null;
+      whereClause.userId = null;
+      whereClause.isDefault = true;
     }
 
-    // Fallback: Tìm global pricing mặc định
-    const globalPricing = await prisma.pricing.findFirst({
-      where: {
-        userId: null,
-        storeId: null,
-        isActive: true,
-        isDefault: true
-      },
+    const pricing = await prisma.pricing.findFirst({
+      where: whereClause,
       include: {
         user: {
           select: { id: true, name: true, username: true }
@@ -102,15 +46,20 @@ export async function GET(request: NextRequest) {
         store: {
           select: { id: true, name: true }
         }
-      }
+      },
+      orderBy: [
+        { isDefault: 'desc' },
+        { createdAt: 'desc' }
+      ]
     });
 
-    if (globalPricing) {
-      return NextResponse.json(globalPricing);
+    if (pricing) {
+      console.log('Found pricing:', pricing.name);
+      return NextResponse.json(pricing);
     }
 
-    // Nếu không có pricing mặc định, lấy pricing hoạt động đầu tiên
-    const firstActivePricing = await prisma.pricing.findFirst({
+    // Fallback cuối cùng: lấy bất kỳ pricing active nào
+    const fallbackPricing = await prisma.pricing.findFirst({
       where: { isActive: true },
       include: {
         user: {
@@ -120,17 +69,18 @@ export async function GET(request: NextRequest) {
           select: { id: true, name: true }
         }
       },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: "desc" }
     });
 
-    if (!firstActivePricing) {
+    if (!fallbackPricing) {
       return NextResponse.json(
         { error: "No active pricing found" },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(firstActivePricing);
+    console.log('Found fallback pricing:', fallbackPricing.name);
+    return NextResponse.json(fallbackPricing);
   } catch (error) {
     console.error("Error fetching default pricing:", error);
     return NextResponse.json(
