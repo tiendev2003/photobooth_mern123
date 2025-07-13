@@ -76,7 +76,7 @@ export default function StoreSidebar({
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="flex items-center flex-1 min-w-0">
             {store.logo && (
-              <Image src={store.logo ?? ""} alt="Logo" className="h-8 w-8 mr-3 rounded-lg object-cover" />
+              <img src={store.logo ?? ""} alt="Logo" className="h-8 w-8 mr-3 rounded-lg object-cover" />
             )}
             <div className="flex-1 min-w-0">
               <h1 className="text-lg font-semibold text-gray-900 dark:text-white truncate">{store.name}</h1>
