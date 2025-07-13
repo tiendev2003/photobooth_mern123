@@ -15,7 +15,7 @@ export default function Step6() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { photos, setPhotos, setVideos, selectedFrame, currentStore, storeLoading, storeError } = useBooth();
+  const { photos, setPhotos, setVideos, selectedFrame, currentStore,   storeError } = useBooth();
   const storeTheme = getStoreTheme(currentStore);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);

@@ -88,14 +88,13 @@ export default function Step8() {
 
   const [frameTemplates, setFrameTemplates] = useState<FrameTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isPrinting, setIsPrinting] = useState(false);
   const [mediaSessionCode, setMediaSessionCode] = useState<string>("");
   const [mediaSessionUrl, setMediaSessionUrl] = useState<string>("");
   const [sessionReady, setSessionReady] = useState(false);
 
   // Tối ưu thời gian xử lý bằng cách xử lý song song và cache
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingProgress, setProcessingProgress] = useState(0);
+
 
   console.log("Step 8 - Session state:", { mediaSessionCode, mediaSessionUrl, sessionReady });
 
@@ -355,15 +354,12 @@ export default function Step8() {
 
 
   const handlePrint = async () => {
-    setIsPrinting(true);
     setIsProcessing(true);
-    setProcessingProgress(0);
 
     try {
       const previewContent = printPreviewRef.current;
       if (!previewContent) {
         alert('Không tìm thấy nội dung để in');
-        setIsPrinting(false);
         setIsProcessing(false);
         return;
       }
@@ -410,15 +406,12 @@ export default function Step8() {
           selectedFrame.columns > selectedFrame.rows : false);
 
       try {
-        setProcessingProgress(10);
-        setProcessingProgress(20);
         // Process all media types in parallel với progress tracking
         const processTasks = [];
 
         // Generate and upload image - Task 1
         const imageTask = (async () => {
           try {
-            setProcessingProgress(30);
             console.time('Tạo ảnh');
             const imageDataUrl = await generateHighQualityImage(isLandscape);
             console.timeEnd('Tạo ảnh');
@@ -426,8 +419,7 @@ export default function Step8() {
               throw new Error("Không thể tạo ảnh");
             }
 
-            setProcessingProgress(50);
-            // Convert and upload image to external API
+
             const imageFile = dataURLtoFile(imageDataUrl, "photobooth.jpg");
             const imageUrl = await uploadImage(imageFile);
 
@@ -440,7 +432,6 @@ export default function Step8() {
               console.error("Failed to update session with image:", err)
             );
 
-            setProcessingProgress(60);
 
             // Send to printer (non-blocking for better UX)
             fetch("http://localhost:4000/api/print", {
@@ -478,7 +469,7 @@ export default function Step8() {
           const videoTask = (async () => {
             try {
               console.log("Starting video generation...");
-              setProcessingProgress(70);
+
 
               const videoUrl = await generateSmoothVideo(isLandscape);
               if (videoUrl) {
@@ -492,7 +483,6 @@ export default function Step8() {
                   console.error("Failed to update session with video:", err)
                 );
 
-                setProcessingProgress(80);
                 console.log("Video processed and uploaded successfully");
               } else {
                 console.error("Failed to generate video - no URL returned");
@@ -507,7 +497,6 @@ export default function Step8() {
           const gifTask = (async () => {
             try {
               console.log("Starting GIF generation from video...");
-              setProcessingProgress(85);
 
               const gifUrl = await generateGifFromVideo(isLandscape);
               if (gifUrl) {
@@ -521,7 +510,6 @@ export default function Step8() {
                   console.error("Failed to update session with GIF:", err)
                 );
 
-                setProcessingProgress(95);
                 console.log("GIF processed and uploaded successfully");
               } else {
                 console.error("Failed to generate GIF - no URL returned");
@@ -535,7 +523,6 @@ export default function Step8() {
 
         // Wait for all tasks to complete
         await Promise.all(processTasks);
-        setProcessingProgress(100);
 
         // Ngắn delay trước khi chuyển trang để user thấy progress hoàn thành
         setTimeout(() => {
@@ -545,13 +532,11 @@ export default function Step8() {
       } catch (error) {
         console.error("Lỗi khi xử lý và tải lên:", error);
         alert(`Có lỗi xảy ra: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
-        setIsPrinting(false);
         setIsProcessing(false);
       }
     } catch (error) {
       console.error("Lỗi khi xử lý:", error);
       alert(`Có lỗi xảy ra: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
-      setIsPrinting(false);
       setIsProcessing(false);
     }
   };
