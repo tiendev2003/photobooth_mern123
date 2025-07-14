@@ -131,6 +131,7 @@ export const useBooth = () => {
     localStorage.removeItem("imageQrCode");
     localStorage.removeItem("videoQrCode");
     localStorage.removeItem("gifQrCode");
+    localStorage.removeItem("mediaSessionCode");
   };
   
   return { ...context, clearAllBoothData };

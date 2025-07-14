@@ -193,21 +193,7 @@ export default function Step8() {
     const initializeMediaSession = async () => {
       if (photos && photos.length > 0) {
         try {
-          // Check if we already have a session code
-          const existingSessionCode = localStorage.getItem("mediaSessionCode");
-          if (existingSessionCode) {
-            console.log("Using existing media session code:", existingSessionCode);
-            setMediaSessionCode(existingSessionCode);
-
-            // Create URL for existing session
-            const baseUrl = typeof window !== 'undefined' ?
-              `${window.location.protocol}//${window.location.host}` : '';
-            const sessionUrl = `${baseUrl}/session/${existingSessionCode}`;
-            setMediaSessionUrl(sessionUrl);
-            setSessionReady(true);
-            return;
-          }
-
+          // Always create a new session when reaching step8
           // Tạo session mới trong database
           const response = await fetch('/api/media-session', {
             method: 'POST',
@@ -368,7 +354,7 @@ export default function Step8() {
       const currentSessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
       if (!currentSessionCode) {
         console.error("No media session available, creating one...");
-        // Try to create a session immediately
+        // Always create a new session
         try {
           const response = await fetch('/api/media-session', {
             method: 'POST',
@@ -434,30 +420,30 @@ export default function Step8() {
 
 
             // Send to printer (non-blocking for better UX)
-            fetch("http://localhost:4000/api/print", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                "filePath": imageUrl,
-                "fileName": "photobooth.jpg",
-                "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
-                "quantity": selectedQuantity || 1,
-              }),
-            })
-              .then((response) => {
-                if (!response.ok) {
-                  throw new Error("Failed to print image");
-                }
-                return response.json();
-              })
-              .then((data) => {
-                console.log("Print job submitted successfully:", data);
-              })
-              .catch((error) => {
-                console.error("Error submitting print job:", error);
-              });
+            // fetch("http://localhost:4000/api/print", {
+            //   method: "POST",
+            //   headers: {
+            //     "Content-Type": "application/json",
+            //   },
+            //   body: JSON.stringify({
+            //     "filePath": imageUrl,
+            //     "fileName": "photobooth.jpg",
+            //     "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
+            //     "quantity": selectedQuantity || 1,
+            //   }),
+            // })
+            //   .then((response) => {
+            //     if (!response.ok) {
+            //       throw new Error("Failed to print image");
+            //     }
+            //     return response.json();
+            //   })
+            //   .then((data) => {
+            //     console.log("Print job submitted successfully:", data);
+            //   })
+            //   .catch((error) => {
+            //     console.error("Error submitting print job:", error);
+            //   });
           } catch (error) {
             console.error("Error processing image:", error);
           }

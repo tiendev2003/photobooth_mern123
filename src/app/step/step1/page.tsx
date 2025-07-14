@@ -6,10 +6,18 @@ import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useBooth } from "@/lib/context/BoothContext";
 import { getStorePrimaryColor } from "@/lib/storeUtils";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Step1() {
   const router = useRouter();
-  const { currentStore } = useBooth();
+  const { currentStore, clearAllBoothData } = useBooth();
+
+  // Clear any previous session data when starting a new session
+  useEffect(() => {
+    // Remove any existing media session code from previous sessions
+    localStorage.removeItem("mediaSessionCode");
+    clearAllBoothData();
+  }, [clearAllBoothData]);
 
   const handleNext = () => {
     router.push("/step/step2");
