@@ -80,7 +80,6 @@ export default function Step8() {
     currentStore,
     selectedQuantity
   } = useBooth();
-  console.log("Step 8 - Current selected frame:", videoQrCode, gifQrCode, imageQrCode, selectedTemplate);
 
   const activeSkinFilter = useMemo(() => {
     return skinFilters.find(filter => filter.id === selectedFilter.id) || skinFilters[0];
@@ -94,9 +93,6 @@ export default function Step8() {
 
   // Tối ưu thời gian xử lý bằng cách xử lý song song và cache
   const [isProcessing, setIsProcessing] = useState(false);
-
-
-  console.log("Step 8 - Session state:", { mediaSessionCode, mediaSessionUrl, sessionReady });
 
   // Ref to track active video elements for cleanup
   const activeVideoElementsRef = useRef<Set<HTMLVideoElement>>(new Set());
@@ -126,7 +122,6 @@ export default function Step8() {
     const fetchTemplates = async () => {
       if (selectedFrame?.id) {
         try {
-          console.log("Fetching templates for frame:", selectedFrame.id);
           const response = await fetch(`/api/frame-templates?frameTypeId=${selectedFrame.id}`);
           if (response.ok) {
             const data = await response.json();
@@ -134,7 +129,6 @@ export default function Step8() {
 
             if (data.data && Array.isArray(data.data)) {
               setFrameTemplates(data.data);
-              console.log("Set frame templates from data.data:", data.data);
 
               // Select first template by default if available
               if (data.data.length > 0) {
@@ -143,7 +137,6 @@ export default function Step8() {
               }
             } else if (data.templates && Array.isArray(data.templates)) {
               setFrameTemplates(data.templates);
-              console.log("Set frame templates from data.templates:", data.templates);
 
               // Select first template by default if available
               if (data.templates.length > 0) {
@@ -152,7 +145,6 @@ export default function Step8() {
               }
             } else if (data && Array.isArray(data)) {
               setFrameTemplates(data);
-              console.log("Set frame templates from data:", data);
 
               // Select first template by default if available
               if (data.length > 0) {
@@ -176,25 +168,12 @@ export default function Step8() {
     fetchTemplates();
   }, [selectedFrame, setSelectedTemplate]);
 
-  // Log selected template changes
-  useEffect(() => {
-    if (selectedTemplate) {
-      console.log("Selected template changed:", {
-        id: selectedTemplate.id,
-        name: selectedTemplate.name,
-        background: selectedTemplate.background,
-        overlay: selectedTemplate.overlay
-      });
-    }
-  }, [selectedTemplate]);
 
-  // Create media session on component mount
+
   useEffect(() => {
     const initializeMediaSession = async () => {
       if (photos && photos.length > 0) {
         try {
-          // Always create a new session when reaching step8
-          // Tạo session mới trong database
           const response = await fetch('/api/media-session', {
             method: 'POST',
             headers: {
@@ -290,40 +269,7 @@ export default function Step8() {
     sliderRef.current?.slickNext();
   };
 
-  // Function to update session with media URLs
-  const updateMediaSession = async (imageUrl?: string, videoUrl?: string, gifUrl?: string) => {
-    // Try to get session code from localStorage as backup
-    const currentSessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
 
-    if (!currentSessionCode) {
-      console.error("No media session code available");
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/media-session', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sessionCode: currentSessionCode,
-          imageUrl,
-          videoUrl,
-          gifUrl
-        })
-      });
-
-      if (response.ok) {
-        const updatedSession = await response.json();
-        console.log("Media session updated:", updatedSession);
-      } else {
-        console.error("Failed to update media session");
-      }
-    } catch (error) {
-      console.error("Error updating media session:", error);
-    }
-  };
 
   // Convert data URL to file
   const dataURLtoFile = (dataURL: string, filename: string): File => {
@@ -350,11 +296,8 @@ export default function Step8() {
         return;
       }
 
-      // Ensure we have a media session before proceeding
       const currentSessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
       if (!currentSessionCode) {
-        console.error("No media session available, creating one...");
-        // Always create a new session
         try {
           const response = await fetch('/api/media-session', {
             method: 'POST',
@@ -377,9 +320,7 @@ export default function Step8() {
             setMediaSessionUrl(sessionUrl);
             setSessionReady(true);
 
-            console.log("Emergency media session created:", session.sessionCode);
           } else {
-            console.error("Failed to create emergency media session");
           }
         } catch (error) {
           console.error("Error creating emergency media session:", error);
@@ -392,15 +333,11 @@ export default function Step8() {
           selectedFrame.columns > selectedFrame.rows : false);
 
       try {
-        // Process all media types in parallel với progress tracking
         const processTasks = [];
 
-        // Generate and upload image - Task 1
         const imageTask = (async () => {
           try {
-            console.time('Tạo ảnh');
             const imageDataUrl = await generateHighQualityImage(isLandscape);
-            console.timeEnd('Tạo ảnh');
             if (!imageDataUrl) {
               throw new Error("Không thể tạo ảnh");
             }
@@ -409,67 +346,49 @@ export default function Step8() {
             const imageFile = dataURLtoFile(imageDataUrl, "photobooth.jpg");
             const imageUrl = await uploadImage(imageFile);
 
-            console.log("Ảnh đã được tải lên thành công:", imageUrl);
             setImageQrCode(imageUrl);
             localStorage.setItem("imageQrCode", imageUrl);
 
-            // Update media session with image URL (non-blocking)
-            updateMediaSession(imageUrl).catch(err =>
-              console.error("Failed to update session with image:", err)
-            );
-
-
-            // Send to printer (non-blocking for better UX)
-            // fetch("http://localhost:4000/api/print", {
-            //   method: "POST",
-            //   headers: {
-            //     "Content-Type": "application/json",
-            //   },
-            //   body: JSON.stringify({
-            //     "filePath": imageUrl,
-            //     "fileName": "photobooth.jpg",
-            //     "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
-            //     "quantity": selectedQuantity || 1,
-            //   }),
-            // })
-            //   .then((response) => {
-            //     if (!response.ok) {
-            //       throw new Error("Failed to print image");
-            //     }
-            //     return response.json();
-            //   })
-            //   .then((data) => {
-            //     console.log("Print job submitted successfully:", data);
-            //   })
-            //   .catch((error) => {
-            //     console.error("Error submitting print job:", error);
-            //   });
+            fetch("http://localhost:4000/api/print", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                "filePath": imageUrl,
+                "fileName": "photobooth.jpg",
+                "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
+                "quantity": selectedQuantity || 1,
+              }),
+            })
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error("Failed to print image");
+                }
+                return response.json();
+              })
+              .then((data) => {
+                console.log("Print job submitted successfully:", data);
+              })
+              .catch((error) => {
+                console.error("Error submitting print job:", error);
+              });
           } catch (error) {
             console.error("Error processing image:", error);
           }
         })();
         processTasks.push(imageTask);
 
-        // Generate and upload video if videos are available - Task 2 (parallel)
         if (videos && videos.length > 0) {
           const videoTask = (async () => {
             try {
-              console.log("Starting video generation...");
 
 
               const videoUrl = await generateSmoothVideo(isLandscape);
               if (videoUrl) {
-                console.log("Video generated successfully, uploading to server...");
                 const serverUrl = await uploadVideo(videoUrl);
                 setVideoQrCode(serverUrl);
                 localStorage.setItem("videoQrCode", serverUrl);
-
-                // Update media session with video URL (non-blocking)
-                updateMediaSession(undefined, serverUrl).catch(err =>
-                  console.error("Failed to update session with video:", err)
-                );
-
-                console.log("Video processed and uploaded successfully");
               } else {
                 console.error("Failed to generate video - no URL returned");
               }
@@ -479,23 +398,14 @@ export default function Step8() {
           })();
           processTasks.push(videoTask);
 
-          // Generate and upload GIF from video - Task 3 (parallel với video)
           const gifTask = (async () => {
             try {
-              console.log("Starting GIF generation from video...");
 
               const gifUrl = await generateGifFromVideo(isLandscape);
               if (gifUrl) {
-                console.log("GIF generated successfully, uploading to server...");
                 const serverUrl = await uploadGif(gifUrl);
                 setGifQrCode(serverUrl);
                 localStorage.setItem("gifQrCode", serverUrl);
-
-                // Update media session with GIF URL (non-blocking)
-                updateMediaSession(undefined, undefined, serverUrl).catch(err =>
-                  console.error("Failed to update session with GIF:", err)
-                );
-
                 console.log("GIF processed and uploaded successfully");
               } else {
                 console.error("Failed to generate GIF - no URL returned");
@@ -507,10 +417,8 @@ export default function Step8() {
           processTasks.push(gifTask);
         }
 
-        // Wait for all tasks to complete
         await Promise.all(processTasks);
 
-        // Ngắn delay trước khi chuyển trang để user thấy progress hoàn thành
         setTimeout(() => {
           router.push("/step/step9");
         }, 500);
@@ -540,7 +448,6 @@ export default function Step8() {
     await Promise.all(promises);
   };
 
-  // Optimized video generation with smooth playback
   const generateSmoothVideo = async (isLandscape: boolean): Promise<string | void> => {
     try {
       const previewContent = printPreviewRef.current;
@@ -561,13 +468,12 @@ export default function Step8() {
 
       const rect = previewContent.getBoundingClientRect();
 
-      // Create output canvas for video with optimized settings
       const outputCanvas = document.createElement('canvas');
       outputCanvas.width = desiredWidth;
       outputCanvas.height = desiredHeight;
       const outputCtx = outputCanvas.getContext('2d', {
-        alpha: false, // Better performance for opaque content
-        desynchronized: true // Allow canvas to render frames out of sync
+        alpha: false,
+        desynchronized: true
       });
 
       if (!outputCtx) {
@@ -658,20 +564,16 @@ export default function Step8() {
             // Preload content for smoother playback
             await new Promise<void>((resolve) => {
               videoElement.onloadedmetadata = () => {
-                // Once metadata is loaded, try to preload more of the video
                 videoElement.oncanplaythrough = () => {
-                  console.log(`Video ${photoIndex} fully loaded and ready for smooth playback`);
                   resolve();
                 };
 
                 // Set a timeout in case canplaythrough never fires
                 setTimeout(() => {
-                  console.log(`Video ${photoIndex} loaded metadata, duration: ${videoElement.duration}`);
                   resolve();
                 }, 2000);
               };
               videoElement.onerror = () => {
-                console.error(`Error loading video ${photoIndex}`);
                 resolve();
               };
               setTimeout(() => resolve(), 5000); // Timeout fallback
@@ -686,25 +588,21 @@ export default function Step8() {
       let backgroundImg: HTMLImageElement | null = null;
       let backgroundValid = false;
       if (selectedTemplate?.background) {
-        console.log("Loading background image:", selectedTemplate.background);
         backgroundImg = document.createElement('img');
         backgroundImg.crossOrigin = "anonymous";
 
         await new Promise<void>((resolve) => {
           backgroundImg!.onload = () => {
             backgroundValid = true;
-            console.log("Background image loaded successfully");
             resolve();
           };
           backgroundImg!.onerror = (error) => {
             backgroundValid = false;
-            console.error("Failed to load background image:", error);
             resolve();
           };
           setTimeout(() => {
             if (!backgroundValid) {
               backgroundValid = false;
-              console.error("Background image load timeout");
             }
             resolve();
           }, 10000); // Increase timeout to 10 seconds
@@ -713,7 +611,6 @@ export default function Step8() {
           backgroundImg!.src = selectedTemplate.background;
           if (backgroundImg!.complete && backgroundImg!.naturalWidth > 0) {
             backgroundValid = true;
-            console.log("Background image already cached");
             resolve();
           }
         });
@@ -723,25 +620,21 @@ export default function Step8() {
       let overlayImg: HTMLImageElement | null = null;
       let overlayValid = false;
       if (selectedTemplate?.overlay) {
-        console.log("Loading overlay image:", selectedTemplate.overlay);
         overlayImg = document.createElement('img');
         overlayImg.crossOrigin = "anonymous";
 
         await new Promise<void>((resolve) => {
           overlayImg!.onload = () => {
             overlayValid = true;
-            console.log("Overlay image loaded successfully");
             resolve();
           };
           overlayImg!.onerror = (error) => {
             overlayValid = false;
-            console.error("Failed to load overlay image:", error);
             resolve();
           };
           setTimeout(() => {
             if (!overlayValid) {
               overlayValid = false;
-              console.error("Overlay image load timeout");
             }
             resolve();
           }, 10000); // Increase timeout to 10 seconds
@@ -750,17 +643,12 @@ export default function Step8() {
           overlayImg!.src = selectedTemplate.overlay;
           if (overlayImg!.complete && overlayImg!.naturalWidth > 0) {
             overlayValid = true;
-            console.log("Overlay image already cached");
             resolve();
           }
         });
       }
-
-      // Start all videos and wait for them to be ready
-      console.log("Starting videos for smooth recording...");
       const videoStartPromises = Array.from(cellVideoMap.values()).map(async (video) => {
         try {
-          // Make videos loop to ensure continuous playback throughout recording
           video.loop = true;
           await video.play();
           return true;
@@ -773,8 +661,6 @@ export default function Step8() {
       await Promise.all(videoStartPromises);
       await new Promise(resolve => setTimeout(resolve, 300)); // Buffer time
 
-      // Start recording
-      console.log("Starting optimized video recording...");
       mediaRecorder.start();
 
       // Optimized rendering with consistent timing
@@ -814,9 +700,7 @@ export default function Step8() {
         }
         lastTime = now;
 
-        // Check if we've been recording too long to prevent memory issues
         if (frameCount > targetFPS * TIMEOUT_DURATION) {
-          console.log("Reached maximum frame count, stopping recording");
           mediaRecorder.stop();
           return;
         }
@@ -828,7 +712,6 @@ export default function Step8() {
         // Handle end of all videos more gracefully
         // Only stop after minimum duration and if all videos are done
         if (!anyPlaying && frameCount > targetFPS * 3) { // Ensure at least 3 seconds of recording
-          console.log("All videos completed, stopping recording");
           mediaRecorder.stop();
           return;
         }
@@ -847,7 +730,6 @@ export default function Step8() {
         // Draw background image first if available - ALWAYS draw this
         if (backgroundImg && backgroundValid) {
           try {
-            console.log(`Drawing background for frame ${frameCount}`);
             previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
           } catch (e) {
             console.error("Error drawing background image in video:", e);
@@ -948,7 +830,6 @@ export default function Step8() {
             previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
             // For debugging
             if (frameCount % 24 === 0) {
-              console.log(`Overlay drawn for frame ${frameCount}`);
             }
           } catch (e) {
             console.error("Error drawing overlay image:", e);
@@ -1000,9 +881,7 @@ export default function Step8() {
         frameCount++;
         requestAnimationFrame(renderFrame);
       };
-      console.log("Starting video rendering...", frameCount);
 
-      // Start rendering
       requestAnimationFrame(renderFrame);
 
       // Make sure we stop recording after the defined timeout
@@ -1020,7 +899,6 @@ export default function Step8() {
         videoDuration
       );
 
-      console.log(`Setting video recording timeout to ${recordingTimeout} seconds`);
 
       // Force loop videos to ensure content plays throughout the recording time
       Array.from(cellVideoMap.values()).forEach(video => {
@@ -1028,7 +906,6 @@ export default function Step8() {
       });
 
       setTimeout(() => {
-        console.log("Video recording timeout reached, stopping...");
         mediaRecorder.stop();
       }, recordingTimeout * 1000);
 
@@ -1162,11 +1039,9 @@ export default function Step8() {
 
             await new Promise<void>((resolve) => {
               videoElement.onloadedmetadata = () => {
-                console.log(`Video ${photoIndex} loaded for GIF creation, duration: ${videoElement.duration}`);
                 resolve();
               };
               videoElement.onerror = () => {
-                console.error(`Error loading video ${photoIndex} for GIF`);
                 resolve();
               };
               setTimeout(() => resolve(), 5000);
@@ -1181,25 +1056,21 @@ export default function Step8() {
       let backgroundImg: HTMLImageElement | null = null;
       let backgroundValid = false;
       if (selectedTemplate?.background) {
-        console.log("Loading background image for GIF:", selectedTemplate.background);
         backgroundImg = document.createElement('img');
         backgroundImg.crossOrigin = "anonymous";
 
         await new Promise<void>((resolve) => {
           backgroundImg!.onload = () => {
             backgroundValid = true;
-            console.log("Background image loaded successfully for GIF");
             resolve();
           };
           backgroundImg!.onerror = (error) => {
             backgroundValid = false;
-            console.error("Failed to load background image for GIF:", error);
             resolve();
           };
           setTimeout(() => {
             if (!backgroundValid) {
               backgroundValid = false;
-              console.error("Background image timeout for GIF");
             }
             resolve();
           }, 10000); // Increase timeout to 10 seconds
@@ -1208,7 +1079,6 @@ export default function Step8() {
           backgroundImg!.src = selectedTemplate.background;
           if (backgroundImg!.complete && backgroundImg!.naturalWidth > 0) {
             backgroundValid = true;
-            console.log("Background image already cached for GIF");
             resolve();
           }
         });
@@ -1218,14 +1088,12 @@ export default function Step8() {
       let overlayImg: HTMLImageElement | null = null;
       let overlayValid = false;
       if (selectedTemplate?.overlay) {
-        console.log("Loading overlay image for GIF:", selectedTemplate.overlay);
         overlayImg = document.createElement('img');
         overlayImg.crossOrigin = "anonymous";
 
         await new Promise<void>((resolve) => {
           overlayImg!.onload = () => {
             overlayValid = true;
-            console.log("Overlay image loaded successfully for GIF");
             resolve();
           };
           overlayImg!.onerror = () => {
@@ -1248,8 +1116,6 @@ export default function Step8() {
         });
       }
 
-      // Start all videos
-      console.log("Starting videos for GIF creation...");
       const videoStartPromises = Array.from(cellVideoMap.values()).map(async (video) => {
         try {
           // Set videos to loop to prevent them from ending during GIF creation
@@ -1265,7 +1131,6 @@ export default function Step8() {
       await Promise.all(videoStartPromises);
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      console.log("Starting GIF frame capture with background:", backgroundValid, "overlay:", overlayValid);
 
       // Calculate actual GIF duration based on video durations
       const maxVideoDuration = Math.max(
@@ -1281,7 +1146,6 @@ export default function Step8() {
         maxVideoDuration + 0.5 // Actual max video duration plus half a second buffer
       );
 
-      console.log(`Using adjusted GIF duration of ${adjustedGifDuration} seconds`);
 
       // Recalculate frames based on adjusted duration
       const totalFrames = Math.ceil(adjustedGifDuration * frameRate);
@@ -1324,7 +1188,6 @@ export default function Step8() {
           try {
             previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
             if (frameIndex % 8 === 0) {
-              console.log(`Background drawn for GIF frame ${frameIndex}`);
             }
           } catch (e) {
             console.error("Error drawing background image in GIF:", e);
@@ -1421,7 +1284,6 @@ export default function Step8() {
           try {
             previewCtx.drawImage(overlayImg, 0, 0, previewCanvas.width, previewCanvas.height);
             if (frameIndex % 8 === 0) {
-              console.log(`Overlay drawn for GIF frame ${frameIndex}`);
             }
           } catch (e) {
             console.error("Error drawing overlay on GIF frame:", e);
@@ -1487,9 +1349,7 @@ export default function Step8() {
           dispose: isCustomFrame && frameIndex > totalFrames * 0.8 ? 1 : 2
         });
 
-        // Ensure we're showing progress throughout the GIF
         if (frameIndex % Math.floor(totalFrames / 4) === 0) {
-          console.log(`GIF progress: ${Math.round((frameIndex / totalFrames) * 100)}%`);
         }
 
         // Wait between frames - IMPORTANT: Need to wait for any async operations
@@ -1518,7 +1378,6 @@ export default function Step8() {
           copy: true
         });
 
-        console.log("Added clean final frames for custom frame GIF");
       } else if (!isCustomFrame) {
         // For regular frames, add a few extra frames with the last good state
         // to ensure smooth looping
@@ -1529,16 +1388,13 @@ export default function Step8() {
           });
         }
 
-        console.log("Added extra frames for regular GIF to ensure smooth looping");
       }
 
-      console.log("Rendering GIF...");
 
       // Render GIF and return as blob URL
       return new Promise<string>((resolve, reject) => {
         gif.on('finished', (blob: Blob) => {
           const gifUrl = URL.createObjectURL(blob);
-          console.log("GIF creation completed successfully");
 
           // Cleanup video elements after GIF creation
           Array.from(cellVideoMap.values()).forEach(video => {
@@ -1556,8 +1412,7 @@ export default function Step8() {
         });
 
         gif.on('error', (...args: unknown[]) => {
-          console.error("Error creating GIF:", args);
-
+          console.error("GIF creation error:", ...args);
           // Cleanup video elements on error too
           Array.from(cellVideoMap.values()).forEach(video => {
             try {
@@ -1579,7 +1434,6 @@ export default function Step8() {
     } catch (error) {
       console.error("Lỗi khi tạo GIF:", error);
 
-      // Cleanup any video elements that were created
       activeVideoElementsRef.current.forEach(video => {
         try {
           video.pause();
@@ -1611,7 +1465,6 @@ export default function Step8() {
         }
       }
 
-      console.log("Using media session URL:", sessionUrl);
       const isCustomFrame = selectedFrame?.isCustom === true;
       const isSquare = selectedFrame?.columns === selectedFrame?.rows;
 
@@ -1631,12 +1484,9 @@ export default function Step8() {
       const images = previewContent.querySelectorAll("img");
       await preloadImages(Array.from(images));
 
-      console.log("Starting high-quality image generation with HTML2Canvas");
 
-      // Create QR code element if session URL exists
       let qrCodeElement: HTMLElement | null = null;
       if (sessionUrl) {
-        console.log('Creating QR code for URL:', sessionUrl);
         qrCodeElement = document.createElement('div');
         qrCodeElement.style.position = 'absolute';
         qrCodeElement.style.bottom = '5%';
@@ -1664,7 +1514,6 @@ export default function Step8() {
           qrCanvas.style.width = '50px';
           qrCanvas.style.height = '50px';
           qrCodeElement.appendChild(qrCanvas);
-          console.log('QR code created successfully');
         } catch (error) {
           console.error('Error generating QR code:', error);
           const fallbackText = document.createElement('div');
@@ -1699,10 +1548,7 @@ export default function Step8() {
           element.tagName === "SCRIPT" ||
           element.classList?.contains("no-print"),
         onclone: (clonedDoc) => {
-          console.log("HTML2Canvas clone started with template:", selectedTemplate);
           if (selectedTemplate) {
-            console.log("Template details - Background:", selectedTemplate.background ? "Yes" : "No",
-              "Overlay:", selectedTemplate.overlay ? "Yes" : "No");
           }
 
           const container = clonedDoc.querySelector("[data-preview]") as HTMLElement;
@@ -1874,7 +1720,6 @@ export default function Step8() {
         previewContent.removeChild(qrCodeElement);
       }
 
-      console.log("HTML2Canvas basic capture completed successfully");
 
       // Create the final canvas with the desired dimensions
       const finalCanvas = document.createElement("canvas");
@@ -1943,9 +1788,7 @@ export default function Step8() {
         );
       }
 
-      // Generate optimized JPEG with specified quality
       const highQualityImageUrl = finalCanvas.toDataURL("image/jpeg", quality);
-      console.log(`Image generated successfully at ${desiredWidth}x${desiredHeight} resolution`);
       return highQualityImageUrl;
     } catch (error) {
       console.error("Error creating high-quality image:", error);
@@ -1965,7 +1808,6 @@ export default function Step8() {
 
   const renderCell = (idx: number) => {
     const photoIndex = selectedIndices[idx];
-    console.log(`Rendering cell ${idx} with photo index:`, selectedIndices);
 
     const cellContent = photoIndex !== undefined ? (
       <Image
@@ -2364,7 +2206,11 @@ export default function Step8() {
               <Loader2 className="animate-spin text-indigo-500" />
             </div>
           ) : (
-            <Printer className="w-12 h-12 text-indigo-500" onClick={handlePrint} />
+            <Printer className="w-12 h-12 text-indigo-500" onClick={() => {
+              console.time('Tạo ảnh');
+              handlePrint();
+              console.timeEnd('Tạo ảnh');
+            }} />
           )}
         </div>
       </div>
