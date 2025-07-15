@@ -21,9 +21,11 @@ export async function GET(
             id: true,
             name: true,
             email: true,
-            username:true,
+            username: true,
             phone: true,
             role: true,
+            machineCode: true,
+            location: true,
             isActive: true,
             createdAt: true,
             updatedAt: true,
@@ -56,7 +58,23 @@ export async function POST(
     const storeId = (await params).id;
 
     const body = await request.json();
-    const { name, username, email, password, phone, role = "USER" } = body;
+    const { name, username, email, password, phone, role = "USER", machineCode, location } = body;
+
+    // Validate required fields
+    if (!name || !username || !password || !role) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Check if role is valid for store employees
+    if (!['USER', 'MACHINE'].includes(role)) {
+      return NextResponse.json(
+        { error: 'Invalid role. Only USER and MACHINE are allowed' },
+        { status: 400 }
+      );
+    }
 
     // Kiểm tra store tồn tại và giới hạn nhân viên
     const store = await prisma.store.findUnique({
@@ -99,13 +117,18 @@ export async function POST(
         phone,
         role,
         storeId,
+        machineCode: role === 'MACHINE' ? machineCode : null,
+        location: role === 'MACHINE' ? location : null,
       },
       select: {
         id: true,
         name: true,
         email: true,
+        username: true,
         phone: true,
         role: true,
+        machineCode: true,
+        location: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
