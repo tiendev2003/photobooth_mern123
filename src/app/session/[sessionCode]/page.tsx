@@ -56,17 +56,50 @@ export default function SessionPage() {
     }
   }, [sessionCode]);
 
-  const downloadMedia = (url: string, filename: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadMedia = async (url: string, filename: string) => {
+    try {
+      // Show loading indicator or feedback
+      setLoading(true);
+      
+      // Fetch the file from the URL
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/octet-stream',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download: ${response.status} ${response.statusText}`);
+      }
+      
+      // Get the blob from the response
+      const blob = await response.blob();
+      
+      // Create a local URL for the blob
+      const blobUrl = URL.createObjectURL(blob);
+      
+      // Create a link and trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      document.body.removeChild(link);
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 100);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert(`Không thể tải tệp: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDownloadAll = () => {
+  const handleDownloadAll = async () => {
     if (!session) return;
 
     const mediaItems = [
@@ -75,11 +108,22 @@ export default function SessionPage() {
       { url: session.gifUrl, filename: 'photobooth-gif.gif' },
     ].filter(item => item.url);
 
-    mediaItems.forEach((item, index) => {
-      setTimeout(() => {
-        downloadMedia(item.url!, item.filename);
-      }, index * 1000); // Delay between downloads
-    });
+    setLoading(true);
+    try {
+      // Download each file with a delay to prevent browser issues
+      for (let i = 0; i < mediaItems.length; i++) {
+        const item = mediaItems[i];
+        await downloadMedia(item.url!, item.filename);
+        // Small delay to ensure browsers don't block multiple downloads
+        if (i < mediaItems.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    } catch (error) {
+      console.error('Error in batch download:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleShare = async () => {
@@ -275,13 +319,13 @@ export default function SessionPage() {
                           <span className="ml-2">
                             {item.type} {index + 1}
                           </span>
-                        </div>
-                        <button
-                          onClick={() => downloadMedia(item.url!, item.filename)}
-                          className="text-pink-400 hover:text-pink-300 transition"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
+                        </div>                  <button
+                    onClick={() => downloadMedia(item.url!, item.filename)}
+                    className="text-pink-400 hover:text-pink-300 transition"
+                    disabled={loading}
+                  >
+                    <Download className={`w-4 h-4 ${loading ? 'animate-pulse' : ''}`} />
+                  </button>
                       </div>
                       <div className="flex-1 flex items-center justify-center">
                         {renderMedia(item.type, item.url!)}
@@ -295,9 +339,10 @@ export default function SessionPage() {
                   <button
                     onClick={handleDownloadAll}
                     className="flex items-center px-6 py-3 bg-pink-600 hover:bg-pink-700 rounded-full transition"
+                    disabled={loading}
                   >
-                    <Download className="mr-2" />
-                    Tải tất cả
+                    <Download className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+                    {loading ? 'Đang tải...' : 'Tải tất cả'}
                   </button>
                   <button
                     onClick={handleShare}

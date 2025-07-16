@@ -109,35 +109,40 @@ export default function Step6() {
           ? [{
             video: {
               deviceId: { exact: deviceId },
-              width: { ideal: 1920, min: 640 },
-              height: { ideal: 1080, min: 480 },
+              width: { ideal: 3840, min: 1280 }, // 4K resolution if available
+              height: { ideal: 2160, min: 720 },
               facingMode: "user",
+              aspectRatio: { ideal: 16/9 },
             },
+            audio: false
           }]
           : []),
         {
           video: {
-            width: { ideal: 1920, min: 640 },
-            height: { ideal: 1080, min: 480 },
+            width: { ideal: 3840, min: 1280 },
+            height: { ideal: 2160, min: 720 },
             facingMode: "user",
+            aspectRatio: { ideal: 16/9 },
           },
+          audio: false
         },
         {
           video: {
-            width: { ideal: 1920, min: 640 },
-            height: { ideal: 1080, min: 480 },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
             facingMode: "user",
           },
+          audio: false
         },
-
         {
           video: {
             facingMode: "user",
           },
+          audio: false
         },
-
         {
           video: true,
+          audio: false
         },
       ];
 
@@ -211,6 +216,7 @@ export default function Step6() {
   const capturePhoto = useCallback(() => {
     if (!videoRef.current) return;
 
+    // Create a high-resolution canvas for better image quality
     const canvas = document.createElement("canvas");
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
@@ -230,7 +236,8 @@ export default function Step6() {
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-      const imageData = canvas.toDataURL("image/png");
+      // Use higher quality JPEG instead of PNG for better quality/size ratio
+      const imageData = canvas.toDataURL("image/jpeg", 1.0); // Use maximum quality
       const timestamp = new Date().toLocaleString();
       setPhotos([{ image: imageData, timestamp }, ...photos]);
     }

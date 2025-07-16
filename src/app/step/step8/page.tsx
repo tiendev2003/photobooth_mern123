@@ -491,11 +491,36 @@ export default function Step8() {
       }
       return new Promise<void>((resolve) => {
         img.onload = () => resolve();
-        img.onerror = () => resolve(); // Xử lý lỗi để không bị treo
-        if (img.src) img.src = img.src; // Kích hoạt tải lại nếu cần
+        img.onerror = () => resolve();
+        if (img.src) img.src = img.src;
       });
     });
     await Promise.all(promises);
+  };
+  const convertFilterToCanvasString = (className: string): string => {
+    return className
+      .split(" ")
+      .map((cls) => {
+        if (cls === "sepia") {
+          return "sepia(100%)";
+        } else if (cls === "grayscale") {
+          return "grayscale(100%)";
+        } else if (cls === "invert") {
+          return "invert(100%)";
+        } else if (cls.includes("-")) {
+          const [prop, val] = cls.split("-");
+          if (["brightness", "contrast", "saturate"].includes(prop)) {
+            return `${prop}(${val}%)`;
+          } else if (prop === "blur") {
+            return `${prop}(${val}px)`;
+          } else if (prop === "hue-rotate") {
+            return `hue-rotate(${val}deg)`;
+          }
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join(" ");
   };
 
   const generateSmoothVideo = async (isLandscape: boolean): Promise<string | void> => {
@@ -512,8 +537,8 @@ export default function Step8() {
       }
 
       const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 2400 : 1600;
-      const desiredHeight = isLandscape ? 1600 : 2400;
+      const desiredWidth = isLandscape ? 3840 : 2560;
+      const desiredHeight = isLandscape ? 2160 : 3840;
 
 
       const rect = previewContent.getBoundingClientRect();
@@ -522,50 +547,67 @@ export default function Step8() {
       outputCanvas.width = desiredWidth;
       outputCanvas.height = desiredHeight;
       const outputCtx = outputCanvas.getContext('2d', {
-        alpha: false,
-        desynchronized: true
+        alpha: true,
+        desynchronized: false
       });
 
       if (!outputCtx) {
         throw new Error("Không thể tạo video canvas context");
       }
 
-      // Optimized MediaRecorder settings for smooth recording
-      const stream = outputCanvas.captureStream(24); // 24fps for cinematic feel and better performance
+      outputCtx.imageSmoothingEnabled = true;
+      outputCtx.imageSmoothingQuality = 'high';
+
+      const stream = outputCanvas.captureStream(30); // 30fps for smoother playback
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'video/webm;codecs=vp8', // VP8 for better compatibility and performance
-        videoBitsPerSecond: 4000000, // 4Mbps - balanced quality/performance
+        mimeType: 'video/webm;codecs=vp9',
+        videoBitsPerSecond: 8000000,
       });
 
       const recordedChunks: Blob[] = [];
       mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
+        if (e.data && e.data.size > 0) {
           recordedChunks.push(e.data);
         }
       };
 
+      mediaRecorder.addEventListener('start', () => {
+        console.log('Starting high-quality video recording');
+        const dataInterval = setInterval(() => {
+          if (mediaRecorder.state === 'recording') {
+            mediaRecorder.requestData();
+          } else {
+            clearInterval(dataInterval);
+          }
+        }, 1000);
+      });
+
       const processedVideoPromise = new Promise<string>((resolve) => {
         mediaRecorder.onstop = () => {
-          const finalBlob = new Blob(recordedChunks, { type: 'video/webm' });
+          const finalBlob = new Blob(recordedChunks, {
+            type: 'video/webm;codecs=vp9'
+          });
+          console.log(`Video file size: ${(finalBlob.size / (1024 * 1024)).toFixed(2)} MB`);
           const processedVideoUrl = URL.createObjectURL(finalBlob);
           resolve(processedVideoUrl);
         };
       });
 
-      // Create preview canvas with proper scaling
       const previewCanvas = document.createElement('canvas');
       previewCanvas.width = rect.width;
       previewCanvas.height = rect.height;
       const previewCtx = previewCanvas.getContext('2d', {
-        alpha: false,
-        desynchronized: true
+        alpha: true,
+        desynchronized: false
       });
 
       if (!previewCtx) {
         throw new Error("Không thể tạo preview canvas context");
       }
 
-      // Load and prepare all videos
+      previewCtx.imageSmoothingEnabled = true;
+      previewCtx.imageSmoothingQuality = 'high';
+
       const cellIndices = selectedFrame?.isCustom
         ? Array.from({ length: selectedFrame.rows }, (_, i) => i)
         : Array.from({ length: selectedFrame!.columns * selectedFrame!.rows }, (_, i) => i);
@@ -585,7 +627,6 @@ export default function Step8() {
         }
       }
 
-      // Load all video elements with proper settings for smooth playback
       for (const idx of cellIndices) {
         if (selectedIndices[idx] !== undefined) {
           const photoIndex = selectedIndices[idx]!;
@@ -604,29 +645,37 @@ export default function Step8() {
             videoElement.playsInline = true;
             videoElement.preload = 'auto'; // Preload for smoother playback
             videoElement.setAttribute('playsinline', ''); // iOS support
+            videoElement.style.objectFit = 'cover';
+            videoElement.style.width = '100%';
+            videoElement.style.height = '100%';
 
-            // Add crossorigin for better handling of video sources
             videoElement.crossOrigin = "anonymous";
 
-            // Track this video element for cleanup
             activeVideoElementsRef.current.add(videoElement);
 
-            // Preload content for smoother playback
             await new Promise<void>((resolve) => {
-              videoElement.onloadedmetadata = () => {
+              videoElement.setAttribute('poster', '');
+              videoElement.oncanplay = () => {
                 videoElement.oncanplaythrough = () => {
                   resolve();
                 };
-
-                // Set a timeout in case canplaythrough never fires
-                setTimeout(() => {
-                  resolve();
-                }, 2000);
               };
+              videoElement.onloadedmetadata = () => {
+                if (videoElement.videoWidth > 0) {
+                  console.log(`Video loaded with dimensions: ${videoElement.videoWidth}x${videoElement.videoHeight}`);
+                  resolve();
+                }
+              };
+
+              setTimeout(() => {
+                resolve();
+              }, 3000);
+
               videoElement.onerror = () => {
+                console.error('Error loading video for high-quality processing');
                 resolve();
               };
-              setTimeout(() => resolve(), 5000); // Timeout fallback
+              setTimeout(() => resolve(), 5000);
             });
 
             cellVideoMap.set(idx, videoElement);
@@ -634,7 +683,6 @@ export default function Step8() {
         }
       }
 
-      // Prepare background image if needed
       let backgroundImg: HTMLImageElement | null = null;
       let backgroundValid = false;
       if (selectedTemplate?.background) {
@@ -658,7 +706,6 @@ export default function Step8() {
             resolve();
           }, 10000); // Increase timeout to 10 seconds
 
-          // Try with and without cache busting
           backgroundImg!.src = selectedTemplate.background;
           if (backgroundImg!.complete && backgroundImg!.naturalWidth > 0) {
             backgroundValid = true;
@@ -667,7 +714,6 @@ export default function Step8() {
         });
       }
 
-      // Prepare overlay if needed
       let overlayImg: HTMLImageElement | null = null;
       let overlayValid = false;
       if (selectedTemplate?.overlay) {
@@ -689,9 +735,8 @@ export default function Step8() {
               overlayValid = false;
             }
             resolve();
-          }, 10000); // Increase timeout to 10 seconds
+          }, 10000);
 
-          // Try with and without cache busting
           overlayImg!.src = selectedTemplate.overlay;
           if (overlayImg!.complete && overlayImg!.naturalWidth > 0) {
             overlayValid = true;
@@ -715,16 +760,14 @@ export default function Step8() {
 
       mediaRecorder.start();
 
-      // Optimized rendering with consistent timing
       let frameCount = 0;
-      const targetFPS = 24;
+      const targetFPS = 30; // Increase FPS for smoother video
       const frameInterval = 1000 / targetFPS;
       let lastTime = performance.now();
 
       // Store initial positions and dimensions for consistency - FIX: Use correct cell selection logic
       const cellPositions = new Map();
 
-      // Get the correct container based on frame type
       const gridContainer = selectedFrame?.isCustom
         ? previewContent.querySelector('.grid-cols-1')
         : previewContent.querySelector('.grid');
@@ -735,7 +778,6 @@ export default function Step8() {
 
       if (gridContainer) {
         if (selectedFrame?.isCustom) {
-          // For custom frames: direct children are the cells in order
           const cellElements = Array.from(gridContainer.children);
           cellElements.forEach((cell, idx) => {
             if (cellVideoMap.has(idx)) {
@@ -840,21 +882,22 @@ export default function Step8() {
             if (selectedFilter?.className) {
               const filterString = selectedFilter.className
                 .split(" ")
-                .filter((cls) => cls.includes("-"))
                 .map((cls) => {
-                  const [prop, val] = cls.split("-");
-                  if (["brightness", "contrast", "saturate"].includes(prop)) {
-                    return `${prop}(${val}%)`;
-                  } else if (prop === "blur") {
-                    return `${prop}(${val}px)`;
-                  } else if (prop === "sepia") {
-                    return `${prop}(1)`;
-                  } else if (prop === "grayscale") {
-                    return `${prop}(1)`;
-                  } else if (prop === "invert") {
-                    return `${prop}(1)`;
-                  } else if (prop === "hue-rotate") {
-                    return `hue-rotate(${val}deg)`;
+                  if (cls === "sepia") {
+                    return "sepia(1)";
+                  } else if (cls === "grayscale") {
+                    return "grayscale(1)";
+                  } else if (cls === "invert") {
+                    return "invert(1)";
+                  } else if (cls.includes("-")) {
+                    const [prop, val] = cls.split("-");
+                    if (["brightness", "contrast", "saturate"].includes(prop)) {
+                      return `${prop}(${val}%)`;
+                    } else if (prop === "blur") {
+                      return `${prop}(${val}px)`;
+                    } else if (prop === "hue-rotate") {
+                      return `hue-rotate(${val}deg)`;
+                    }
                   }
                   return "";
                 })
@@ -957,8 +1000,14 @@ export default function Step8() {
             offsetX = (singleImageWidth - drawWidth) / 2;
           }
 
+          // Draw first image (left)
           outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, offsetX, offsetY, drawWidth, drawHeight);
-          outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, singleImageWidth + offsetX, offsetY, drawWidth, drawHeight);
+
+          // Draw second image (right) - exact duplicate with no gap
+          // Important: Use exact integer values for the position to avoid subpixel rendering issues
+          // Fix: Use exactly half the width to eliminate the white gap
+          const rightX = Math.round(singleImageWidth);
+          outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, rightX, offsetY, drawWidth, drawHeight);
         } else {
           const aspectRatio = previewCanvas.width / previewCanvas.height;
           const targetAspectRatio = desiredWidth / desiredHeight;
@@ -997,9 +1046,8 @@ export default function Step8() {
       // Use the defined timeout or the calculated video duration
       const recordingTimeout = Math.min(
         TIMEOUT_DURATION || 10, // Use full TIMEOUT_DURATION (10 seconds)
-        videoDuration
+        Math.max(5, videoDuration) // Ensure minimum 5 seconds for quality
       );
-
 
       // Force loop videos to ensure content plays throughout the recording time
       Array.from(cellVideoMap.values()).forEach(video => {
@@ -1007,6 +1055,8 @@ export default function Step8() {
       });
 
       setTimeout(() => {
+        console.log(`Stopping video recording after ${recordingTimeout} seconds`);
+        mediaRecorder.requestData(); // Request final chunk before stopping
         mediaRecorder.stop();
       }, recordingTimeout * 1000);
 
@@ -1309,21 +1359,22 @@ export default function Step8() {
             if (selectedFilter?.className) {
               const filterString = selectedFilter.className
                 .split(" ")
-                .filter((cls) => cls.includes("-"))
                 .map((cls) => {
-                  const [prop, val] = cls.split("-");
-                  if (["brightness", "contrast", "saturate"].includes(prop)) {
-                    return `${prop}(${val}%)`;
-                  } else if (prop === "blur") {
-                    return `${prop}(${val}px)`;
-                  } else if (prop === "sepia") {
-                    return `${prop}(1)`;
-                  } else if (prop === "grayscale") {
-                    return `${prop}(1)`;
-                  } else if (prop === "invert") {
-                    return `${prop}(1)`;
-                  } else if (prop === "hue-rotate") {
-                    return `hue-rotate(${val}deg)`;
+                  if (cls === "sepia") {
+                    return "sepia(1)";
+                  } else if (cls === "grayscale") {
+                    return "grayscale(1)";
+                  } else if (cls === "invert") {
+                    return "invert(1)";
+                  } else if (cls.includes("-")) {
+                    const [prop, val] = cls.split("-");
+                    if (["brightness", "contrast", "saturate"].includes(prop)) {
+                      return `${prop}(${val}%)`;
+                    } else if (prop === "blur") {
+                      return `${prop}(${val}px)`;
+                    } else if (prop === "hue-rotate") {
+                      return `hue-rotate(${val}deg)`;
+                    }
                   }
                   return "";
                 })
@@ -1415,7 +1466,10 @@ export default function Step8() {
 
           // Draw the same content twice side by side (left and right)
           outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, offsetX, offsetY, drawWidth, drawHeight);
-          outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, singleImageWidth + offsetX, offsetY, drawWidth, drawHeight);
+          // Use exact integer values for the position to avoid subpixel rendering issues
+          // Fix: Use exactly half the width to eliminate the white gap on the right
+          const rightX = Math.round(singleImageWidth);
+          outputCtx.drawImage(previewCanvas, 0, 0, previewCanvas.width, previewCanvas.height, rightX, offsetY, drawWidth, drawHeight);
 
           // Save first frame for custom frames to use later if needed
           if (frameIndex === 0) {
@@ -1542,12 +1596,11 @@ export default function Step8() {
     }
   };
 
-  const generateHighQualityImage = async (isLandscape: boolean, quality: number = 0.85): Promise<string | void> => {
+  const generateHighQualityImage = async (isLandscape: boolean): Promise<string | void> => {
     const previewContent = printPreviewRef.current;
     if (!previewContent) return;
 
     try {
-      // Use existing media session URL or fallback to localStorage
       let sessionUrl = mediaSessionUrl;
       if (!sessionUrl) {
         const sessionCode = localStorage.getItem("mediaSessionCode");
@@ -1561,19 +1614,16 @@ export default function Step8() {
       const isCustomFrame = selectedFrame?.isCustom === true;
       const isSquare = selectedFrame?.columns === selectedFrame?.rows;
 
-      // Optimize resolution for print quality while keeping file size manageable
-      const desiredWidth = isLandscape ? 2400 : 1600;  // Reduced from 3600/2400 to keep file size under limits
-      const desiredHeight = isLandscape ? 1600 : 2400; // Reduced from 2400/3600 to keep file size under limits
+      const desiredWidth = isLandscape ? 3600 : 2400;  // Increased for higher quality output
+      const desiredHeight = isLandscape ? 2400 : 3600; // Increased for higher quality output
 
       const rect = previewContent.getBoundingClientRect();
-      // Improved scale factor calculation based on target dimensions
       const scaleFactor = Math.max(
         desiredWidth / rect.width,
         desiredHeight / rect.height,
-        3
-      ); // Ensure at least 3x scaling for quality
+        4
+      );
 
-      // Pre-load and optimize all images to ensure high-quality rendering
       const images = previewContent.querySelectorAll("img");
       await preloadImages(Array.from(images));
 
@@ -1596,19 +1646,14 @@ export default function Step8() {
           element.tagName === "SCRIPT" ||
           element.classList?.contains("no-print"),
         onclone: (clonedDoc) => {
-          if (selectedTemplate) {
-          }
-
           const container = clonedDoc.querySelector("[data-preview]") as HTMLElement;
           if (container && container.style) {
-            // Apply optimized styles to container
             container.style.backgroundColor = "#FFFFFF";
             container.style.transform = "translateZ(0)";
             container.style.backfaceVisibility = "hidden";
             container.style.position = "relative";
             container.style.overflow = "hidden";
 
-            // Apply identical padding as in renderPreview function
             if (isCustomFrame) {
               container.style.paddingBottom = "10%";
               container.style.paddingTop = "10%";
@@ -1639,93 +1684,43 @@ export default function Step8() {
               container.style.paddingRight = "5%";
               container.style.paddingLeft = "5%";
             }
-            // Set correct aspect ratio for different frame types
-            if (isCustomFrame) {
-              container.style.aspectRatio = "1/3";
-            } else if (isSquare && selectedFrame?.columns === 1) {
-              container.style.aspectRatio = "2/3";
-            } else {
-              container.style.aspectRatio = isLandscape ? "3/2" : "2/3";
-            }
+            container.style.aspectRatio = isCustomFrame ? "1/3" : (isSquare && selectedFrame?.columns === 1) ? "2/3" : isLandscape ? "3/2" : "2/3";
           }
 
-          // Process all images for optimal quality
           const images = clonedDoc.querySelectorAll("img");
           images.forEach((img) => {
-            // Ensure high-quality rendering
             img.style.imageRendering = "crisp-edges";
             img.style.imageRendering = "-webkit-optimize-contrast";
-
-            // Apply color adjustments for print
             const imgStyle = img.style as ExtendedCSSStyleDeclaration;
             imgStyle.colorAdjust = "exact";
             imgStyle.webkitPrintColorAdjust = "exact";
             imgStyle.printColorAdjust = "exact";
 
-            // Apply filter effects if selected
-            if (selectedFilter?.className) {
-              // Parse CSS class names into proper filter string
-              const filterClasses = selectedFilter.className.split(" ");
-              const filterValues = filterClasses
-                .filter((cls) => cls.includes("-"))
-                .map((cls) => {
-                  const [prop, val] = cls.split("-");
-                  if (["brightness", "contrast", "saturate"].includes(prop)) {
-                    return `${prop}(${val}%)`;
-                  } else if (prop === "blur") {
-                    return `${prop}(${val}px)`;
-                  } else if (prop === "sepia") {
-                    return `${prop}(1)`;
-                  } else if (prop === "grayscale") {
-                    return `${prop}(1)`;
-                  } else if (prop === "invert") {
-                    return `${prop}(1)`;
-                  } else if (prop === "hue-rotate") {
-                    return `hue-rotate(${val}deg)`;
-                  }
-                  return "";
-                })
-                .filter(Boolean)
-                .join(" ");
-
-              if (filterValues) {
-                img.style.filter = filterValues;
-                img.style.webkitFilter = filterValues; // Webkit compatibility
-                // Force filter application
-                img.setAttribute('data-filter-applied', 'true');
-              }
-            }
-
-            // Ensure filter is applied to photo-booth-image class specifically
-            if (img.classList.contains('photo-booth-image')) {
-              // Apply the selected filter class directly to maintain consistency
-              if (selectedFilter?.className) {
-                const existingClasses = img.className;
-                // Remove any existing filter classes
-                const cleanClasses = existingClasses.split(' ').filter(cls =>
-                  !cls.includes('brightness-') &&
-                  !cls.includes('contrast-') &&
-                  !cls.includes('saturate-') &&
-                  !cls.includes('blur-') &&
-                  !cls.includes('sepia') &&
-                  !cls.includes('grayscale') &&
-                  !cls.includes('invert') &&
-                  !cls.includes('hue-rotate-')
-                ).join(' ');
-
-                img.className = `${cleanClasses} ${selectedFilter.className}`;
-              }
+            if (img.classList.contains('photo-booth-image') && selectedFilter?.className) {
+              const filterString = convertFilterToCanvasString(selectedFilter.className);
+              img.style.filter = filterString;
+              img.style.webkitFilter = filterString;
+              img.className = `${img.className.split(' ').filter(cls =>
+                !cls.includes('brightness-') &&
+                !cls.includes('contrast-') &&
+                !cls.includes('saturate-') &&
+                !cls.includes('blur-') &&
+                !cls.includes('sepia') &&
+                !cls.includes('grayscale') &&
+                !cls.includes('invert') &&
+                !cls.includes('hue-rotate-')
+              ).join(' ')} ${selectedFilter.className}`;
             }
           });
 
-          // Also apply filter to the main preview container if needed
           const previewContainer = clonedDoc.querySelector('#photobooth-print-preview');
           if (previewContainer && selectedFilter?.className) {
-            // Apply filter class to the container level as well
+            const filterString = convertFilterToCanvasString(selectedFilter.className);
+            (previewContainer as HTMLElement).style.filter = filterString;
+            (previewContainer as HTMLElement).style.webkitFilter = filterString;
             previewContainer.classList.add(...selectedFilter.className.split(' '));
           }
 
-          // Optimize frame background rendering
           const backgroundContainer = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-0");
           if (backgroundContainer) {
             const backgroundElement = backgroundContainer.querySelector("img");
@@ -1736,7 +1731,6 @@ export default function Step8() {
             }
           }
 
-          // Optimize frame overlay rendering
           const overlayContainer = clonedDoc.querySelector(".pointer-events-none.absolute.inset-0.z-20");
           if (overlayContainer) {
             const overlayElement = overlayContainer.querySelector("img");
@@ -1747,7 +1741,6 @@ export default function Step8() {
             }
           }
 
-          // Configure grid layout based on frame type
           if (isCustomFrame) {
             const gridElement = clonedDoc.querySelector(".grid");
             if (gridElement) {
@@ -1766,12 +1759,10 @@ export default function Step8() {
 
 
 
-      // Create the final canvas with the desired dimensions
       const finalCanvas = document.createElement("canvas");
       finalCanvas.width = desiredWidth;
       finalCanvas.height = desiredHeight;
 
-      // Get canvas context with optimized settings for print quality
       const ctx = finalCanvas.getContext("2d", {
         alpha: true,
         willReadFrequently: false,
@@ -1780,11 +1771,14 @@ export default function Step8() {
 
       if (!ctx) throw new Error("Cannot create 2D context");
 
-      // Setup the final canvas with white background
       ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(0, 0, desiredWidth, desiredHeight);
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
+      if (selectedFilter?.className) {
+        const filterString = convertFilterToCanvasString(selectedFilter.className);
+        ctx.filter = filterString;
+      }
 
       if (isCustomFrame) {
         // Custom frame: Render two identical images side by side for 6x4 layout
@@ -1798,11 +1792,11 @@ export default function Step8() {
           0, 0, singleImageWidth, singleImageHeight
         );
 
-        // Draw second image (right) - exact duplicate
+        const rightX = Math.round(singleImageWidth);
         ctx.drawImage(
           canvas,
           0, 0, canvas.width, canvas.height,
-          singleImageWidth, 0, singleImageWidth, singleImageHeight
+          rightX, 0, singleImageWidth, singleImageHeight
         );
       } else {
         // Regular frame: Render a single image centered and scaled
@@ -1816,24 +1810,22 @@ export default function Step8() {
         let offsetY = 0;
 
         if (aspectRatio > targetAspectRatio) {
-          // Canvas is wider than target - fit to width
           drawHeight = desiredWidth / aspectRatio;
           offsetY = (desiredHeight - drawHeight) / 2;
         } else {
-          // Canvas is taller than target - fit to height
           drawWidth = desiredHeight * aspectRatio;
           offsetX = (desiredWidth - drawWidth) / 2;
         }
 
-        // Draw the image centered
         ctx.drawImage(
           canvas,
           0, 0, canvas.width, canvas.height,
           offsetX, offsetY, drawWidth, drawHeight
         );
       }
+      ctx.filter = "none";
 
-      const highQualityImageUrl = finalCanvas.toDataURL("image/jpeg", quality);
+      const highQualityImageUrl = finalCanvas.toDataURL("image/jpeg", 0.95); // Increased quality to 0.95
       return highQualityImageUrl;
     } catch (error) {
       console.error("Error creating high-quality image:", error);
