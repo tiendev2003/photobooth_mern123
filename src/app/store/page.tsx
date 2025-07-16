@@ -238,6 +238,28 @@ export default function StoreDashboard() {
     fetchStoreData();
   }, [user, token, router]);
 
+  // Create a refresh function that can be passed to child components
+  const refreshStoreData = async () => {
+    try {
+      const response = await fetch('/api/store/dashboard', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch store data');
+      }
+
+      const data = await response.json();
+      setStore(data.store);
+      calculateMachineRevenues(data.store);
+    } catch (err) {
+      console.error('Error refreshing store data:', err);
+    }
+  };
+
   const calculateMachineRevenues = (storeData: StoreInfo) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -722,6 +744,7 @@ export default function StoreDashboard() {
             <EmployeesTab 
               employees={store.employees}
               maxEmployees={store.maxEmployees}
+              onRefresh={refreshStoreData}
             />
           )}
 

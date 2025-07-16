@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from 'react';
+import { useAuth } from '@/lib/context/AuthContext';
 import { formatDateTime } from '../utils/formatters';
+import AddEmployeeModal, { EmployeeFormData } from './AddEmployeeModal';
 
 interface Employee {
   id: string;
@@ -16,9 +19,13 @@ interface Employee {
 interface EmployeesTabProps {
   employees: Employee[];
   maxEmployees: number;
+  onRefresh?: () => void;
 }
 
-export default function EmployeesTab({ employees, maxEmployees }: EmployeesTabProps) {
+export default function EmployeesTab({ employees, maxEmployees, onRefresh }: EmployeesTabProps) {
+  const { token } = useAuth();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'STORE_OWNER':
@@ -45,6 +52,31 @@ export default function EmployeesTab({ employees, maxEmployees }: EmployeesTabPr
     }
   };
 
+  const handleAddEmployee = async (employeeData: EmployeeFormData) => {
+    try {
+      const response = await fetch('/api/store/employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(employeeData),
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert('Thêm nhân viên thành công!' + (data.warning ? '\n\n' + data.warning : ''));
+        if (onRefresh) onRefresh(); // Refresh the list
+      } else {
+        throw new Error(data.error || 'Failed to create employee');
+      }
+    } catch (error) {
+      console.error('Error creating employee:', error);
+      throw error;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
@@ -54,6 +86,12 @@ export default function EmployeesTab({ employees, maxEmployees }: EmployeesTabPr
             {employees.length}/{maxEmployees} nhân viên
           </p>
         </div>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="mt-4 md:mt-0 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+        >
+          Thêm nhân viên
+        </button>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -122,6 +160,12 @@ export default function EmployeesTab({ employees, maxEmployees }: EmployeesTabPr
           </table>
         </div>
       </div>
+
+      <AddEmployeeModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleAddEmployee}
+      />
     </div>
   );
 }
