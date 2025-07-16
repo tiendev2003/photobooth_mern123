@@ -15,7 +15,7 @@ export default function Step6() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const { photos, setPhotos, setVideos, selectedFrame, currentStore,   storeError } = useBooth();
+  const { photos, setPhotos, setVideos, selectedFrame, currentStore, storeError } = useBooth();
   const storeTheme = getStoreTheme(currentStore);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
@@ -98,28 +98,100 @@ export default function Step6() {
   const initializeCamera = useCallback(async (deviceId?: string) => {
     try {
       setCameraError(null);
+      setIsCameraLoading(true);
+
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
 
-      const constraints = {
-        video: {
-          width: { ideal: 3840, min: 1280 },
-          height: { ideal: 2160, min: 720 },
-          deviceId: deviceId ? { exact: deviceId } : undefined,
-          facingMode: "user",
+      const constraintConfigs: MediaStreamConstraints[] = [
+        ...(deviceId
+          ? [{
+            video: {
+              deviceId: { exact: deviceId },
+              width: { ideal: 1920, min: 640 },
+              height: { ideal: 1080, min: 480 },
+              facingMode: "user",
+            },
+          }]
+          : []),
+        {
+          video: {
+            width: { ideal: 1920, min: 640 },
+            height: { ideal: 1080, min: 480 },
+            facingMode: "user",
+          },
         },
-      };
+        {
+          video: {
+            width: { ideal: 1920, min: 640 },
+            height: { ideal: 1080, min: 480 },
+            facingMode: "user",
+          },
+        },
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        {
+          video: {
+            facingMode: "user",
+          },
+        },
+
+        {
+          video: true,
+        },
+      ];
+
+      let stream: MediaStream | null = null;
+      let lastError: Error | null = null;
+
+      for (const constraints of constraintConfigs) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+          break;
+        } catch (error) {
+          lastError = error as Error;
+          console.warn("Failed to get stream with constraints:", constraints, error);
+
+          // If it's an OverconstrainedError and we're trying a specific device,
+          // skip to more general constraints
+          if (error instanceof Error && error.name === 'OverconstrainedError') {
+            continue;
+          }
+        }
+      }
+
+      if (!stream) {
+        throw lastError || new Error("Unable to access camera with any configuration");
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
+        setIsCameraLoading(false);
       }
+
     } catch (error) {
       console.error("Error initializing camera:", error);
+      setIsCameraLoading(false);
 
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          setPermissionStatus("denied");
+          setCameraError("Quyền truy cập máy ảnh bị từ chối. Vui lòng cấp quyền để tiếp tục.");
+        } else if (error.name === 'NotFoundError') {
+          setCameraError("Không tìm thấy camera. Vui lòng kiểm tra kết nối camera.");
+        } else if (error.name === 'OverconstrainedError') {
+          setCameraError("Camera không hỗ trợ cấu hình yêu cầu. Đang thử cấu hình khác...");
+          // Try again with basic constraints
+          setTimeout(() => {
+            initializeCamera();
+          }, 1000);
+        } else {
+          setCameraError(`Lỗi camera: ${error.message}`);
+        }
+      } else {
+        setCameraError("Lỗi không xác định khi khởi tạo camera.");
+      }
     }
   }, []);
 
@@ -224,34 +296,44 @@ export default function Step6() {
   // Hàm yêu cầu quyền truy cập máy ảnh
   const requestCameraPermission = async () => {
     try {
+      setIsCameraLoading(true);
       await navigator.mediaDevices.getUserMedia({ video: true });
       setPermissionStatus("granted");
-      enumerateCameras();
+      await enumerateCameras();
+      setIsCameraLoading(false);
     } catch (error) {
       console.error("Error requesting camera permission:", error);
+      setIsCameraLoading(false);
       setPermissionStatus("denied");
       setCameraError("Quyền truy cập máy ảnh bị từ chối. Vui lòng cấp quyền để tiếp tục.");
     }
   };
+
   useEffect(() => {
     // Kiểm tra quyền truy cập máy ảnh khi component mount
     const checkCameraPermission = async () => {
       try {
-        await navigator.mediaDevices.getUserMedia({ video: true });
+        setIsCameraLoading(true);
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // Stop the test stream immediately
+        stream.getTracks().forEach(track => track.stop());
+
         setPermissionStatus("granted");
-        enumerateCameras();
+        await enumerateCameras();
+        setIsCameraLoading(false);
       } catch (error) {
         console.error("Error checking camera permission:", error);
+        setIsCameraLoading(false);
         setPermissionStatus("denied");
       }
     };
 
     checkCameraPermission();
-  }, []);
+  }, [enumerateCameras]);
 
   return (
     <StoreBackground currentStore={currentStore}>
-       
+
 
       {storeError && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-500 bg-opacity-90 text-white px-4 py-2 rounded-lg z-50">

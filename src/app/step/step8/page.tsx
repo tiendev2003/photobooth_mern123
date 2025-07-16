@@ -342,7 +342,6 @@ export default function Step8() {
               throw new Error("Không thể tạo ảnh");
             }
 
-
             const imageFile = dataURLtoFile(imageDataUrl, "photobooth.jpg");
             const imageUrl = await uploadImage(imageFile);
 
@@ -373,8 +372,11 @@ export default function Step8() {
               .catch((error) => {
                 console.error("Error submitting print job:", error);
               });
+
+            return imageUrl; // Return the URL for later use
           } catch (error) {
             console.error("Error processing image:", error);
+            return null;
           }
         })();
         processTasks.push(imageTask);
@@ -382,42 +384,92 @@ export default function Step8() {
         if (videos && videos.length > 0) {
           const videoTask = (async () => {
             try {
-
-
               const videoUrl = await generateSmoothVideo(isLandscape);
               if (videoUrl) {
                 const serverUrl = await uploadVideo(videoUrl);
                 setVideoQrCode(serverUrl);
                 localStorage.setItem("videoQrCode", serverUrl);
+                return serverUrl; // Return the URL for later use
               } else {
                 console.error("Failed to generate video - no URL returned");
+                return null;
               }
             } catch (error) {
               console.error("Error processing video:", error);
+              return null;
             }
           })();
           processTasks.push(videoTask);
 
           const gifTask = (async () => {
             try {
-
               const gifUrl = await generateGifFromVideo(isLandscape);
               if (gifUrl) {
                 const serverUrl = await uploadGif(gifUrl);
                 setGifQrCode(serverUrl);
                 localStorage.setItem("gifQrCode", serverUrl);
                 console.log("GIF processed and uploaded successfully");
+                return serverUrl; // Return the URL for later use
               } else {
                 console.error("Failed to generate GIF - no URL returned");
+                return null;
               }
             } catch (error) {
               console.error("Error processing GIF:", error);
+              return null;
             }
           })();
           processTasks.push(gifTask);
         }
 
-        await Promise.all(processTasks);
+        const results = await Promise.all(processTasks);
+
+        // Xử lý kết quả dựa trên số lượng tasks
+        let uploadedImageUrl = null;
+        let uploadedVideoUrl = null;
+        let uploadedGifUrl = null;
+
+        if (videos && videos.length > 0) {
+          // Có cả image, video và gif tasks
+          [uploadedImageUrl, uploadedVideoUrl, uploadedGifUrl] = results;
+        } else {
+          // Chỉ có image task
+          [uploadedImageUrl] = results;
+        }
+
+        // Cập nhật media session với các URLs đã upload
+        const currentSessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
+        if (currentSessionCode) {
+          try {
+            const updateData: any = {
+              sessionCode: currentSessionCode,
+            };
+
+            if (uploadedImageUrl) updateData.imageUrl = uploadedImageUrl;
+            if (uploadedVideoUrl) updateData.videoUrl = uploadedVideoUrl;
+            if (uploadedGifUrl) updateData.gifUrl = uploadedGifUrl;
+
+            const updateResponse = await fetch('/api/media-session', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(updateData)
+            });
+
+            if (updateResponse.ok) {
+              console.log("Media session updated successfully with URLs:", {
+                image: uploadedImageUrl,
+                video: uploadedVideoUrl,
+                gif: uploadedGifUrl
+              });
+            } else {
+              console.error("Failed to update media session:", await updateResponse.text());
+            }
+          } catch (error) {
+            console.error("Error updating media session:", error);
+          }
+        }
 
         setTimeout(() => {
           router.push("/step/step9");
@@ -669,26 +721,65 @@ export default function Step8() {
       const frameInterval = 1000 / targetFPS;
       let lastTime = performance.now();
 
-      // Store initial positions and dimensions for consistency
+      // Store initial positions and dimensions for consistency - FIX: Use correct cell selection logic
       const cellPositions = new Map();
 
-      // Calculate and store all cell positions once to ensure consistency
-      const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
-      cells.forEach((cell, idx) => {
-        if (cellVideoMap.has(idx)) {
-          const cellRect = cell.getBoundingClientRect();
-          const relativeLeft = cellRect.left - rect.left;
-          const relativeTop = cellRect.top - rect.top;
+      // Get the correct container based on frame type
+      const gridContainer = selectedFrame?.isCustom 
+        ? previewContent.querySelector('.grid-cols-1')
+        : previewContent.querySelector('.grid');
+      
+      console.log('Video Generation - Frame type:', selectedFrame?.isCustom ? 'Custom' : 'Regular', 'Grid container found:', !!gridContainer);
+      console.log('Video Preview canvas size:', previewCanvas.width, 'x', previewCanvas.height);
+      console.log('Video Output canvas size:', outputCanvas.width, 'x', outputCanvas.height);
+      
+      if (gridContainer) {
+        if (selectedFrame?.isCustom) {
+          // For custom frames: direct children are the cells in order
+          const cellElements = Array.from(gridContainer.children);
+          cellElements.forEach((cell, idx) => {
+            if (cellVideoMap.has(idx)) {
+              const cellRect = cell.getBoundingClientRect();
+              const relativeLeft = cellRect.left - rect.left;
+              const relativeTop = cellRect.top - rect.top;
 
-          // Store position and dimension data
-          cellPositions.set(idx, {
-            left: relativeLeft,
-            top: relativeTop,
-            width: cellRect.width,
-            height: cellRect.height
+              cellPositions.set(idx, {
+                left: relativeLeft,
+                top: relativeTop,
+                width: cellRect.width,
+                height: cellRect.height
+              });
+            }
+          });
+        } else {
+          // For regular frames: need to handle the nested column structure
+          const columnElements = Array.from(gridContainer.children);
+          columnElements.forEach((column, colIdx) => {
+            const cellsInColumn = Array.from(column.children);
+            cellsInColumn.forEach((cellContainer, rowIdx) => {
+              // Find the actual cell div inside the container
+              const cell = cellContainer.querySelector('div[class*="aspect-"]');
+              if (cell) {
+                // Calculate correct index: colIdx + (rowIdx * columns)
+                const cellIdx = colIdx + (rowIdx * selectedFrame!.columns);
+                
+                if (cellVideoMap.has(cellIdx)) {
+                  const cellRect = cell.getBoundingClientRect();
+                  const relativeLeft = cellRect.left - rect.left;
+                  const relativeTop = cellRect.top - rect.top;
+
+                  cellPositions.set(cellIdx, {
+                    left: relativeLeft,
+                    top: relativeTop,
+                    width: cellRect.width,
+                    height: cellRect.height
+                  });
+                }
+              }
+            });
           });
         }
-      });
+      }
 
       const renderFrame = () => {
         const now = performance.now();
@@ -737,7 +828,7 @@ export default function Step8() {
         }
 
         // Use stored cell positions for consistent rendering
-        cells.forEach((cell, idx) => {
+        cellIndices.forEach((idx) => {
           if (!cellVideoMap.has(idx) || !cellPositions.has(idx)) return;
 
           const cellData = cellPositions.get(idx);
@@ -745,7 +836,7 @@ export default function Step8() {
 
           // Only render ready frames to avoid stuttering
           if (videoElement.readyState >= 2) {
-            // Apply filter optimally
+            // Apply filter optimally - Updated to match GIF logic
             if (selectedFilter?.className) {
               const filterString = selectedFilter.className
                 .split(" ")
@@ -754,6 +845,16 @@ export default function Step8() {
                   const [prop, val] = cls.split("-");
                   if (["brightness", "contrast", "saturate"].includes(prop)) {
                     return `${prop}(${val}%)`;
+                  } else if (prop === "blur") {
+                    return `${prop}(${val}px)`;
+                  } else if (prop === "sepia") {
+                    return `${prop}(1)`;
+                  } else if (prop === "grayscale") {
+                    return `${prop}(1)`;
+                  } else if (prop === "invert") {
+                    return `${prop}(1)`;
+                  } else if (prop === "hue-rotate") {
+                    return `hue-rotate(${val}deg)`;
                   }
                   return "";
                 })
@@ -962,34 +1063,41 @@ export default function Step8() {
       const GIF = (await import('gif.js')).default;
 
       const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 2400 : 1600;
-      const desiredHeight = isLandscape ? 1600 : 2400;
+      // Giảm độ phân giải để tăng tốc xử lý
+      const desiredWidth = isLandscape ? 1200 : 800;  // Giảm từ 2400/1600 xuống 1200/800
+      const desiredHeight = isLandscape ? 800 : 1200; // Giảm từ 1600/2400 xuống 800/1200
       const rect = previewContent.getBoundingClientRect();
 
       // Create output canvas for GIF
       const outputCanvas = document.createElement('canvas');
       outputCanvas.width = desiredWidth;
       outputCanvas.height = desiredHeight;
-      const outputCtx = outputCanvas.getContext('2d');
+      const outputCtx = outputCanvas.getContext('2d', {
+        alpha: false,
+        desynchronized: true
+      }); // Sử dụng cùng thiết lập context như video
 
       if (!outputCtx) {
         throw new Error("Không thể tạo GIF canvas context");
       }
 
-      // Create preview canvas
+      // Create preview canvas với kích thước giống video (không giảm nữa để đảm bảo layout chính xác)
       const previewCanvas = document.createElement('canvas');
-      previewCanvas.width = rect.width;
-      previewCanvas.height = rect.height;
-      const previewCtx = previewCanvas.getContext('2d');
+      previewCanvas.width = rect.width; // Sử dụng kích thước đầy đủ như video
+      previewCanvas.height = rect.height; // Sử dụng kích thước đầy đủ như video
+      const previewCtx = previewCanvas.getContext('2d', {
+        alpha: false,
+        desynchronized: true
+      }); // Sử dụng cùng thiết lập context như video
 
       if (!previewCtx) {
         throw new Error("Không thể tạo preview canvas context");
       }
 
-      // Initialize GIF encoder with optimized settings
+      // Initialize GIF encoder với cài đặt tối ưu cho tốc độ
       const gif = new GIF({
-        workers: 2,
-        quality: 10, // Lower quality for smaller file size
+        workers: Math.min(4, navigator.hardwareConcurrency || 2), // Sử dụng tối đa số CPU cores
+        quality: 15, // Tăng từ 10 lên 15 để cân bằng chất lượng/tốc độ
         width: desiredWidth,
         height: desiredHeight,
         workerScript: '/gif.worker.js' // Make sure this file exists in public folder
@@ -1015,7 +1123,8 @@ export default function Step8() {
         }
       }
 
-      // Load all video elements
+      // Load all video elements với tối ưu hóa
+      const videoLoadPromises = [];
       for (const idx of cellIndices) {
         if (selectedIndices[idx] !== undefined) {
           const photoIndex = selectedIndices[idx]!;
@@ -1028,98 +1137,79 @@ export default function Step8() {
           }
 
           if (videoUrl) {
-            const videoElement = document.createElement('video');
-            videoElement.src = videoUrl;
-            videoElement.muted = true;
-            videoElement.playsInline = true;
-            videoElement.preload = 'auto';
+            const loadPromise = (async () => {
+              const videoElement = document.createElement('video');
+              videoElement.src = videoUrl!;
+              videoElement.muted = true;
+              videoElement.playsInline = true;
+              videoElement.preload = 'metadata'; // Chỉ load metadata thay vì 'auto'
+              videoElement.loop = true; // Set loop ngay từ đầu
 
-            // Track this video element for cleanup
-            activeVideoElementsRef.current.add(videoElement);
+              // Track this video element for cleanup
+              activeVideoElementsRef.current.add(videoElement);
 
-            await new Promise<void>((resolve) => {
-              videoElement.onloadedmetadata = () => {
-                resolve();
-              };
-              videoElement.onerror = () => {
-                resolve();
-              };
-              setTimeout(() => resolve(), 5000);
-            });
+              await new Promise<void>((resolve) => {
+                videoElement.onloadedmetadata = () => resolve();
+                videoElement.onerror = () => resolve();
+                setTimeout(() => resolve(), 2000); // Giảm timeout từ 5s xuống 2s
+              });
 
-            cellVideoMap.set(idx, videoElement);
+              cellVideoMap.set(idx, videoElement);
+            })();
+            
+            videoLoadPromises.push(loadPromise);
           }
         }
       }
 
-      // Prepare background image if needed
-      let backgroundImg: HTMLImageElement | null = null;
-      let backgroundValid = false;
-      if (selectedTemplate?.background) {
-        backgroundImg = document.createElement('img');
-        backgroundImg.crossOrigin = "anonymous";
+      // Load tất cả videos song song
+      await Promise.all(videoLoadPromises);
 
-        await new Promise<void>((resolve) => {
-          backgroundImg!.onload = () => {
-            backgroundValid = true;
-            resolve();
-          };
-          backgroundImg!.onerror = (error) => {
-            backgroundValid = false;
-            resolve();
-          };
-          setTimeout(() => {
-            if (!backgroundValid) {
-              backgroundValid = false;
+      // Prepare background và overlay images song song để tăng tốc
+      const [backgroundResult, overlayResult] = await Promise.all([
+        // Background image
+        selectedTemplate?.background ? (async () => {
+          const backgroundImg = document.createElement('img');
+          backgroundImg.crossOrigin = "anonymous";
+
+          return new Promise<{ img: HTMLImageElement | null, valid: boolean }>((resolve) => {
+            backgroundImg.onload = () => resolve({ img: backgroundImg, valid: true });
+            backgroundImg.onerror = () => resolve({ img: null, valid: false });
+            setTimeout(() => resolve({ img: null, valid: false }), 3000); // Giảm timeout
+
+            backgroundImg.src = selectedTemplate.background!;
+            if (backgroundImg.complete && backgroundImg.naturalWidth > 0) {
+              resolve({ img: backgroundImg, valid: true });
             }
-            resolve();
-          }, 10000); // Increase timeout to 10 seconds
+          });
+        })() : Promise.resolve({ img: null, valid: false }),
 
-          // Try with and without cache busting
-          backgroundImg!.src = selectedTemplate.background;
-          if (backgroundImg!.complete && backgroundImg!.naturalWidth > 0) {
-            backgroundValid = true;
-            resolve();
-          }
-        });
-      }
+        // Overlay image
+        selectedTemplate?.overlay ? (async () => {
+          const overlayImg = document.createElement('img');
+          overlayImg.crossOrigin = "anonymous";
 
-      // Prepare overlay if needed
-      let overlayImg: HTMLImageElement | null = null;
-      let overlayValid = false;
-      if (selectedTemplate?.overlay) {
-        overlayImg = document.createElement('img');
-        overlayImg.crossOrigin = "anonymous";
+          return new Promise<{ img: HTMLImageElement | null, valid: boolean }>((resolve) => {
+            overlayImg.onload = () => resolve({ img: overlayImg, valid: true });
+            overlayImg.onerror = () => resolve({ img: null, valid: false });
+            setTimeout(() => resolve({ img: null, valid: false }), 3000); // Giảm timeout
 
-        await new Promise<void>((resolve) => {
-          overlayImg!.onload = () => {
-            overlayValid = true;
-            resolve();
-          };
-          overlayImg!.onerror = () => {
-            overlayValid = false;
-            console.error("Failed to load overlay image for GIF");
-            resolve();
-          };
-          setTimeout(() => {
-            overlayValid = false;
-            console.error("Overlay image timeout for GIF");
-            resolve();
-          }, 5000);
+            overlayImg.src = selectedTemplate.overlay!;
+            if (overlayImg.complete && overlayImg.naturalWidth > 0) {
+              resolve({ img: overlayImg, valid: true });
+            }
+          });
+        })() : Promise.resolve({ img: null, valid: false })
+      ]);
 
-          overlayImg!.src = `${selectedTemplate.overlay}?v=${Date.now()}`;
-          if (overlayImg!.complete) {
-            overlayValid = overlayImg!.naturalWidth > 0 && overlayImg!.naturalHeight > 0;
-            console.log("Overlay image already cached for GIF:", overlayValid);
-            resolve();
-          }
-        });
-      }
+      const backgroundImg = backgroundResult.img;
+      const backgroundValid = backgroundResult.valid;
+      const overlayImg = overlayResult.img;
+      const overlayValid = overlayResult.valid;
 
       const videoStartPromises = Array.from(cellVideoMap.values()).map(async (video) => {
         try {
-          // Set videos to loop to prevent them from ending during GIF creation
-          video.loop = true;
+          // Videos đã được set loop từ trước
           await video.play();
           return true;
         } catch (e) {
@@ -1129,48 +1219,89 @@ export default function Step8() {
       });
 
       await Promise.all(videoStartPromises);
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 100)); // Giảm buffer time từ 300ms xuống 100ms
 
-
-      // Calculate actual GIF duration based on video durations
+      // Tính toán thời gian GIF ngắn hơn để tăng tốc
       const maxVideoDuration = Math.max(
         ...Array.from(cellVideoMap.values()).map(v => v.duration || 0)
       );
 
       // Use shorter duration for custom frames to prevent glitches
-      const frameRate = 8; // 8 FPS for reasonable file size
+      const frameRate = 6; // Giảm từ 8 FPS xuống 6 FPS để tăng tốc
       const frameInterval = 1000 / frameRate;
 
       const adjustedGifDuration = Math.min(
-        isCustomFrame ? 2 : 3, // Default durations
-        maxVideoDuration + 0.5 // Actual max video duration plus half a second buffer
+        isCustomFrame ? 1.5 : 2, // Giảm duration để tăng tốc
+        maxVideoDuration + 0.2 // Giảm buffer time
       );
-
 
       // Recalculate frames based on adjusted duration
       const totalFrames = Math.ceil(adjustedGifDuration * frameRate);
 
-      // Store cell positions once for consistency
+      // Store cell positions once for consistency - FIX: Use correct cell selection logic
       const cellPositions = new Map();
-      const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
-      cells.forEach((cell, idx) => {
-        if (cellVideoMap.has(idx)) {
-          const cellRect = cell.getBoundingClientRect();
-          const relativeLeft = cellRect.left - rect.left;
-          const relativeTop = cellRect.top - rect.top;
+      
+      // Get the correct container based on frame type
+      const gridContainer = selectedFrame?.isCustom 
+        ? previewContent.querySelector('.grid-cols-1')
+        : previewContent.querySelector('.grid');
+      
+      console.log('GIF Generation - Frame type:', selectedFrame?.isCustom ? 'Custom' : 'Regular', 'Grid container found:', !!gridContainer);
+      console.log('GIF Preview canvas size:', previewCanvas.width, 'x', previewCanvas.height);
+      console.log('GIF Output canvas size:', outputCanvas.width, 'x', outputCanvas.height);
+      
+      if (gridContainer) {
+        if (selectedFrame?.isCustom) {
+          // For custom frames: direct children are the cells in order
+          const cellElements = Array.from(gridContainer.children);
+          console.log('GIF Custom frame - Cell elements found:', cellElements.length);
+          cellElements.forEach((cell, idx) => {
+            if (cellVideoMap.has(idx)) {
+              const cellRect = cell.getBoundingClientRect();
+              const relativeLeft = cellRect.left - rect.left;
+              const relativeTop = cellRect.top - rect.top;
 
-          // Store position and dimension data
-          cellPositions.set(idx, {
-            left: relativeLeft,
-            top: relativeTop,
-            width: cellRect.width,
-            height: cellRect.height
+              cellPositions.set(idx, {
+                left: relativeLeft,
+                top: relativeTop,
+                width: cellRect.width,
+                height: cellRect.height
+              });
+              console.log(`GIF Custom cell ${idx}:`, { left: relativeLeft, top: relativeTop, width: cellRect.width, height: cellRect.height });
+            }
+          });
+        } else {
+          // For regular frames: need to handle the nested column structure
+          const columnElements = Array.from(gridContainer.children);
+          columnElements.forEach((column, colIdx) => {
+            const cellsInColumn = Array.from(column.children);
+            cellsInColumn.forEach((cellContainer, rowIdx) => {
+              // Find the actual cell div inside the container
+              const cell = cellContainer.querySelector('div[class*="aspect-"]');
+              if (cell) {
+                // Calculate correct index: colIdx + (rowIdx * columns)
+                const cellIdx = colIdx + (rowIdx * selectedFrame!.columns);
+                
+                if (cellVideoMap.has(cellIdx)) {
+                  const cellRect = cell.getBoundingClientRect();
+                  const relativeLeft = cellRect.left - rect.left;
+                  const relativeTop = cellRect.top - rect.top;
+
+                  cellPositions.set(cellIdx, {
+                    left: relativeLeft,
+                    top: relativeTop,
+                    width: cellRect.width,
+                    height: cellRect.height
+                  });
+                }
+              }
+            });
           });
         }
-      });
+      }
 
       // Store first frame data for custom frames (to ensure we can restore it if needed)
-      let firstFrameData = null;
+      let firstFrameData: ImageData | null = null;
 
       for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
         // Clear canvases with white background
@@ -1187,19 +1318,14 @@ export default function Step8() {
         if (backgroundImg && backgroundValid) {
           try {
             previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
-            if (frameIndex % 8 === 0) {
-            }
           } catch (e) {
             console.error("Error drawing background image in GIF:", e);
           }
         }
 
-        const cells = Array.from(previewContent.querySelectorAll('div[class*="aspect-"]'));
-
-        // Render each cell
-        cells.forEach((cell, idx) => {
-          if (!cellVideoMap.has(idx)) return;
-
+        // Render each cell using the stored positions
+        cellIndices.forEach((idx) => {
+          if (!cellVideoMap.has(idx) || !cellPositions.has(idx)) return;
 
           const videoElement = cellVideoMap.get(idx)!;
           const cellData = cellPositions.get(idx);
@@ -1349,15 +1475,17 @@ export default function Step8() {
           dispose: isCustomFrame && frameIndex > totalFrames * 0.8 ? 1 : 2
         });
 
-        if (frameIndex % Math.floor(totalFrames / 4) === 0) {
+        if (frameIndex % Math.floor(totalFrames / 2) === 0) {
+          console.log(`GIF progress: ${Math.round((frameIndex / totalFrames) * 100)}%`);
         }
 
-        // Wait between frames - IMPORTANT: Need to wait for any async operations
-        await new Promise(resolve => setTimeout(resolve, frameInterval));
+        // Wait between frames - Giảm thời gian chờ để tăng tốc
+        if (frameIndex % 2 === 0) { // Chỉ wait cho frames chẵn
+          await new Promise(resolve => setTimeout(resolve, frameInterval / 2));
+        }
       }
 
-      // For custom frames, add one final static frame that's a duplicate of an early frame
-      // This ensures a clean loop without the glitch at the end
+      // For custom frames, add shorter final frames to reduce processing time
       if (isCustomFrame && firstFrameData) {
         // Ensure our final frame is clear
         outputCtx.fillStyle = "#FFFFFF";
@@ -1366,28 +1494,19 @@ export default function Step8() {
         // Apply the first frame data to ensure a perfect duplicate
         outputCtx.putImageData(firstFrameData, 0, 0);
 
-        // Add this frame with a slightly longer duration to pause on this good frame
+        // Add only one final frame to save time
         gif.addFrame(outputCanvas, {
-          delay: frameInterval * 2,
+          delay: frameInterval * 1.5,
           copy: true
         });
-
-        // Add one more duplicate frame to ensure smooth looping
-        gif.addFrame(outputCanvas, {
-          delay: frameInterval * 2,
-          copy: true
-        });
-
       } else if (!isCustomFrame) {
-        // For regular frames, add a few extra frames with the last good state
-        // to ensure smooth looping
-        for (let i = 0; i < 3; i++) {
+        // For regular frames, add fewer extra frames to save time
+        for (let i = 0; i < 2; i++) { // Giảm từ 3 xuống 2
           gif.addFrame(outputCanvas, {
-            delay: frameInterval * 1.5,
+            delay: frameInterval,
             copy: true
           });
         }
-
       }
 
 

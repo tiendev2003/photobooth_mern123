@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 
 export default function Step9() {
   const router = useRouter();
-  const {  clearAllBoothData, currentStore } = useBooth();
+  const { clearAllBoothData, currentStore } = useBooth();
 
   // State for media session
   const [sessionCode, setSessionCode] = useState<string | null>(null);
@@ -24,15 +24,15 @@ export default function Step9() {
       try {
         // Lấy session code từ localStorage hoặc từ step8
         const storedSessionCode = localStorage.getItem("mediaSessionCode");
-        
+
         if (storedSessionCode) {
           setSessionCode(storedSessionCode);
-          
+
           // Tạo session URL
           const baseUrl = typeof window !== 'undefined' ?
             `${window.location.protocol}//${window.location.host}` : '';
           setSessionUrl(`${baseUrl}/session/${storedSessionCode}`);
-          
+
           console.log('Using stored session code:', storedSessionCode);
         } else {
           setError("Không tìm thấy session code");
@@ -44,10 +44,11 @@ export default function Step9() {
         setIsLoading(false);
       }
     };
-
     // Đợi một chút để step8 hoàn thành việc tạo session
     const timer = setTimeout(getMediaSessionCode, 1000);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, []);
 
   // Automatically redirect to home after 60 seconds and clear data
@@ -63,7 +64,7 @@ export default function Step9() {
 
   return (
     <StoreBackground currentStore={currentStore}>
-      <StoreHeader 
+      <StoreHeader
         currentStore={currentStore}
         title="ẢNH CỦA BẠN ĐÃ SẴN SÀNG!"
       />
@@ -77,7 +78,7 @@ export default function Step9() {
         <div className="flex flex-wrap justify-center gap-8 w-full mb-8">
           {/* QR Code for All Media Session */}
           <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg">
-             {isLoading ? (
+            {isLoading ? (
               <div className="w-[250px] h-[250px] flex items-center justify-center bg-black/20 rounded-lg">
                 <div className="flex flex-col items-center">
                   <Loader2 className="w-16 h-16 text-pink-400 animate-spin mb-4" />
@@ -110,12 +111,12 @@ export default function Step9() {
       </main>
 
       <div className="flex justify-center w-full px-16 pb-20 z-10">
-        <h1 
+        <h1
           className="text-white text-2xl md:text-3xl lg:text-4xl font-bold text-center tracking-wide"
           style={{ color: getStorePrimaryColor(currentStore) }}
         >
-          {currentStore?.name ? 
-            `Cảm ơn quý khách đã ghé thăm ${currentStore.name}` : 
+          {currentStore?.name ?
+            `Cảm ơn quý khách đã ghé thăm ${currentStore.name}` :
             "Cảm ơn quý khách đã ghé thăm S Photobooth"
           }
         </h1>
