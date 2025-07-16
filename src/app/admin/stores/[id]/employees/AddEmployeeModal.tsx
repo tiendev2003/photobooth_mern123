@@ -21,6 +21,7 @@ export interface EmployeeFormData {
 }
 
 export default function AddEmployeeModal({ isOpen, onClose, onSubmit, storeId }: AddEmployeeModalProps) {
+  console.log("AddEmployeeModal mounted for store:", storeId);
   const [formData, setFormData] = useState<EmployeeFormData>({
     name: '',
     username: '',

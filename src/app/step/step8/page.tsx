@@ -71,10 +71,7 @@ export default function Step8() {
     selectedTemplate,
     setSelectedTemplate,
     setImageQrCode,
-    imageQrCode,
-    videoQrCode,
     setVideoQrCode,
-    gifQrCode,
     setGifQrCode,
     videos,
     currentStore,
@@ -89,8 +86,7 @@ export default function Step8() {
   const [loading, setLoading] = useState(true);
   const [mediaSessionCode, setMediaSessionCode] = useState<string>("");
   const [mediaSessionUrl, setMediaSessionUrl] = useState<string>("");
-  const [sessionReady, setSessionReady] = useState(false);
-
+ 
   // Tối ưu thời gian xử lý bằng cách xử lý song song và cache
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -196,17 +192,14 @@ export default function Step8() {
               `${window.location.protocol}//${window.location.host}` : '';
             const sessionUrl = `${baseUrl}/session/${session.sessionCode}`;
             setMediaSessionUrl(sessionUrl);
-            setSessionReady(true);
-
+             
             console.log("Media session created:", session.sessionCode, sessionUrl);
           } else {
             console.error("Failed to create media session:", response.status, await response.text());
-            setSessionReady(false);
-          }
+           }
         } catch (error) {
           console.error("Error creating media session:", error);
-          setSessionReady(false);
-        }
+         }
       }
     };
 
@@ -217,11 +210,13 @@ export default function Step8() {
   useEffect(() => {
     return () => {
       console.log("Step 8 cleanup: Stopping all active video elements");
+      // Copy ref value to avoid stale closure
+      const activeVideos = activeVideoElementsRef.current;
       // Stop and cleanup all active video elements
-      activeVideoElementsRef.current.forEach(video => {
+      activeVideos.forEach(video => {
         cleanupVideoElement(video);
       });
-      activeVideoElementsRef.current.clear();
+      activeVideos.clear();
     };
   }, []);
 
@@ -318,8 +313,7 @@ export default function Step8() {
               `${window.location.protocol}//${window.location.host}` : '';
             const sessionUrl = `${baseUrl}/session/${session.sessionCode}`;
             setMediaSessionUrl(sessionUrl);
-            setSessionReady(true);
-
+ 
           } else {
           }
         } catch (error) {
@@ -441,7 +435,12 @@ export default function Step8() {
         const currentSessionCode = mediaSessionCode || localStorage.getItem("mediaSessionCode");
         if (currentSessionCode) {
           try {
-            const updateData: any = {
+            const updateData: {
+              sessionCode: string;
+              imageUrl?: string;
+              videoUrl?: string;
+              gifUrl?: string;
+            } = {
               sessionCode: currentSessionCode,
             };
 
@@ -649,6 +648,7 @@ export default function Step8() {
             resolve();
           };
           backgroundImg!.onerror = (error) => {
+            console.error("Error loading background image:", error);
             backgroundValid = false;
             resolve();
           };
@@ -681,6 +681,7 @@ export default function Step8() {
             resolve();
           };
           overlayImg!.onerror = (error) => {
+            console.error('Error loading overlay image:', error);
             overlayValid = false;
             resolve();
           };
@@ -725,14 +726,14 @@ export default function Step8() {
       const cellPositions = new Map();
 
       // Get the correct container based on frame type
-      const gridContainer = selectedFrame?.isCustom 
+      const gridContainer = selectedFrame?.isCustom
         ? previewContent.querySelector('.grid-cols-1')
         : previewContent.querySelector('.grid');
-      
+
       console.log('Video Generation - Frame type:', selectedFrame?.isCustom ? 'Custom' : 'Regular', 'Grid container found:', !!gridContainer);
       console.log('Video Preview canvas size:', previewCanvas.width, 'x', previewCanvas.height);
       console.log('Video Output canvas size:', outputCanvas.width, 'x', outputCanvas.height);
-      
+
       if (gridContainer) {
         if (selectedFrame?.isCustom) {
           // For custom frames: direct children are the cells in order
@@ -762,7 +763,7 @@ export default function Step8() {
               if (cell) {
                 // Calculate correct index: colIdx + (rowIdx * columns)
                 const cellIdx = colIdx + (rowIdx * selectedFrame!.columns);
-                
+
                 if (cellVideoMap.has(cellIdx)) {
                   const cellRect = cell.getBoundingClientRect();
                   const relativeLeft = cellRect.left - rect.left;
@@ -1156,7 +1157,7 @@ export default function Step8() {
 
               cellVideoMap.set(idx, videoElement);
             })();
-            
+
             videoLoadPromises.push(loadPromise);
           }
         }
@@ -1240,16 +1241,16 @@ export default function Step8() {
 
       // Store cell positions once for consistency - FIX: Use correct cell selection logic
       const cellPositions = new Map();
-      
+
       // Get the correct container based on frame type
-      const gridContainer = selectedFrame?.isCustom 
+      const gridContainer = selectedFrame?.isCustom
         ? previewContent.querySelector('.grid-cols-1')
         : previewContent.querySelector('.grid');
-      
+
       console.log('GIF Generation - Frame type:', selectedFrame?.isCustom ? 'Custom' : 'Regular', 'Grid container found:', !!gridContainer);
       console.log('GIF Preview canvas size:', previewCanvas.width, 'x', previewCanvas.height);
       console.log('GIF Output canvas size:', outputCanvas.width, 'x', outputCanvas.height);
-      
+
       if (gridContainer) {
         if (selectedFrame?.isCustom) {
           // For custom frames: direct children are the cells in order
@@ -1281,7 +1282,7 @@ export default function Step8() {
               if (cell) {
                 // Calculate correct index: colIdx + (rowIdx * columns)
                 const cellIdx = colIdx + (rowIdx * selectedFrame!.columns);
-                
+
                 if (cellVideoMap.has(cellIdx)) {
                   const cellRect = cell.getBoundingClientRect();
                   const relativeLeft = cellRect.left - rect.left;
