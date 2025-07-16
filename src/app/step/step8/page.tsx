@@ -9,7 +9,6 @@ import { uploadGif, uploadImage, uploadVideo } from "@/lib/utils/universalUpload
 import { ChevronLeft, ChevronRight, ImageIcon, Loader2, Printer, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import QRCode from 'qrcode';
 import { useEffect, useMemo, useRef, useState } from "react";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick-theme.css";
@@ -86,7 +85,7 @@ export default function Step8() {
   const [loading, setLoading] = useState(true);
   const [mediaSessionCode, setMediaSessionCode] = useState<string>("");
   const [mediaSessionUrl, setMediaSessionUrl] = useState<string>("");
- 
+
   // Tối ưu thời gian xử lý bằng cách xử lý song song và cache
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -192,14 +191,14 @@ export default function Step8() {
               `${window.location.protocol}//${window.location.host}` : '';
             const sessionUrl = `${baseUrl}/session/${session.sessionCode}`;
             setMediaSessionUrl(sessionUrl);
-             
+
             console.log("Media session created:", session.sessionCode, sessionUrl);
           } else {
             console.error("Failed to create media session:", response.status, await response.text());
-           }
+          }
         } catch (error) {
           console.error("Error creating media session:", error);
-         }
+        }
       }
     };
 
@@ -313,7 +312,7 @@ export default function Step8() {
               `${window.location.protocol}//${window.location.host}` : '';
             const sessionUrl = `${baseUrl}/session/${session.sessionCode}`;
             setMediaSessionUrl(sessionUrl);
- 
+
           } else {
           }
         } catch (error) {
@@ -1046,7 +1045,6 @@ export default function Step8() {
     }
   };
 
-  // Generate GIF from video with optimized settings
   const generateGifFromVideo = async (isLandscape: boolean): Promise<string | void> => {
     try {
       const previewContent = printPreviewRef.current;
@@ -1060,51 +1058,45 @@ export default function Step8() {
         return;
       }
 
-      // Import gif.js library dynamically
       const GIF = (await import('gif.js')).default;
 
       const isCustomFrame = selectedFrame?.isCustom === true;
-      // Giảm độ phân giải để tăng tốc xử lý
-      const desiredWidth = isLandscape ? 1200 : 800;  // Giảm từ 2400/1600 xuống 1200/800
-      const desiredHeight = isLandscape ? 800 : 1200; // Giảm từ 1600/2400 xuống 800/1200
+      const desiredWidth = isLandscape ? 1200 : 800;
+      const desiredHeight = isLandscape ? 800 : 1200;
       const rect = previewContent.getBoundingClientRect();
 
-      // Create output canvas for GIF
       const outputCanvas = document.createElement('canvas');
       outputCanvas.width = desiredWidth;
       outputCanvas.height = desiredHeight;
       const outputCtx = outputCanvas.getContext('2d', {
         alpha: false,
         desynchronized: true
-      }); // Sử dụng cùng thiết lập context như video
+      });
 
       if (!outputCtx) {
         throw new Error("Không thể tạo GIF canvas context");
       }
 
-      // Create preview canvas với kích thước giống video (không giảm nữa để đảm bảo layout chính xác)
       const previewCanvas = document.createElement('canvas');
-      previewCanvas.width = rect.width; // Sử dụng kích thước đầy đủ như video
-      previewCanvas.height = rect.height; // Sử dụng kích thước đầy đủ như video
+      previewCanvas.width = rect.width;
+      previewCanvas.height = rect.height;
       const previewCtx = previewCanvas.getContext('2d', {
         alpha: false,
         desynchronized: true
-      }); // Sử dụng cùng thiết lập context như video
+      });
 
       if (!previewCtx) {
         throw new Error("Không thể tạo preview canvas context");
       }
 
-      // Initialize GIF encoder với cài đặt tối ưu cho tốc độ
       const gif = new GIF({
-        workers: Math.min(4, navigator.hardwareConcurrency || 2), // Sử dụng tối đa số CPU cores
-        quality: 15, // Tăng từ 10 lên 15 để cân bằng chất lượng/tốc độ
+        workers: Math.min(4, navigator.hardwareConcurrency || 2),
+        quality: 15,
         width: desiredWidth,
         height: desiredHeight,
-        workerScript: '/gif.worker.js' // Make sure this file exists in public folder
+        workerScript: '/gif.worker.js'
       });
 
-      // Load and prepare all videos
       const cellIndices = selectedFrame?.isCustom
         ? Array.from({ length: selectedFrame.rows }, (_, i) => i)
         : Array.from({ length: selectedFrame!.columns * selectedFrame!.rows }, (_, i) => i);
@@ -1112,7 +1104,6 @@ export default function Step8() {
       const cellVideoMap = new Map<number, HTMLVideoElement>();
       const photoToVideoMap = new Map<number, string>();
 
-      // Create video mapping
       if (videos.length > 0) {
         const selectedPhotoIndices = selectedIndices.filter(idx => idx !== undefined) as number[];
 
@@ -1124,7 +1115,6 @@ export default function Step8() {
         }
       }
 
-      // Load all video elements với tối ưu hóa
       const videoLoadPromises = [];
       for (const idx of cellIndices) {
         if (selectedIndices[idx] !== undefined) {
@@ -1143,10 +1133,9 @@ export default function Step8() {
               videoElement.src = videoUrl!;
               videoElement.muted = true;
               videoElement.playsInline = true;
-              videoElement.preload = 'metadata'; // Chỉ load metadata thay vì 'auto'
-              videoElement.loop = true; // Set loop ngay từ đầu
+              videoElement.preload = 'metadata';
+              videoElement.loop = true;
 
-              // Track this video element for cleanup
               activeVideoElementsRef.current.add(videoElement);
 
               await new Promise<void>((resolve) => {
@@ -1163,7 +1152,6 @@ export default function Step8() {
         }
       }
 
-      // Load tất cả videos song song
       await Promise.all(videoLoadPromises);
 
       // Prepare background và overlay images song song để tăng tốc
@@ -1220,15 +1208,13 @@ export default function Step8() {
       });
 
       await Promise.all(videoStartPromises);
-      await new Promise(resolve => setTimeout(resolve, 100)); // Giảm buffer time từ 300ms xuống 100ms
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Tính toán thời gian GIF ngắn hơn để tăng tốc
       const maxVideoDuration = Math.max(
         ...Array.from(cellVideoMap.values()).map(v => v.duration || 0)
       );
 
-      // Use shorter duration for custom frames to prevent glitches
-      const frameRate = 6; // Giảm từ 8 FPS xuống 6 FPS để tăng tốc
+      const frameRate = 6;
       const frameInterval = 1000 / frameRate;
 
       const adjustedGifDuration = Math.min(
@@ -1236,13 +1222,10 @@ export default function Step8() {
         maxVideoDuration + 0.2 // Giảm buffer time
       );
 
-      // Recalculate frames based on adjusted duration
       const totalFrames = Math.ceil(adjustedGifDuration * frameRate);
 
-      // Store cell positions once for consistency - FIX: Use correct cell selection logic
       const cellPositions = new Map();
 
-      // Get the correct container based on frame type
       const gridContainer = selectedFrame?.isCustom
         ? previewContent.querySelector('.grid-cols-1')
         : previewContent.querySelector('.grid');
@@ -1253,7 +1236,6 @@ export default function Step8() {
 
       if (gridContainer) {
         if (selectedFrame?.isCustom) {
-          // For custom frames: direct children are the cells in order
           const cellElements = Array.from(gridContainer.children);
           console.log('GIF Custom frame - Cell elements found:', cellElements.length);
           cellElements.forEach((cell, idx) => {
@@ -1272,15 +1254,12 @@ export default function Step8() {
             }
           });
         } else {
-          // For regular frames: need to handle the nested column structure
           const columnElements = Array.from(gridContainer.children);
           columnElements.forEach((column, colIdx) => {
             const cellsInColumn = Array.from(column.children);
             cellsInColumn.forEach((cellContainer, rowIdx) => {
-              // Find the actual cell div inside the container
               const cell = cellContainer.querySelector('div[class*="aspect-"]');
               if (cell) {
-                // Calculate correct index: colIdx + (rowIdx * columns)
                 const cellIdx = colIdx + (rowIdx * selectedFrame!.columns);
 
                 if (cellVideoMap.has(cellIdx)) {
@@ -1301,21 +1280,17 @@ export default function Step8() {
         }
       }
 
-      // Store first frame data for custom frames (to ensure we can restore it if needed)
       let firstFrameData: ImageData | null = null;
 
       for (let frameIndex = 0; frameIndex < totalFrames; frameIndex++) {
-        // Clear canvases with white background
         previewCtx.fillStyle = "#FFFFFF";
         previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
         outputCtx.fillStyle = "#FFFFFF";
         outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-        // Reset context state before drawing
         previewCtx.filter = "none";
         previewCtx.globalCompositeOperation = "source-over";
 
-        // Draw background image first if available
         if (backgroundImg && backgroundValid) {
           try {
             previewCtx.drawImage(backgroundImg, 0, 0, previewCanvas.width, previewCanvas.height);
@@ -1324,7 +1299,6 @@ export default function Step8() {
           }
         }
 
-        // Render each cell using the stored positions
         cellIndices.forEach((idx) => {
           if (!cellVideoMap.has(idx) || !cellPositions.has(idx)) return;
 
@@ -1332,7 +1306,6 @@ export default function Step8() {
           const cellData = cellPositions.get(idx);
 
           if (videoElement.readyState >= 2) {
-            // Apply filter
             if (selectedFilter?.className) {
               const filterString = selectedFilter.className
                 .split(" ")
@@ -1605,51 +1578,6 @@ export default function Step8() {
       await preloadImages(Array.from(images));
 
 
-      let qrCodeElement: HTMLElement | null = null;
-      if (sessionUrl) {
-        qrCodeElement = document.createElement('div');
-        qrCodeElement.style.position = 'absolute';
-        qrCodeElement.style.bottom = '5%';
-        qrCodeElement.style.left = isCustomFrame ? '10%' : '5%';
-        qrCodeElement.style.width = '55px';
-        qrCodeElement.style.height = '55px';
-        qrCodeElement.style.zIndex = '30';
-        qrCodeElement.style.backgroundColor = 'white';
-        qrCodeElement.style.padding = '2px';
-        qrCodeElement.style.borderRadius = '2px';
-        qrCodeElement.style.border = '1px solid #ccc';
-
-        // Create QR code canvas
-        const qrCanvas = document.createElement('canvas');
-        try {
-          await QRCode.toCanvas(qrCanvas, sessionUrl, {
-            width: 45,
-            margin: 0,
-            color: {
-              dark: '#000000',
-              light: '#FFFFFF'
-            },
-            errorCorrectionLevel: 'M' // Medium error correction
-          });
-          qrCanvas.style.width = '50px';
-          qrCanvas.style.height = '50px';
-          qrCodeElement.appendChild(qrCanvas);
-        } catch (error) {
-          console.error('Error generating QR code:', error);
-          const fallbackText = document.createElement('div');
-          fallbackText.innerText = 'QR';
-          fallbackText.style.fontSize = '10px';
-          fallbackText.style.textAlign = 'center';
-          fallbackText.style.lineHeight = '50px';
-          fallbackText.style.color = '#000';
-          qrCodeElement.appendChild(fallbackText);
-        }
-
-        previewContent.appendChild(qrCodeElement);
-      } else {
-        console.log('No session URL available for QR code');
-      }
-
       const html2canvas = (await import("html2canvas-pro")).default;
 
       // Enhanced HTML2Canvas configuration for better quality
@@ -1835,10 +1763,7 @@ export default function Step8() {
         },
       });
 
-      // Remove QR code element after capturing
-      if (qrCodeElement) {
-        previewContent.removeChild(qrCodeElement);
-      }
+
 
 
       // Create the final canvas with the desired dimensions
