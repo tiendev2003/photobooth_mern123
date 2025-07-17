@@ -218,3 +218,56 @@ export const uploadImageWithStore = async (imageFile: File): Promise<string> => 
     throw error;
   }
 }
+
+// upload for frame
+
+export const uploadFrameToExternalAPI = async (frameFile: File): Promise<string> => {
+  try {
+    console.log("Starting frame upload to external API...");
+    console.log("Frame file:", {
+      name: frameFile.name,
+      size: frameFile.size,
+      type: frameFile.type
+    });
+
+    // Create form data for upload
+    const formData = new FormData();
+    formData.append("frame", frameFile);
+
+    console.log("Sending upload request to external API");
+    
+    // Upload to external PHP API
+    const uploadResponse = await fetch(UPLOAD_CONFIG.EXTERNAL_API.UPLOAD_FRAME, {
+      method: "POST",
+      body: formData,
+    });
+
+    console.log("Upload response status:", uploadResponse.status);
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error("Upload error response:", errorText);
+      throw new Error(`Frame upload failed: ${uploadResponse.statusText}`);
+    }
+
+    const data: UploadResponse = await uploadResponse.json();
+    console.log("Frame uploaded successfully:", data);
+
+    if (!data.success || !data.data?.url) {
+      throw new Error(data.message || "Upload failed");
+    }
+
+    // Return the full URL from the API using helper function
+    const fullUrl = UPLOAD_CONFIG.EXTERNAL_API.getFileUrl(data.data.url);
+    console.log("Final frame URL:", fullUrl);
+    return fullUrl;
+  } catch (error) {
+    console.error("Error uploading frame to external API:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete frame file from external API
+ */
+ 

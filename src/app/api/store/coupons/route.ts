@@ -1,3 +1,4 @@
+import { markExpiredCoupons } from "@/lib/cron/couponCleaner";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import jwt from "jsonwebtoken";
@@ -5,6 +6,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
+    // Tự động đánh dấu các mã giảm giá đã hết hạn mỗi khi lấy danh sách
+    await markExpiredCoupons();
+    
     const authHeader = request.headers.get("authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

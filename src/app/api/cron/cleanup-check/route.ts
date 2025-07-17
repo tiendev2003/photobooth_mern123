@@ -31,24 +31,41 @@ export async function GET() {
   try {
     // Kiểm tra xem có nên dọn dẹp không
     if (shouldRunCleanup()) {
-      // Gọi API cleanup
+      // Gọi API cleanup images
       const apiUrl = process.env.API_BASE_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiUrl}/api/images/cleanup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-role': 'ADMIN'
-        }
-      });
       
-      const result = await response.json();
-      console.log(`Scheduled cleanup completed: ${result.deletedCount} files deleted.`);
+      // Parallel requests for both cleanup operations
+      const [imageCleanupResponse, couponCleanupResponse] = await Promise.all([
+        fetch(`${apiUrl}/api/images/cleanup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-role': 'ADMIN'
+          }
+        }),
+        fetch(`${apiUrl}/api/coupons/cleanup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-role': 'ADMIN'
+          }
+        })
+      ]);
+      
+      const imageResult = await imageCleanupResponse.json();
+      const couponResult = await couponCleanupResponse.json();
+      
+      console.log(`Scheduled cleanup completed: ${imageResult.deletedCount} files deleted.`);
+      console.log(`Scheduled coupon cleanup completed: ${couponResult.markedCount} coupons marked as inactive.`);
       
       return NextResponse.json({
         success: true,
         message: 'Cleanup check ran successfully',
         cleanupRan: true,
-        result
+        results: {
+          images: imageResult,
+          coupons: couponResult
+        }
       });
     }
     

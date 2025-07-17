@@ -3,8 +3,7 @@ export const UPLOAD_CONFIG = {
 
   EXTERNAL_DOMAIN:  process.env.NEXT_PUBLIC_EXTERNAL_DOMAIN || "https://danango.com",
   EXTERNAL_API_PATH:  process.env.NEXT_PUBLIC_EXTERNAL_API_PATH || "/api.php",
-  EXTERNAL_UPLOADS_PATH:  process.env.NEXT_PUBLIC_EXTERNAL_UPLOADS_PATH || "/uploads",
-
+ 
   // External PHP API endpoints - auto-generated from domain and paths
   get EXTERNAL_API() {
     const baseUrl = `${this.EXTERNAL_DOMAIN}${this.EXTERNAL_API_PATH}`;
@@ -15,6 +14,9 @@ export const UPLOAD_CONFIG = {
       UPLOAD_GIF: `${baseUrl}?action=upload_gif`,
       UPLOAD_STORE: `${baseUrl}?action=upload_store`,
       GET_FILES: `${baseUrl}?action=get_files`,
+      UPLOAD_FRAME: `${baseUrl}?action=upload_frame`,
+      DELETE_FRAME: `${baseUrl}?action=delete_frame_file`,
+
       // Helper function to get full URL for uploaded files
       getFileUrl: (relativePath: string) =>
         `${this.EXTERNAL_DOMAIN}/${relativePath}`,

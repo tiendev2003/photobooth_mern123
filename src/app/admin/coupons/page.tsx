@@ -58,6 +58,7 @@ export default function CouponsManagement() {
     hasPrevPage: false
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
 
   // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -79,7 +80,8 @@ export default function CouponsManagement() {
       // Build query string with pagination and search parameters
       const queryParams = new URLSearchParams({
         page: page.toString(),
-        limit: limit.toString()
+        limit: limit.toString(),
+        includeInactive: showInactive.toString()
       });
 
       if (search) {
@@ -149,7 +151,7 @@ export default function CouponsManagement() {
     if (token) {
       fetchData(pagination.page, pagination.limit, searchQuery);
     }
-  }, [token, pagination.page, pagination.limit, searchQuery, fetchData]);
+  }, [token, pagination.page, pagination.limit, searchQuery, showInactive, fetchData]);
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
@@ -307,7 +309,7 @@ export default function CouponsManagement() {
   };
 
   const handleDeleteCoupon = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this coupon?')) {
+    if (!confirm('Bạn có chắc muốn xóa mã giảm giá này?')) {
       return;
     }
 
@@ -320,7 +322,15 @@ export default function CouponsManagement() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete coupon');
+        throw new Error('Không thể xóa mã giảm giá');
+      }
+
+      const result = await response.json();
+      
+      if (result.action === 'deactivated') {
+        alert('Mã giảm giá này đã được sử dụng trong giao dịch và không thể xóa. Nó đã được đánh dấu là không hoạt động.');
+      } else {
+        alert('Đã xóa mã giảm giá thành công!');
       }
 
       fetchData(); // Refresh list
@@ -415,12 +425,12 @@ export default function CouponsManagement() {
         </div>
       </div>
 
-      {/* Search bar - Responsive */}
+      {/* Search bar and filters - Responsive */}
       <div className="mb-6">
         <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
-            placeholder="Nhập mas..."
+            placeholder="Nhập mã..."
             value={searchQuery}
             onChange={handleSearchChange}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -432,6 +442,23 @@ export default function CouponsManagement() {
             Tìm kiếm
           </button>
         </form>
+        
+        {/* Toggle for showing inactive coupons */}
+        <div className="mt-3 flex items-center">
+          <label className="flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={() => {
+                setShowInactive(!showInactive);
+              }}
+              className="form-checkbox h-5 w-5 text-blue-600 rounded"
+            />
+            <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+              Hiển thị cả mã giảm giá đã hết hạn
+            </span>
+          </label>
+        </div>
       </div>
 
       {/* Coupon Form Modal - Responsive */}
@@ -607,17 +634,23 @@ export default function CouponsManagement() {
               {coupons.length > 0 ? (
                 coupons.map((coupon) => {
                   const isExpired = new Date(coupon.expiresAt) < new Date();
+                  const isInactive = coupon.isActive === false;
 
                   return (
-                    <tr key={coupon.id}>
+                    <tr key={coupon.id} className={isInactive ? "bg-gray-50 dark:bg-gray-900 opacity-80" : ""}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                         {coupon.code}
+                        {isInactive && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                            Hết hạn
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {coupon.discount} xu
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isExpired
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isExpired || isInactive
                           ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                           : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                           }`}>

@@ -1,6 +1,6 @@
 import { UpdateFrameTemplateInput } from "@/lib/models";
 import { prisma } from "@/lib/prisma";
-import { uploadImageToExternalAPI } from "@/lib/utils/uploadApi";
+import { uploadFrameToExternalAPI } from "@/lib/utils/uploadApi";
 import fs from "fs/promises";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
@@ -21,7 +21,7 @@ async function uploadImage(file: File) {
     }
 
     // Upload to external API
-    const imageUrl = await uploadImageToExternalAPI(file);
+    const imageUrl = await uploadFrameToExternalAPI(file);
     if (!imageUrl) {
       throw new Error("Image upload failed");
     }
@@ -49,7 +49,7 @@ async function uploadImage(file: File) {
     return null;
   }
 }
- 
+
 // GET - Lấy frame template theo ID
 export async function GET(
   request: NextRequest,
@@ -107,6 +107,11 @@ export async function PUT(
     if (contentType && contentType.includes("multipart/form-data")) {
       // Process form data with file uploads
       const formData = await request.formData();
+
+      // kiểm tra có tồn tại frame ko
+      const exitFrameTemplate = await prisma.frameTemplate.findUnique({
+        where: { id },
+      });
 
       // Extract text fields
       updateData = {
@@ -173,6 +178,14 @@ export async function PUT(
         if (backgroundImage) {
           updateData.background = backgroundImage.path;
           updateData.filename = backgroundImage.filename;
+          const fileNameLogoOld= exitFrameTemplate?.filename;
+          console.log("Old filename:", fileNameLogoOld);
+          await fetch(
+            `${process.env.NEXT_PUBLIC_EXTERNAL_DOMAIN}/api.php?action=delete_frame_file&filename=${fileNameLogoOld}`,
+            {
+              method: "POST",
+            }
+          );
         }
       }
 
@@ -183,6 +196,13 @@ export async function PUT(
         overlayImage = await uploadImage(overlayFile);
         if (overlayImage) {
           updateData.overlay = overlayImage.path;
+          const fileNameLogoOld= exitFrameTemplate?.overlay.split("/").pop();
+          await fetch(
+            `${process.env.NEXT_PUBLIC_EXTERNAL_DOMAIN}/api.php?action=delete_frame_file&filename=${fileNameLogoOld}`,
+            {
+              method: "POST",
+            }
+          );
         }
       }
     } else {

@@ -1,20 +1,26 @@
+import { markExpiredCoupons } from '@/lib/cron/couponCleaner';
 import { CouponData, createCoupon, getAllCoupons } from '@/lib/models/Coupon';
 import { NextRequest, NextResponse } from 'next/server';
 
 // GET /api/coupons - Get all coupons with pagination
 export async function GET(req: NextRequest) {
   try {
+    // Tự động đánh dấu các mã giảm giá đã hết hạn mỗi khi lấy danh sách
+    await markExpiredCoupons();
+    
     // Get pagination parameters from URL
     const searchParams = req.nextUrl.searchParams;
     const pageParam = searchParams.get('page');
     const limitParam = searchParams.get('limit');
     const searchQuery = searchParams.get('search') || '';
+    const includeInactive = searchParams.get('includeInactive') === 'true';
     
     // Set pagination options
     const options = {
       page: pageParam ? parseInt(pageParam) : 1,
       limit: limitParam ? parseInt(limitParam) : 10,
-      search: searchQuery
+      search: searchQuery,
+      includeInactive
     };
     
     // Get paginated coupons

@@ -16,19 +16,29 @@ export async function getAllCoupons(options?: {
   page?: number; 
   limit?: number; 
   search?: string;
+  includeInactive?: boolean;
 }) {
   // Default values
   const page = options?.page || 1;
   const limit = options?.limit || 10;
   const search = options?.search || '';
+  const includeInactive = options?.includeInactive || false;
   const skip = (page - 1) * limit;
   
   // Search conditions
-  const where: Prisma.CouponWhereInput = search ? {
+  let where: Prisma.CouponWhereInput = search ? {
     OR: [
       { code: { contains: search } }
     ]
   } : {};
+  
+  // Only show active coupons by default
+  if (!includeInactive) {
+    where = {
+      ...where,
+      isActive: true
+    };
+  };
   
   // Get total count for pagination
   const totalCoupons = await prisma.coupon.count({ where });

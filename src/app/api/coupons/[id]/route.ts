@@ -122,19 +122,47 @@ export async function DELETE(
 
     // Check if coupon exists
     const existingCoupon = await prisma.coupon.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        revenues: { select: { id: true }, take: 1 },
+        couponUsages: { select: { id: true }, take: 1 }
+      }
     });
 
     if (!existingCoupon) {
       return NextResponse.json({ error: 'Coupon not found' }, { status: 404 });
     }
 
-    // Delete coupon
+    // Kiểm tra xem coupon đã được sử dụng trong doanh thu hoặc coupon usage chưa
+    const hasReferences = existingCoupon.revenues.length > 0 || existingCoupon.couponUsages.length > 0;
+    
+    if (hasReferences) {
+      // Nếu đã được sử dụng, chỉ đánh dấu là không hoạt động thay vì xóa
+      await prisma.coupon.update({
+        where: { id },
+        data: { 
+          isActive: false 
+        }
+      });
+      
+      return NextResponse.json(
+        { 
+          message: 'Coupon has been used in transactions and cannot be deleted. It has been marked as inactive instead.',
+          action: 'deactivated'
+        }, 
+        { status: 200 }
+      );
+    }
+    
+    // Nếu chưa được sử dụng, tiến hành xóa
     await prisma.coupon.delete({
       where: { id }
     });
 
-    return NextResponse.json({ message: 'Coupon deleted successfully' }, { status: 200 });
+    return NextResponse.json({ 
+      message: 'Coupon deleted successfully',
+      action: 'deleted'
+    }, { status: 200 });
   } catch (error) {
     console.error('Error deleting coupon:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

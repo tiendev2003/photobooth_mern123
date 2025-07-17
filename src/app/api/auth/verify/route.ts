@@ -1,9 +1,11 @@
+import { cleanExpiredMedia } from '@/lib/cron/mediaCleaner';
 import { prisma } from '@/lib/prisma';
 import { jwtVerify } from 'jose';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
+    await cleanExpiredMedia();
     // Get token from Authorization header
     const authHeader = request.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
