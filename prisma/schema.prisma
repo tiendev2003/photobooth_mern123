@@ -176,7 +176,7 @@ model Pricing {
 model Coupon {
   id           String        @id @default(uuid())
   code         String        @unique // Mã giảm giá
-  discount     Float // Mức giảm giá (%)
+  discount     Float // Mức giảm giá 
   expiresAt    DateTime      @map("expires_at") // Ngày hết hạn (tự động 1 ngày)
   userId       String?       @map("user_id") // ID người dùng tạo (optional)
   storeId      String? // ID cửa hàng (null nếu global)
