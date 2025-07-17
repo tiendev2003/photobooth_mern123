@@ -1,4 +1,4 @@
-import { FileType, PrismaClient, Role } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
@@ -292,7 +292,7 @@ async function main() {
           name: `Template Global ${frameType.name} ${templateIndex}`,
           filename: `global_${frameType.id}_template_${templateIndex}.png`,
           background: `/templates/global/bg_${frameType.id}_${templateIndex}.png`,
-          overlay: `/templates/global/overlay_${frameType.id}_${templateIndex}.png`,
+          overlay: "",
           frameTypeId: frameType.id,
           isGlobal: true,
           isActive: true,
@@ -303,129 +303,9 @@ async function main() {
     }
   }
 
-  // Create Sample Media Sessions (5 sessions)
-  console.log("📸 Creating Sample Media Sessions...");
-  const sessions = [];
-  for (let i = 1; i <= 5; i++) {
-    const session = await prisma.mediaSession.create({
-      data: {
-        sessionCode: `DEMO00${i}`,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
-      },
-    });
-    sessions.push(session);
-  }
+ 
 
-  // Create Sample Images (5 images)
-  console.log("🖼️  Creating Sample Images...");
-  const sampleImages = [
-    {
-      filename: "demo_image_1.jpg",
-      path: "/uploads/images/demo_image_1.jpg",
-      fileType: FileType.IMAGE,
-      size: 1024000,
-      sessionId: sessions[0].id,
-    },
-    {
-      filename: "demo_image_2.jpg",
-      path: "/uploads/images/demo_image_2.jpg",
-      fileType: FileType.IMAGE,
-      size: 1536000,
-      sessionId: sessions[1].id,
-    },
-    {
-      filename: "demo_gif_1.gif",
-      path: "/uploads/gifs/demo_gif_1.gif",
-      fileType: FileType.GIF,
-      size: 2048000,
-      sessionId: sessions[2].id,
-    },
-    {
-      filename: "demo_video_1.mp4",
-      path: "/uploads/videos/demo_video_1.mp4",
-      fileType: FileType.VIDEO,
-      size: 10240000,
-      duration: 15,
-      sessionId: sessions[3].id,
-    },
-    {
-      filename: "demo_image_3.png",
-      path: "/uploads/images/demo_image_3.png",
-      fileType: FileType.IMAGE,
-      size: 2048000,
-      sessionId: sessions[4].id,
-    },
-  ];
-
-  for (const image of sampleImages) {
-    await prisma.image.create({
-      data: image,
-    });
-  }
-
-  // Create Sample Coupons (5 coupons)
-  console.log("🎫 Creating Sample Coupons...");
-
-  // Global coupons
-  await prisma.coupon.create({
-    data: {
-      code: "GLOBAL70",
-      discount: 70,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      usageLimit: 100,
-      isActive: true,
-      currentUsage: 0,
-      userId: null,
-      storeId: null,
-    },
-  });
-
-  await prisma.coupon.create({
-    data: {
-      code: "GLOBAL120",
-      discount: 120,
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      usageLimit: 50,
-      isActive: true,
-      currentUsage: 0,
-      userId: null,
-      storeId: null,
-    },
-  });
-
-  // Store specific coupons
-  for (let i = 0; i < 3; i++) {
-    await prisma.coupon.create({
-      data: {
-        code: `STORE${i + 1}_SALE`,
-        discount: 50 + i * 20,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-        usageLimit: 30 + i * 10,
-        isActive: true,
-        currentUsage: 0,
-        userId: null,
-        storeId: stores[i].id,
-      },
-    });
-  }
-
-  // Create Sample Revenues (5 revenues)
-  console.log("💰 Creating Sample Revenues...");
-  const revenues = [];
-  for (let i = 0; i < 5; i++) {
-    const revenue = await prisma.revenue.create({
-      data: {
-        amount: 50000 + i * 10000,
-        description: `Giao dịch mẫu ${i + 1}`,
-        userId: allUsers[i * 5].id, // Lấy một số user từ danh sách
-        storeId: stores[i].id,
-        originalAmount: 70000 + i * 10000,
-        discountAmount: 20000,
-        couponId: null,
-      },
-    });
-    revenues.push(revenue);
-  }
+ 
 
   console.log("✅ Seeding completed successfully!");
   console.log("");
