@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { useDialog } from '@/lib/context/DialogContext';
 import { useCallback, useEffect, useState } from 'react';
 
 interface Revenue {
@@ -68,6 +69,7 @@ export default function RevenueManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'summary' | 'detailed'>('summary');
+  const {showDialog} = useDialog();
 
   // Filters
   const [selectedStore, setSelectedStore] = useState<string>('');
@@ -239,7 +241,10 @@ export default function RevenueManagement() {
       document.body.removeChild(a);
     } catch (error) {
       console.error('Error exporting data:', error);
-      alert('Có lỗi xảy ra khi xuất dữ liệu');
+      showDialog({
+        header: "Lỗi",
+        content: "Không thể xuất dữ liệu. Vui lòng thử lại sau.",
+      });
     }
   };
 

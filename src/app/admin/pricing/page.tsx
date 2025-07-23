@@ -1,5 +1,6 @@
 'use client';
 
+import { useDialog } from '@/lib/context/DialogContext';
 import { useEffect, useState } from 'react';
 
 interface Pricing {
@@ -49,6 +50,8 @@ export default function PricingAdminPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingPricing, setEditingPricing] = useState<Pricing | null>(null);
+    const {showDialog} = useDialog();
+  
   const [formData, setFormData] = useState({
     name: '',
     priceOnePhoto: 0,
@@ -154,11 +157,17 @@ export default function PricingAdminPage() {
         resetFormData();
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error}`);
+        showDialog({
+          header: "Lỗi",
+          content: error.error || "Không thể lưu bảng giá.",
+        });
       }
     } catch (error) {
       console.error('Error saving pricing:', error);
-      alert('Error saving pricing');
+      showDialog({
+        header: "Lỗi",
+        content: "Không thể lưu bảng giá.",
+      });
     }
   };
 
@@ -219,11 +228,17 @@ export default function PricingAdminPage() {
         await fetchPricings();
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error}`);
+        showDialog({
+          header: "Lỗi",
+          content: error.error || "Không thể xóa bảng giá.",
+        });
       }
     } catch (error) {
       console.error('Error deleting pricing:', error);
-      alert('Error deleting pricing');
+      showDialog({
+        header: "Lỗi",
+        content: "Không thể xóa bảng giá.",
+      });
     }
   };
 
@@ -246,11 +261,17 @@ export default function PricingAdminPage() {
         await fetchPricings();
       } else {
         const error = await response.json();
-        alert(`Error: ${error.error}`);
+        showDialog({
+          header: "Lỗi",
+          content: error.error || "Không thể cập nhật trạng thái.",
+        });
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      alert('Error updating status');
+      showDialog({
+        header: "Lỗi",
+        content: "Không thể cập nhật trạng thái.",
+      });
     }
   };
 

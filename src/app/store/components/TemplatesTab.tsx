@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { useDialog } from '@/lib/context/DialogContext';
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -42,6 +43,8 @@ export default function TemplatesTab({ storeId }: TemplatesTabProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+    const {showDialog} = useDialog();
+  
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -292,7 +295,10 @@ export default function TemplatesTab({ storeId }: TemplatesTabProps) {
   const handleEdit = (template: FrameTemplate) => {
     // Chỉ cho phép sửa template của store này
     if (template.storeId !== storeId) {
-      alert('Bạn không có quyền sửa mẫu khung này');
+       showDialog({
+        header: "Lỗi",
+        content: "Bạn không có quyền sửa mẫu khung này",
+      });
       return;
     }
 
@@ -324,7 +330,10 @@ export default function TemplatesTab({ storeId }: TemplatesTabProps) {
 
     // Chỉ cho phép xóa template của store này
     if (template.storeId !== storeId) {
-      alert('Bạn không có quyền xóa mẫu khung này');
+      showDialog({
+        header: "Lỗi",
+        content: "Bạn không có quyền xóa mẫu khung này",
+      });
       return;
     }
 
@@ -359,7 +368,10 @@ export default function TemplatesTab({ storeId }: TemplatesTabProps) {
 
       // Chỉ cho phép thay đổi vị trí template của store này
       if (template.storeId !== storeId) {
-        alert('Bạn không có quyền thay đổi thứ tự của mẫu khung này');
+        showDialog({
+          header: "Lỗi",
+          content: "Bạn không có quyền thay đổi vị trí mẫu khung này",
+        });
         return;
       }
 
@@ -548,7 +560,10 @@ export default function TemplatesTab({ storeId }: TemplatesTabProps) {
                               if (!isNaN(position) && position >= 0) {
                                 handleChangePosition(template.id, position);
                               } else {
-                                alert("Vui lòng nhập một số không âm hợp lệ");
+                                showDialog({
+                                  header: "Thông báo",
+                                  content: "Vui lòng nhập một số không âm hợp lệ",
+                                });
                               }
                             }
                           }}
@@ -585,7 +600,10 @@ export default function TemplatesTab({ storeId }: TemplatesTabProps) {
                       if (!isNaN(position) && position >= 0) {
                         handleChangePosition(template.id, position);
                       } else {
-                        alert("Vui lòng nhập một số không âm hợp lệ");
+                        showDialog({
+                          header: "Thông báo",
+                          content: "Vui lòng nhập một số không âm hợp lệ",
+                        });
                       }
                     }
                   }}

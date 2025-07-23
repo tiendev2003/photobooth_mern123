@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { useDialog } from '@/lib/context/DialogContext';
 import { uploadImageWithStore } from '@/lib/utils/uploadApi';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -52,6 +53,8 @@ export default function StoresPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+    const {showDialog} = useDialog();
+  
   const [formData, setFormData] = useState({
     name: '',
     slogan: '',
@@ -82,11 +85,17 @@ export default function StoresPage() {
         if (response.ok) {
           setStores(data.stores || []);
         } else {
-          alert(data.error || 'Failed to fetch stores');
+           showDialog({
+            header: "Lỗi",
+            content: data.error || "Không thể tải danh sách cửa hàng.",
+          });
         }
       } catch (error) {
         console.error('Error fetching stores:', error);
-        alert('Failed to fetch stores');
+        showDialog({
+          header: "Lỗi",
+          content: "Không thể tải danh sách cửa hàng.",
+        });
       } finally {
         setLoading(false);
       }

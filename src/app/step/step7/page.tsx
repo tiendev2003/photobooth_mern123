@@ -4,6 +4,7 @@ import StoreBackground from "@/app/components/StoreBackground";
 import StoreHeader from "@/app/components/StoreHeader";
 import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useBooth } from "@/lib/context/BoothContext";
+import { useDialog } from "@/lib/context/DialogContext";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -14,6 +15,7 @@ export default function Step7() {
   const handleBack = () => {
     router.push("/step/step6");
   };
+  const {showDialog} = useDialog();
 
 
   const handleNext = () => {
@@ -25,7 +27,10 @@ export default function Step7() {
         : 4; // Default to 4 if no frame selected
     const selectedCount = selectedIndices.filter(i => i !== undefined).length;
     if (selectedCount < maxPhotos) {
-      alert(`Vui lòng chọn ít nhất ${maxPhotos} ảnh để tiếp tục.`);
+      showDialog({
+        header: "Thông báo",
+        content: `Vui lòng chọn ít nhất ${maxPhotos} ảnh để tiếp tục.`,
+      });
       return;
     }
     router.push("/step/step8");

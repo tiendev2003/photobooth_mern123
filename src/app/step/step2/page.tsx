@@ -4,6 +4,7 @@ import StoreBackground from "@/app/components/StoreBackground";
 import StoreHeader from "@/app/components/StoreHeader";
 import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useBooth } from "@/lib/context/BoothContext";
+import { useDialog } from "@/lib/context/DialogContext";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -11,15 +12,18 @@ export default function Step2() {
   const router = useRouter();
   const { currentStore } = useBooth();
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
-
+  const {showDialog} = useDialog();
 
   const handleNext = () => {
     // Navigate to the next step if a language is selected
     if (selectedLanguage) {
       router.push("/step/step3");
     } else {
-      alert("Vui lòng chọn ngôn ngữ trước khi tiếp tục");
-    }
+      showDialog({
+        header: "Thông báo",
+        content: "Vui lòng chọn một ngôn ngữ để tiếp tục.",
+      });
+     }
   };
 
   const handleBack = () => {
@@ -68,8 +72,7 @@ export default function Step2() {
       <StoreNavigationButtons 
         onBack={handleBack}
         onNext={handleNext}
-        nextDisabled={!selectedLanguage}
-        currentStore={currentStore}
+         currentStore={currentStore}
       />
     </StoreBackground>
   );

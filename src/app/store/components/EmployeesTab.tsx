@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
 import { formatDateTime } from '../utils/formatters';
 import AddEmployeeModal, { EmployeeFormData } from './AddEmployeeModal';
+import { useDialog } from '@/lib/context/DialogContext';
 
 interface Employee {
   id: string;
@@ -25,6 +26,8 @@ interface EmployeesTabProps {
 export default function EmployeesTab({ employees, maxEmployees, onRefresh }: EmployeesTabProps) {
   const { token } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const {showDialog} = useDialog();
+  
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -66,7 +69,10 @@ export default function EmployeesTab({ employees, maxEmployees, onRefresh }: Emp
       const data = await response.json();
       
       if (response.ok) {
-        alert('Thêm nhân viên thành công!' + (data.warning ? '\n\n' + data.warning : ''));
+        showDialog({
+          header: "Thành công",
+          content: "Nhân viên đã được thêm thành công",
+        });
         if (onRefresh) onRefresh(); // Refresh the list
       } else {
         throw new Error(data.error || 'Failed to create employee');

@@ -1,5 +1,6 @@
 "use client";
 
+import { useDialog } from "@/lib/context/DialogContext";
 import { ArrowLeft, Download, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -24,6 +25,7 @@ export default function SessionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const {showDialog} = useDialog();
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -93,7 +95,10 @@ export default function SessionPage() {
       }, 100);
     } catch (error) {
       console.error('Download error:', error);
-      alert(`Không thể tải tệp: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
+      showDialog({
+        header: "Lỗi",
+        content: "Đã xảy ra lỗi khi tải tệp. Vui lòng thử lại sau.",
+      });
     } finally {
       setLoading(false);
     }

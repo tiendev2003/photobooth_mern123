@@ -4,7 +4,7 @@ import { Ubuntu } from "next/font/google";
 import { BoothProvider } from "../lib/context/BoothContext";
 import CleanupScheduler from "./components/CleanupScheduler";
 import "./globals.css";
-
+import { DialogProvider } from "@/lib/context/DialogContext";
 
 const ubuntu = Ubuntu({
   subsets: ["latin"],
@@ -12,27 +12,29 @@ const ubuntu = Ubuntu({
   variable: "--font-ubuntu", // optional: sử dụng biến CSS
 });
 
- export const viewport: Viewport = {
-  themeColor: '#ffffff',
-  width: 'device-width',
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
+  width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  userScalable: true
+  userScalable: true,
 };
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "S Photobooth - Unique Photo Booth",
-    description: "Capture fun moments and create photo strips with S Photobooth. Try it now!",
-    manifest: '/manifest.json',
+    description:
+      "Capture fun moments and create photo strips with S Photobooth. Try it now!",
+    manifest: "/manifest.json",
     appleWebApp: {
       capable: true,
-      statusBarStyle: 'default',
-      title: 'S Photobooth',
+      statusBarStyle: "default",
+      title: "S Photobooth",
     },
     openGraph: {
       title: "S Photobooth - Unique Photo Booth",
-      description: "Capture fun moments and create photo strips with S Photobooth. Try it now!",
+      description:
+        "Capture fun moments and create photo strips with S Photobooth. Try it now!",
       url: "https://s.mayphotobooth.com/",
       siteName: "S Photobooth",
       images: [
@@ -49,7 +51,8 @@ export async function generateMetadata(): Promise<Metadata> {
     twitter: {
       card: "summary_large_image",
       title: "S Photobooth - Unique Photo Booth",
-      description: "Capture fun moments and create photo strips with S Photobooth. Try it now!",
+      description:
+        "Capture fun moments and create photo strips with S Photobooth. Try it now!",
       images: ["https://s.mayphotobooth.com/og-image.jpg"],
     },
     other: {
@@ -70,7 +73,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/web-app-manifest-192x192.png" />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href="/web-app-manifest-192x192.png"
+        />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon.ico" />
       </head>
       <body
@@ -79,9 +87,9 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CleanupScheduler />
-            <BoothProvider>
-            {children}
-           </BoothProvider>
+          <BoothProvider>
+            <DialogProvider>{children}</DialogProvider>
+          </BoothProvider>
         </AuthProvider>
       </body>
     </html>

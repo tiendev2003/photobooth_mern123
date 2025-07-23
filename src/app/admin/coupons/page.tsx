@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { useDialog } from '@/lib/context/DialogContext';
 import { useCallback, useEffect, useState } from 'react';
 
 interface User {
@@ -47,6 +48,7 @@ export default function CouponsManagement() {
   const [defaultPricing, setDefaultPricing] = useState<Pricing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const {showDialog} = useDialog();
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -228,7 +230,10 @@ export default function CouponsManagement() {
       fetchData();
     } catch (err) {
       console.error('Error creating coupon:', err);
-      alert(`Tạo mã giảm giá thất bại: ${err instanceof Error ? err.message : 'Lỗi không xác định'}`);
+       showDialog({
+        header: "Lỗi",
+        content: `Không thể tạo mã giảm giá: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      });
     } finally {
       setLoading(false);
     }
@@ -328,10 +333,16 @@ export default function CouponsManagement() {
       const result = await response.json();
       
       if (result.action === 'deactivated') {
-        alert('Mã giảm giá này đã được sử dụng trong giao dịch và không thể xóa. Nó đã được đánh dấu là không hoạt động.');
+        showDialog({
+          header: "Thông báo",
+          content: "Mã giảm giá đã được vô hiệu hóa.",
+        });
       } else {
-        alert('Đã xóa mã giảm giá thành công!');
-      }
+        showDialog({
+          header: "Thông báo",
+          content: "Mã giảm giá đã được xóa thành công.",
+        });
+       }
 
       fetchData(); // Refresh list
 

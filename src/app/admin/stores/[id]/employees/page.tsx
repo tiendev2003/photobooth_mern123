@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { use, useEffect, useState } from 'react';
 import AddEmployeeModal, { EmployeeFormData } from './AddEmployeeModal';
+import { useDialog } from '@/lib/context/DialogContext';
 
 interface Employee {
   id: string;
@@ -32,6 +33,7 @@ export default function StoreEmployeesPage({ params }: { params: Promise<{ id: s
   const [showPasswords, setShowPasswords] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const {showDialog} = useDialog();
   
   // Unwrap params using React.use()
   const resolvedParams = use(params);
@@ -47,11 +49,17 @@ export default function StoreEmployeesPage({ params }: { params: Promise<{ id: s
         if (response.ok) {
           setStore(data.store);
         } else {
-          alert(data.error || 'Failed to fetch store employees');
+          showDialog({
+            header: "Lỗi",
+            content: data.error || 'Failed to fetch store employees',
+          });
         }
       } catch (error) {
         console.error('Error fetching store employees:', error);
-        alert('Failed to fetch store employees');
+        showDialog({
+          header: "Lỗi",
+          content: 'Failed to fetch store employees',
+        });
       } finally {
         setLoading(false);
       }
@@ -64,7 +72,10 @@ export default function StoreEmployeesPage({ params }: { params: Promise<{ id: s
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert('Đã copy vào clipboard!');
+     showDialog({
+      header: "Thông báo",
+      content: "Đã sao chép vào clipboard!",
+    });
   };
 
   const copyAllCredentials = () => {
@@ -75,7 +86,10 @@ export default function StoreEmployeesPage({ params }: { params: Promise<{ id: s
     ).join('\n');
     
     navigator.clipboard.writeText(credentials);
-    alert('Đã copy tất cả thông tin đăng nhập!');
+    showDialog({
+      header: "Thông báo",
+      content: "Đã sao chép tất cả thông tin đăng nhập vào clipboard!",
+    });
   };
 
   const resetPassword = async (employeeId: string) => {
@@ -88,13 +102,22 @@ export default function StoreEmployeesPage({ params }: { params: Promise<{ id: s
       });
       const data = await response.json();
       if (response.ok) {
-        alert('Mật khẩu đã được reset thành công!');
+        showDialog({
+          header: "Thông báo",
+          content: "Mật khẩu đã được reset thành công!",
+        });
       } else {
-        alert(data.error || 'Failed to reset password');
+        showDialog({
+          header: "Lỗi",
+          content: data.error || 'Failed to reset password',
+        });
       }
     } catch (error) {
       console.error('Error resetting password:', error);
-      alert('Failed to reset password');
+      showDialog({
+        header: "Lỗi",
+        content: 'Failed to reset password',
+      });
     }
   };
 
@@ -112,7 +135,11 @@ export default function StoreEmployeesPage({ params }: { params: Promise<{ id: s
       const data = await response.json();
       
       if (response.ok) {
-        alert('Thêm nhân viên thành công!' + (data.warning ? '\n\n' + data.warning : ''));
+        
+        showDialog({
+          header: "Thành công",
+          content: "Nhân viên đã được thêm thành công",
+        });
         setRefreshTrigger(prev => prev + 1); // Refresh the list
       } else {
         throw new Error(data.error || 'Failed to create employee');

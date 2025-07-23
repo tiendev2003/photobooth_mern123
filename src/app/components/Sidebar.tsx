@@ -33,6 +33,8 @@ export default function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
     { href: '/admin/templates', label: 'Mẫu khung', icon: Image },
     { href: '/admin/coupons', label: 'Mã giảm giá', icon: Tag },
     { href: '/admin/images', label: 'Hình ảnh', icon: Camera },
+    // background
+    { href: '/admin/backgrounds', label: 'Hình nền', icon: Image },
   ];
 
   // Thêm menu Stores cho ADMIN và MANAGER

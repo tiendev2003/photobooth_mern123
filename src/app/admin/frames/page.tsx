@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { useDialog } from '@/lib/context/DialogContext';
 import Image from 'next/image';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -21,6 +22,7 @@ export default function FrameTypesManagement() {
   const [frameTypes, setFrameTypes] = useState<FrameType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const {showDialog} = useDialog();
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -270,7 +272,10 @@ export default function FrameTypesManagement() {
           console.log("Image uploaded successfully:", imagePath);
         } catch (error) {
           console.error("Failed to upload image:", error);
-          alert("Failed to upload image. Please try again.");
+           showDialog({
+            header: "Lỗi",
+            content: `Không thể tải lên hình ảnh: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          });
           return; // Stop form submission if image upload fails
         } finally {
           setLoading(false);

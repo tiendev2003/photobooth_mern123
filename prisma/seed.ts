@@ -303,6 +303,25 @@ async function main() {
     }
   }
 
+  // Seed backgrounds (admin quản lý)
+  console.log("🖼️  Creating Backgrounds...");
+  const backgrounds = [
+    { name: "Hồng", url: "/uploads/stores/background_hong.png" },
+    { name: "Xanh", url: "/uploads/stores/background_xanh.png" },
+    { name: "Vàng", url: "/uploads/stores/background_vang.png" },
+    { name: "Tím", url: "/uploads/stores/background_tim.png" },
+    { name: "Trắng", url: "/uploads/stores/background_trang.png" },
+  ];
+  for (const bg of backgrounds) {
+    await prisma.background.create({
+      data: {
+        name: bg.name,
+        url: bg.url,
+        isActive: true,
+       },
+    });
+  }
+
  
 
  

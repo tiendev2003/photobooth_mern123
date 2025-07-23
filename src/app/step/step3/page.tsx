@@ -5,6 +5,7 @@ import StoreHeader from "@/app/components/StoreHeader";
 import StoreNavigationButtons from "@/app/components/StoreNavigationButtons";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useBooth } from "@/lib/context/BoothContext";
+import { useDialog } from "@/lib/context/DialogContext";
 import { FrameType, Pricing } from "@/lib/models";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -17,6 +18,8 @@ export default function Step3() {
   const [loading, setLoading] = useState(true);
   const {user} = useAuth();
 
+    const {showDialog} = useDialog();
+  
   useEffect(() => {
     const fetchPricing = async () => {
       try {
@@ -166,9 +169,12 @@ export default function Step3() {
     if (selectedFrame) {
       router.push("/step/step4");
     } else {
-      // Show an alert or message that a frame needs to be selected
-      alert("Vui lòng chọn khung hình trước khi tiếp tục");
-    }
+      // Show a dialog or alert if no frame is selected
+      showDialog({
+        header: "Thông báo",
+        content: "Vui lòng chọn một khung hình để tiếp tục.",
+      });
+     }
   };
 
   const handleBack = () => {

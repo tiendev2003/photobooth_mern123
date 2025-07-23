@@ -2,6 +2,17 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Model Background - Quản lý các ảnh background cho photobooth
+model Background {
+  id          String   @id @default(uuid())
+  name        String   // Tên background
+  url         String   // Đường dẫn ảnh background
+  isActive    Boolean  @default(true) // Trạng thái hoạt động
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([isActive])
+}
+
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
@@ -61,6 +72,7 @@ model User {
   revenues         Revenue[] // Doanh thu do user/máy tạo ra
   couponUsages     CouponUsage[] // Lịch sử sử dụng mã giảm giá
   pricings         Pricing[] // các pricing gán cho user này
+
 
   @@index([storeId])
   @@index([machineCode])
