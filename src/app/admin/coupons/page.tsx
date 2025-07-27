@@ -60,8 +60,7 @@ export default function CouponsManagement() {
     hasPrevPage: false
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
-
+ 
   // Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -83,8 +82,7 @@ export default function CouponsManagement() {
       const queryParams = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
-        includeInactive: showInactive.toString()
-      });
+       });
 
       if (search) {
         queryParams.append('search', search);
@@ -152,7 +150,7 @@ export default function CouponsManagement() {
     if (token) {
       fetchData(pagination.page, pagination.limit, searchQuery);
     }
-  }, [token, pagination.page, pagination.limit, searchQuery, showInactive, fetchData]);
+  }, [token, pagination.page, pagination.limit, searchQuery,  fetchData]);
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
@@ -453,22 +451,7 @@ export default function CouponsManagement() {
           </button>
         </form>
         
-        {/* Toggle for showing inactive coupons */}
-        <div className="mt-3 flex items-center">
-          <label className="flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showInactive}
-              onChange={() => {
-                setShowInactive(!showInactive);
-              }}
-              className="form-checkbox h-5 w-5 text-blue-600 rounded"
-            />
-            <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-              Hiển thị cả mã giảm giá đã hết hạn
-            </span>
-          </label>
-        </div>
+        
       </div>
 
       {/* Coupon Form Modal - Responsive */}

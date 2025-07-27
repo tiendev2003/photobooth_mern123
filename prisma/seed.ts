@@ -279,14 +279,14 @@ async function main() {
     createdFrameTypes.push(created);
   }
 
-  // Create Frame Templates (2 templates cho mỗi frame type)
+  // Create Frame Templates (10 templates cho mỗi frame type)
   console.log("🎨 Creating Frame Templates...");
 
-  // Tạo 2 global templates cho mỗi frame type
+  // Tạo 10 global templates cho mỗi frame type
   for (let typeIndex = 0; typeIndex < createdFrameTypes.length; typeIndex++) {
     const frameType = createdFrameTypes[typeIndex];
 
-    for (let templateIndex = 1; templateIndex <= 2; templateIndex++) {
+    for (let templateIndex = 1; templateIndex <= 10; templateIndex++) {
       await prisma.frameTemplate.create({
         data: {
           name: `Template Global ${frameType.name} ${templateIndex}`,
@@ -297,7 +297,7 @@ async function main() {
           isGlobal: true,
           isActive: true,
           storeId: null,
-          position: typeIndex * 2 + templateIndex,
+          position: typeIndex * 10 + templateIndex,
         },
       });
     }

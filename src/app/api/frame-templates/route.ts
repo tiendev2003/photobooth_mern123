@@ -1,7 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
 // Type for Prisma where clause
@@ -17,17 +15,7 @@ interface FrameTemplateWhereClause {
   }>;
 }
 
-// Function to ensure directory exists
-async function createDirIfNotExists(dir: string) {
-  try {
-    const { access  } = await import('fs/promises');
-    await access(dir);
-  } catch {
-    const { mkdir } = await import('fs/promises');
-    await mkdir(dir, { recursive: true });
-  }
-}
-
+ 
 // Function to upload an image and return its details
 async function uploadImage(file: File) {
   try {
@@ -38,38 +26,31 @@ async function uploadImage(file: File) {
       return null;
     }
 
-    // Properly sanitize the filename to remove all problematic characters
-    const sanitizedFileName = file.name
-      .replace(/\s+/g, '_')
-      .replace(/[()[\]{}áàảãạăắằẳẵặâấầẩẫậéèẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữự]/g, '')
-      .replace(/[^\w.-]/g, ''); // Remove any non-alphanumeric characters except underscores, dots, and hyphens
+    // Upload to external API (giống PUT)
+    // Sử dụng uploadFrameToExternalAPI để đồng bộ với PUT
+    const { uploadFrameToExternalAPI } = await import('@/lib/utils/uploadApi');
+    const imageUrl = await uploadFrameToExternalAPI(file);
+    if (!imageUrl) {
+      throw new Error('Image upload failed');
+    }
 
-    // Generate a unique filename
-    const uniqueFilename = `${uuidv4()}_${sanitizedFileName}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'images');
-    const filePath = path.join(uploadsDir, uniqueFilename);
-    const relativePath = `/uploads/images/${uniqueFilename}`;
-
-    // Ensure the uploads directory exists
-    await createDirIfNotExists(uploadsDir);
-
-    // Write the file to disk
-    await writeFile(filePath, buffer);
+    // Extract filename from URL
+    const urlParts = imageUrl.split('/');
+    const filename = urlParts[urlParts.length - 1];
 
     // Save the file information to the database
     await prisma.image.create({
       data: {
-        filename: uniqueFilename,
-        path: relativePath,
+        filename: filename,
+        path: imageUrl,
         fileType: 'IMAGE',
-        size: buffer.length
+        size: file.size
       }
     });
 
     return {
-      filename: uniqueFilename,
-      path: relativePath
+      filename: filename,
+      path: imageUrl
     };
   } catch (error) {
     console.error('Error uploading image:', error);

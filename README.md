@@ -1,8 +1,8 @@
-DATABASE_URL="mysql://root:123123@localhost:3306/photobooth_db"
+DATABASE_URL="mysql://nextjs:123123123@localhost:3306/photobooth_db"
 JWT_SECRET="your-super-secret-jwt-key"
 NEXTAUTH_SECRET="your-nextauth-secret-key"
-NEXTAUTH_URL="http://localhost:3000"
-API_BASE_URL="http://localhost:3000"
+NEXTAUTH_URL="https://s.mayphotobooth.com"
+API_BASE_URL="https://s.mayphotobooth.com"
 
 NEXT_PUBLIC_MAIN_DOMAIN=s.mayphotobooth.com
 NEXT_PUBLIC_ADMIN_DOMAIN=crm.mayphotobooth.com

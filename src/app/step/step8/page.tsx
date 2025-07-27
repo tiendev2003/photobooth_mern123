@@ -60,7 +60,7 @@ export default function Step8() {
     webkitPrintColorAdjust?: string;
     printColorAdjust: string;
   }
-  const { showDialog,hideDialog } = useDialog();
+  const { showDialog, hideDialog } = useDialog();
 
   const router = useRouter();
   const {
@@ -93,7 +93,7 @@ export default function Step8() {
 
   // Ref to track active video elements for cleanup
   const activeVideoElementsRef = useRef<Set<HTMLVideoElement>>(new Set());
- 
+
   // Helper function to cleanup video elements
   const cleanupVideoElement = (video: HTMLVideoElement) => {
     try {
@@ -282,10 +282,10 @@ export default function Step8() {
 
 
   const handlePrint = async () => {
-     showDialog({
-                header: "Thông báo",
-                content: "Vui lòng đợi trong giây lát, ảnh đang được tạo...",
-              });
+    showDialog({
+      header: "Thông báo",
+      content: "Vui lòng đợi trong giây lát, ảnh đang được tạo...",
+    });
     setIsProcessing(true);
 
     try {
@@ -474,7 +474,7 @@ export default function Step8() {
             console.error("Error updating media session:", error);
           }
         }
-
+        hideDialog();
         setTimeout(() => {
           router.push("/step/step9");
         }, 500);
@@ -490,7 +490,7 @@ export default function Step8() {
       setIsProcessing(false);
     } finally {
       setIsProcessing(false);
-      hideDialog();
+
     }
   };
   const preloadImages = async (images: HTMLImageElement[]): Promise<void> => {
@@ -2244,7 +2244,6 @@ export default function Step8() {
             <Printer className="w-12 h-12 text-indigo-500" onClick={() => {
               console.time('Tạo ảnh');
               handlePrint();
-             
               console.timeEnd('Tạo ảnh');
             }} />
           )}
