@@ -148,8 +148,7 @@ export default function CouponsManagement() {
     }
   }, [token]); // Add token as a dependency
 
-  // Fetch coupons and users when component mounts or pagination changes
-  useEffect(() => {
+   useEffect(() => {
     if (token) {
       fetchData(pagination.page, pagination.limit, searchQuery);
     }

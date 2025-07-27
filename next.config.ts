@@ -150,8 +150,7 @@ const nextConfig = {
   },
 
   images: {
-    unoptimized: true,
-    domains: ["localhost"],
+    domains: ["localhost",'upload.dananggo.com'],
     remotePatterns: [
       {
         protocol: "http",

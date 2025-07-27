@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 
 interface StoreInfo {
   id: string;
@@ -87,7 +89,7 @@ export default function EditStoreTab({
                   <div className="text-sm font-medium text-gray-700 mb-2">Logo hiện tại</div>
                   <div className="w-20 h-20 border border-gray-300 rounded-lg overflow-hidden bg-white flex items-center justify-center">
                     {store.logo ? (
-                      <img src={store.logo} alt="Current Logo" className="w-full h-full object-cover" />
+                      <Image src={store.logo} alt="Current Logo" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-gray-400 text-xs">Chưa có logo</span>
                     )}
@@ -99,7 +101,7 @@ export default function EditStoreTab({
                   <div className="flex-shrink-0">
                     <div className="text-sm font-medium text-gray-700 mb-2">Logo mới</div>
                     <div className="w-20 h-20 border border-gray-300 rounded-lg overflow-hidden">
-                      <img src={logoPreview} alt="New Logo Preview" className="w-full h-full object-cover" />
+                      <Image src={logoPreview} alt="New Logo Preview" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}
@@ -140,7 +142,7 @@ export default function EditStoreTab({
                   <div className="text-sm font-medium text-gray-700 mb-2">Hình nền hiện tại</div>
                   <div className="w-32 h-20 border border-gray-300 rounded-lg overflow-hidden bg-white flex items-center justify-center">
                     {store.background ? (
-                      <img src={store.background} alt="Current Background" className="w-full h-full object-cover" />
+                      <Image src={store.background} alt="Current Background" className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-gray-400 text-xs">Chưa có hình nền</span>
                     )}
@@ -152,7 +154,7 @@ export default function EditStoreTab({
                   <div className="flex-shrink-0">
                     <div className="text-sm font-medium text-gray-700 mb-2">Hình nền mới</div>
                     <div className="w-32 h-20 border border-gray-300 rounded-lg overflow-hidden">
-                      <img src={backgroundPreview} alt="New Background Preview" className="w-full h-full object-cover" />
+                      <Image src={backgroundPreview} alt="New Background Preview" className="w-full h-full object-cover" />
                     </div>
                   </div>
                 )}

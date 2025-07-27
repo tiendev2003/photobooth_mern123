@@ -638,9 +638,19 @@ export default function TemplatesManagement() {
           templates.map(template => (
           <div key={template.id} className="bg-white rounded-lg shadow-md overflow-hidden">
             <div className="relative h-48">
+              {/*  nếu có nền */}
               {template.background && (
                 <Image
                   src={template.background}
+                  alt={template.name}
+                  fill
+                  className="object-cover"
+                />
+              )}
+              {/* // nếu có overlay */}
+              {template.overlay && (
+                <Image
+                  src={template.overlay}
                   alt={template.name}
                   fill
                   className="object-cover"

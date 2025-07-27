@@ -45,15 +45,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
             setToken(storedToken);
             setIsAdmin(['ADMIN', 'KETOAN'].includes(parsedUser.role));
           } else {
-            // Token is invalid or was invalidated, log user out
-            localStorage.removeItem('user');
-            localStorage.removeItem('token');
+          
           }
         } catch (error) {
           console.error('Token verification error:', error);
-          // On error, clear local storage
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
+         
         }
       }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 interface StoreInfo {
   id: string;
   name: string;
@@ -79,9 +81,12 @@ export default function SettingsTab({ store, onEditClick }: SettingsTabProps) {
               <label className="block text-sm font-medium text-gray-700">Logo cửa hàng</label>
               <div className="mt-2">
                 {store.logo ? (
-                  <img 
+                  <Image 
                     src={store.logo} 
                     alt="Logo cửa hàng" 
+                    width={80}
+                    height={80}
+
                     className="h-20 w-20 object-cover rounded-lg border border-gray-200"
                   />
                 ) : (
@@ -96,7 +101,7 @@ export default function SettingsTab({ store, onEditClick }: SettingsTabProps) {
               <label className="block text-sm font-medium text-gray-700">Hình nền cửa hàng</label>
               <div className="mt-2">
                 {store.background ? (
-                  <img 
+                  <Image 
                     src={store.background} 
                     alt="Hình nền cửa hàng" 
                     className="h-20 w-32 object-cover rounded-lg border border-gray-200"
