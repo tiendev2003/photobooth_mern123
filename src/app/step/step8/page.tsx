@@ -397,7 +397,7 @@ export default function Step8() {
                 "filePath": imageUrl,
                 "fileName": "photobooth.jpg",
                 "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
-                "quantity": selectedQuantity || 1,
+                "quantity": selectedFrame?.isCustom ? selectedQuantity : selectedQuantity * 2 ,
               }),
             })
               .then((response) => {
