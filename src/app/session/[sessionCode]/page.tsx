@@ -12,7 +12,8 @@ interface MediaSession {
   sessionCode: string;
   imageUrl?: string;
   videoUrl?: string;
-  gifUrl?: string;
+  gifUrl?: string; // Keeping the same field name for API compatibility
+  fastMotionVideoUrl?: string; // Adding the new field name for future compatibility
   status: 'PROCESSING' | 'COMPLETED' | 'EXPIRED';
   expiresAt: string;
   createdAt: string;
@@ -110,7 +111,7 @@ export default function SessionPage() {
     const mediaItems = [
       { url: session.imageUrl, filename: 'photobooth-image.jpg' },
       { url: session.videoUrl, filename: 'photobooth-video.webm' },
-      { url: session.gifUrl, filename: 'photobooth-gif.gif' },
+      { url: session.gifUrl || session.fastMotionVideoUrl, filename: 'photobooth-fast-motion.webm' },
     ].filter(item => item.url);
 
     setLoading(true);
@@ -156,14 +157,14 @@ export default function SessionPage() {
   };
 
   const renderMedia = (type: string, url: string) => {
-    if (type === 'Video') {
+    if (type === 'Video' || type === 'FastMotionVideo') {
       return (
-        <div className="relative w-full bg-black rounded-lg overflow-hidden">
+        <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
           <video
             src={url}
             controls
-            className="w-full h-auto max-h-[80vh] object-contain"
-            style={{ minHeight: '200px' }}
+            className="w-full h-full object-contain"
+            style={{ maxHeight: '100%', margin: '0 auto' }}
             preload="metadata"
           >
             Your browser does not support the video tag.
@@ -220,7 +221,7 @@ export default function SessionPage() {
   const mediaItems = session ? [
     { type: 'Image', url: session.imageUrl, filename: 'photobooth-image.jpg' },
     { type: 'Video', url: session.videoUrl, filename: 'photobooth-video.webm' },
-    { type: 'GIF', url: session.gifUrl, filename: 'photobooth-gif.gif' },
+    { type: 'FastMotionVideo', url: session.gifUrl || session.fastMotionVideoUrl, filename: 'photobooth-fast-motion.webm' },
   ].filter(item => item.url) : [];
 
   return (
@@ -322,7 +323,7 @@ export default function SessionPage() {
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center text-sm text-gray-300">
                           <span className="ml-2">
-                            {item.type} {index + 1}
+                            {item.type === 'FastMotionVideo' ? 'Fast Motion' : item.type} {index + 1}
                           </span>
                         </div>                  <button
                     onClick={() => downloadMedia(item.url!, item.filename)}
@@ -332,7 +333,7 @@ export default function SessionPage() {
                     <Download className={`w-4 h-4 ${loading ? 'animate-pulse' : ''}`} />
                   </button>
                       </div>
-                      <div className="flex-1 flex items-center justify-center">
+                      <div className={`flex-1 flex items-center justify-center ${item.type === 'FastMotionVideo' || item.type === 'Video' ? 'h-full' : ''}`}>
                         {renderMedia(item.type, item.url!)}
                       </div>
                     </div>
