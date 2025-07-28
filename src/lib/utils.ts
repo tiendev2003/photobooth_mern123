@@ -2,7 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import GIF from "gif.js";
 import { twMerge } from "tailwind-merge";
 
-export const TIMEOUT_DURATION = 10; // 10 seconds for normal video generation 
+export const TIMEOUT_DURATION = 2; // 10 seconds for normal video generation 
 
 
 export function cn(...inputs: ClassValue[]) {
