@@ -5,7 +5,7 @@ import StoreHeader from "@/app/components/StoreHeader";
 import { useBooth } from "@/lib/context/BoothContext";
 import { useDialog } from "@/lib/context/DialogContext";
 import { FrameTemplate } from "@/lib/models/FrameTemplate";
-import { cn, TIMEOUT_DURATION } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { uploadImage, uploadVideo } from "@/lib/utils/universalUpload";
 import { ChevronLeft, ChevronRight, ImageIcon, Loader2, Printer, Sparkles } from "lucide-react";
 import Image from "next/image";
@@ -134,6 +134,34 @@ export default function Step8() {
     }
   };
 
+  // Helper function để đánh giá khả năng phần cứng
+  const getHardwareCapabilities = () => {
+    const cores = navigator.hardwareConcurrency || 4;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const memory = (navigator as any).deviceMemory || 4; // GB - deviceMemory is experimental API
+    
+    let tier = 'medium';
+    if (cores < 4 || memory < 4) {
+      tier = 'low';
+    } else if (cores >= 8 && memory >= 8) {
+      tier = 'high';
+    }
+    
+    console.log(`Hardware assessment: ${tier} (${cores} cores, ${memory}GB RAM)`);
+    
+    return {
+      tier,
+      cores,
+      memory,
+      recommendedFPS: tier === 'low' ? 15 : tier === 'high' ? 30 : 20,
+      recommendedBitrate: tier === 'low' ? 2000000 : tier === 'high' ? 8000000 : 4000000,
+      recommendedTimeout: tier === 'low' ? 6 : tier === 'high' ? 10 : 8
+    };
+  };
+
+  // Use hardware capabilities để tối ưu hóa performance
+  const hardwareCapabilities = getHardwareCapabilities();
+
   // Helper function to cleanup video elements
   const cleanupVideoElement = (video: HTMLVideoElement) => {
     try {
@@ -259,7 +287,7 @@ export default function Step8() {
       });
       activeVideos.clear();
     };
-  }, []);
+  }, [cleanupVideoElement]);
 
   // Slick carousel settings and refs
   const skinFilterSliderRef = useRef<Slider | null>(null);
@@ -631,29 +659,46 @@ export default function Step8() {
       outputCtx.imageSmoothingEnabled = true;
       outputCtx.imageSmoothingQuality = 'high';
 
-      const stream = outputCanvas.captureStream(30); // 30fps for smoother playback
+      // Giảm FPS cho máy yếu, tăng FPS cho máy mạnh
+      const fps = hardwareCapabilities.recommendedFPS;
+      const stream = outputCanvas.captureStream(fps);
+      
       // Try different codecs for better browser support
       let mediaRecorder;
+      let selectedMimeType = '';
+      
+      // Điều chỉnh bitrate dựa trên khả năng phần cứng
+      let videoBitsPerSecond = hardwareCapabilities.recommendedBitrate;
+
       try {
-        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+        // Thử các codec theo thứ tự ưu tiên
+        const codecOptions = [
+          { mimeType: 'video/webm;codecs=vp9', bitrate: videoBitsPerSecond },
+          { mimeType: 'video/webm;codecs=vp8', bitrate: Math.min(videoBitsPerSecond, 6000000) },
+          { mimeType: 'video/webm', bitrate: Math.min(videoBitsPerSecond, 6000000) },
+          { mimeType: 'video/mp4', bitrate: Math.min(videoBitsPerSecond, 6000000) }
+        ];
+
+        for (const option of codecOptions) {
+          if (MediaRecorder.isTypeSupported(option.mimeType)) {
+            selectedMimeType = option.mimeType;
+            videoBitsPerSecond = option.bitrate;
+            mediaRecorder = new MediaRecorder(stream, {
+              mimeType: option.mimeType,
+              videoBitsPerSecond: option.bitrate,
+            });
+            console.log(`Using codec: ${option.mimeType} with bitrate: ${option.bitrate}`);
+            break;
+          }
+        }
+
+        if (!mediaRecorder) {
+          // Fallback không có codec cụ thể
           mediaRecorder = new MediaRecorder(stream, {
-            mimeType: 'video/webm;codecs=vp9',
-            videoBitsPerSecond: 8000000,
+            videoBitsPerSecond: Math.min(videoBitsPerSecond, 4000000), // Giảm bitrate cho tương thích
           });
-        } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-          mediaRecorder = new MediaRecorder(stream, {
-            mimeType: 'video/webm;codecs=vp8',
-            videoBitsPerSecond: 8000000,
-          });
-        } else if (MediaRecorder.isTypeSupported('video/webm')) {
-          mediaRecorder = new MediaRecorder(stream, {
-            mimeType: 'video/webm',
-            videoBitsPerSecond: 8000000,
-          });
-        } else {
-          mediaRecorder = new MediaRecorder(stream, {
-            videoBitsPerSecond: 8000000,
-          });
+          selectedMimeType = 'video/webm'; // Default
+          console.log('Using default MediaRecorder without specific codec');
         }
       } catch (error) {
         console.error("Error creating MediaRecorder:", error);
@@ -661,44 +706,106 @@ export default function Step8() {
       }
 
       const recordedChunks: Blob[] = [];
+      let dataIntervalId: NodeJS.Timeout | null = null;
+      let hasRecordedData = false;
+
       mediaRecorder.ondataavailable = (e) => {
+        console.log('Data available:', e.data.size, 'bytes');
         if (e.data && e.data.size > 0) {
           recordedChunks.push(e.data);
+          hasRecordedData = true;
         }
       };
 
       mediaRecorder.addEventListener('start', () => {
         console.log('MediaRecorder started successfully');
-        const dataInterval = setInterval(() => {
+        hasRecordedData = false;
+        
+        // Yêu cầu dữ liệu thường xuyên hơn để tránh mất chunks
+        dataIntervalId = setInterval(() => {
           if (mediaRecorder.state === 'recording') {
-            mediaRecorder.requestData();
+            try {
+              mediaRecorder.requestData();
+            } catch (error) {
+              console.warn('Error requesting data:', error);
+            }
           } else {
-            clearInterval(dataInterval);
+            if (dataIntervalId) {
+              clearInterval(dataIntervalId);
+              dataIntervalId = null;
+            }
           }
-        }, 1000);
+        }, 500); // Giảm từ 1000ms xuống 500ms để thu thập chunks thường xuyên hơn
       });
 
       mediaRecorder.addEventListener('error', (e) => {
         console.error('MediaRecorder error:', e);
+        if (dataIntervalId) {
+          clearInterval(dataIntervalId);
+          dataIntervalId = null;
+        }
       });
 
       const processedVideoPromise = new Promise<string>((resolve, reject) => {
+        const stopTimeout = setTimeout(() => {
+          console.warn('Video processing timeout - forcing resolution with existing data');
+          if (recordedChunks.length > 0) {
+            const finalBlob = new Blob(recordedChunks, {
+              type: selectedMimeType || 'video/webm'
+            });
+            if (finalBlob.size > 0) {
+              const processedVideoUrl = URL.createObjectURL(finalBlob);
+              resolve(processedVideoUrl);
+              return;
+            }
+          }
+          reject(new Error('Video processing timeout - no valid data'));
+        }, 30000); // 30 giây timeout
+
         mediaRecorder.onstop = () => {
+          clearTimeout(stopTimeout);
+          if (dataIntervalId) {
+            clearInterval(dataIntervalId);
+            dataIntervalId = null;
+          }
+          
           console.log('MediaRecorder stopped, processing chunks:', recordedChunks.length);
+          
+          // Kiểm tra nếu không có chunks nhưng có dữ liệu
           if (recordedChunks.length === 0) {
             console.error('No video chunks recorded!');
-            reject(new Error('No video data recorded'));
+            
+            // Thử yêu cầu dữ liệu cuối cùng
+            if (hasRecordedData) {
+              console.log('Attempting final data request...');
+              setTimeout(() => {
+                if (recordedChunks.length > 0) {
+                  const finalBlob = new Blob(recordedChunks, {
+                    type: selectedMimeType || 'video/webm'
+                  });
+                  if (finalBlob.size > 0) {
+                    const processedVideoUrl = URL.createObjectURL(finalBlob);
+                    resolve(processedVideoUrl);
+                    return;
+                  }
+                }
+                reject(new Error('Không thể ghi dữ liệu video. Vui lòng thử lại.'));
+              }, 1000);
+              return;
+            }
+            
+            reject(new Error('Không thể ghi dữ liệu video. Vui lòng thử lại.'));
             return;
           }
           
           const finalBlob = new Blob(recordedChunks, {
-            type: 'video/webm'
+            type: selectedMimeType || 'video/webm'
           });
           console.log(`Video file size: ${(finalBlob.size / (1024 * 1024)).toFixed(2)} MB`);
           
           if (finalBlob.size === 0) {
             console.error('Video blob is empty!');
-            reject(new Error('Video data is empty'));
+            reject(new Error('Dữ liệu video trống. Vui lòng thử lại.'));
             return;
           }
           
@@ -903,28 +1010,42 @@ export default function Step8() {
       if (successfulStarts === 0) {
         throw new Error("Không thể phát bất kỳ video nào. Vui lòng thử lại.");
       }
-      // Add safety check before starting recording
+      // Enhanced safety check before starting recording
       console.log('MediaRecorder state before start:', mediaRecorder.state);
       if (mediaRecorder.state !== 'inactive') {
         console.warn('MediaRecorder is not in inactive state, resetting...');
-        mediaRecorder.stop();
-        await new Promise(resolve => setTimeout(resolve, 100));
+        try {
+          mediaRecorder.stop();
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (resetError) {
+          console.warn('Error resetting MediaRecorder:', resetError);
+        }
       }
 
-      await new Promise(resolve => setTimeout(resolve, 500)); // Increased buffer time
+      // Đợi video ổn định trước khi bắt đầu recording
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Tăng thời gian đợi
       
       console.log('Starting MediaRecorder...');
+      
+      // Kiểm tra lại trạng thái trước khi start
       if (mediaRecorder.state === 'inactive') {
-        mediaRecorder.start(1000); // Start with 1 second timeslice
-        console.log('MediaRecorder started with state:', mediaRecorder.state);
+        try {
+          // Bắt đầu với timeslice nhỏ hơn để thu chunks thường xuyên
+          mediaRecorder.start(250); // Giảm từ 1000ms xuống 250ms
+          console.log('MediaRecorder started with state:', mediaRecorder.state);
+        } catch (startError) {
+          console.error('Error starting MediaRecorder:', startError);
+          throw new Error("Không thể bắt đầu ghi video. Vui lòng thử lại.");
+        }
       } else {
         throw new Error("MediaRecorder không thể bắt đầu - trạng thái không hợp lệ");
       }
 
       let frameCount = 0;
-      const targetFPS = 30; // Increase FPS for smoother video
+      const targetFPS = hardwareCapabilities.recommendedFPS; // Sử dụng hardware capabilities
       const frameInterval = 1000 / targetFPS;
       let lastTime = performance.now();
+      const recordingStartTime = performance.now();
 
       // Store initial positions and dimensions for consistency - FIX: Use correct cell selection logic
       const cellPositions = new Map();
@@ -986,6 +1107,7 @@ export default function Step8() {
 
       const renderFrame = () => {
         const now = performance.now();
+        const elapsedTime = (now - recordingStartTime) / 1000; // Thời gian đã trôi qua tính bằng giây
 
         // Check if MediaRecorder is still recording
         if (mediaRecorder.state !== 'recording') {
@@ -1000,11 +1122,22 @@ export default function Step8() {
         }
         lastTime = now;
 
-        if (frameCount > targetFPS * TIMEOUT_DURATION) { // Restored to original timeout
-          console.log(`Timeout reached (${TIMEOUT_DURATION}s), stopping recording. Frame count:`, frameCount);
+        // Tăng thời gian timeout cho máy yếu
+        const maxDuration = hardwareCapabilities.recommendedTimeout;
+        
+        if (elapsedTime > maxDuration) {
+          console.log(`Timeout reached (${maxDuration}s), stopping recording. Frame count:`, frameCount);
           if (mediaRecorder.state === 'recording') {
-            mediaRecorder.requestData();
-            mediaRecorder.stop();
+            try {
+              mediaRecorder.requestData();
+              setTimeout(() => {
+                if (mediaRecorder.state === 'recording') {
+                  mediaRecorder.stop();
+                }
+              }, 100);
+            } catch (stopError) {
+              console.warn('Error stopping MediaRecorder on timeout:', stopError);
+            }
           }
           return;
         }
@@ -1014,19 +1147,29 @@ export default function Step8() {
         );
 
         // Handle end of all videos more gracefully
-        // Only stop after minimum duration and if all videos are done
-        if (!anyPlaying && frameCount > targetFPS * 3) { // Restored to 3 seconds minimum
-          console.log('All videos finished, stopping recording. Frame count:', frameCount);
+        // Đảm bảo có đủ thời gian recording tối thiểu
+        const minRecordingTime = hardwareCapabilities.tier === 'low' ? 2 : 3;
+        
+        if (!anyPlaying && elapsedTime > minRecordingTime) {
+          console.log('All videos finished, stopping recording. Elapsed time:', elapsedTime.toFixed(2), 's');
           if (mediaRecorder.state === 'recording') {
-            mediaRecorder.requestData();
-            mediaRecorder.stop();
+            try {
+              mediaRecorder.requestData();
+              setTimeout(() => {
+                if (mediaRecorder.state === 'recording') {
+                  mediaRecorder.stop();
+                }
+              }, 100);
+            } catch (stopError) {
+              console.warn('Error stopping MediaRecorder when videos finished:', stopError);
+            }
           }
           return;
         }
 
         // Log progress every 30 frames (once per second at 30fps)
-        if (frameCount % 30 === 0) {
-          console.log(`Recording progress: ${Math.floor(frameCount / targetFPS)}s, anyPlaying: ${anyPlaying}, videos: ${Array.from(cellVideoMap.values()).map(v => !v.ended && !v.paused).join(',')}`);
+        if (frameCount % Math.max(1, targetFPS) === 0) {
+          console.log(`Recording progress: ${elapsedTime.toFixed(1)}s, anyPlaying: ${anyPlaying}, videos: ${Array.from(cellVideoMap.values()).map(v => !v.ended && !v.paused).join(',')}`);
         }
 
         // Always draw the background regardless of video state
@@ -1176,8 +1319,7 @@ export default function Step8() {
 
       requestAnimationFrame(renderFrame);
 
-      // Make sure we stop recording after the defined timeout
-      // Use this as a fallback in case videos don't trigger the stop condition
+      // Enhanced timeout handling với retry mechanism
       const videoDuration = Math.min(
         10, // Max 10 seconds to match TIMEOUT_DURATION
         Math.max(
@@ -1185,11 +1327,13 @@ export default function Step8() {
         ) + 1 // Add one second to the longest video to ensure we capture everything
       );
 
-      // Enhanced timeout handling
-      const recordingTimeout = Math.min(
-        TIMEOUT_DURATION || 10, // Use full TIMEOUT_DURATION (10 seconds)
-        Math.max(8, videoDuration) // Increased minimum from 5 to 8 seconds
-      );
+      // Tính toán thời gian recording phù hợp với khả năng máy
+      const baseTimeout = hardwareCapabilities.recommendedTimeout;
+      const recordingTimeout = hardwareCapabilities.tier === 'low'
+        ? Math.min(baseTimeout * 0.6, Math.max(4, videoDuration)) // Máy yếu: giảm thời gian
+        : Math.min(baseTimeout, Math.max(6, videoDuration)); // Máy bình thường
+
+      console.log(`Calculated recording timeout: ${recordingTimeout}s based on hardware: ${hardwareCapabilities.cores} cores`);
 
       // Force loop videos to ensure content plays throughout the recording time
       Array.from(cellVideoMap.values()).forEach((video, index) => {
@@ -1208,6 +1352,11 @@ export default function Step8() {
             console.warn('Could not refresh video currentTime:', error);
           }
         });
+
+        // Thêm listener để kiểm tra video đã sẵn sàng chưa
+        video.addEventListener('canplay', () => {
+          console.log(`Video ${index} is ready to play`);
+        });
       });
 
       const timeoutId = setTimeout(() => {
@@ -1215,14 +1364,41 @@ export default function Step8() {
         try {
           if (mediaRecorder.state === 'recording') {
             mediaRecorder.requestData(); // Request final chunk before stopping
-            mediaRecorder.stop();
+            setTimeout(() => {
+              if (mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+              }
+            }, 200); // Đợi 200ms để đảm bảo có data
           }
         } catch (error) {
           console.error('Error stopping MediaRecorder:', error);
         }
       }, recordingTimeout * 1000);
 
-      const result = await processedVideoPromise;
+      let result;
+      try {
+        result = await processedVideoPromise;
+        console.log('Video processing completed successfully');
+      } catch (videoError) {
+        console.error('Video processing failed:', videoError);
+        
+        // Thử lần cuối với dữ liệu hiện có
+        if (recordedChunks.length > 0) {
+          console.log('Attempting to recover with existing chunks:', recordedChunks.length);
+          const recoveryBlob = new Blob(recordedChunks, {
+            type: selectedMimeType || 'video/webm'
+          });
+          if (recoveryBlob.size > 1024) { // Ít nhất 1KB
+            const recoveryUrl = URL.createObjectURL(recoveryBlob);
+            console.log('Recovery successful, using partial video data');
+            result = recoveryUrl;
+          } else {
+            throw videoError; // Re-throw nếu không thể khôi phục
+          }
+        } else {
+          throw videoError;
+        }
+      }
 
       // Clear the timeout if recording finished early
       clearTimeout(timeoutId);
@@ -1260,20 +1436,35 @@ export default function Step8() {
       });
       activeVideoElementsRef.current.clear();
 
-      // More specific error messages
+      // More specific error messages - không bắt buộc phải có video
       if (error instanceof Error) {
-        if (error.message.includes('MediaRecorder')) {
-          alert("❌ Lỗi khi ghi video. Vui lòng thử lại hoặc sử dụng trình duyệt khác.");
-        } else if (error.message.includes('không hỗ trợ')) {
-          alert("❌ Trình duyệt không hỗ trợ tạo video. Vui lòng sử dụng Chrome, Firefox hoặc Edge.");
+        const errorMessage = error.message.toLowerCase();
+        
+        if (errorMessage.includes('mediarecorder') || errorMessage.includes('không thể tạo mediarecorder')) {
+          console.warn("Video MediaRecorder error - may be browser compatibility issue");
+          // Không throw error, để tiếp tục với image generation
+          return;
+        } else if (errorMessage.includes('không hỗ trợ') || errorMessage.includes('not supported')) {
+          console.warn("Video recording not supported in this browser");
+          return;
+        } else if (errorMessage.includes('no video data') || errorMessage.includes('no video chunks')) {
+          console.warn("Video failed to record data - may be hardware limitation");
+          return;
+        } else if (errorMessage.includes('timeout')) {
+          console.warn("Video generation timeout - may be slow hardware");
+          return;
         } else {
-          alert(`❌ Có lỗi xảy ra khi tạo video: ${error.message}`);
+          console.error(`Video generation failed: ${error.message}`);
+          // Show user notification but don't stop the entire process
+          setTimeout(() => {
+            alert("⚠️ Không thể tạo video chất lượng cao do giới hạn phần cứng. Sẽ tiếp tục tạo ảnh.");
+          }, 100);
+          return;
         }
       } else {
-        alert("❌ Có lỗi xảy ra khi tạo video. Vui lòng thử lại.");
+        console.error("Unknown video generation error");
+        return;
       }
-      
-      throw error; // Re-throw to let handlePrint know there was an error
     }
   };
 const generateFastVideo = async (isLandscape: boolean): Promise<string | void> => {
@@ -1301,8 +1492,8 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
     console.log('Fast video count:', videos.length);
 
     const isCustomFrame = selectedFrame?.isCustom === true;
-      const desiredWidth = isLandscape ? 3600 : 2400;  // Same as generateHighQualityImage
-      const desiredHeight = isLandscape ? 2400 : 3600; // Same as generateHighQualityImage
+    const desiredWidth = isLandscape ? 3600 : 2400;  // Same as generateHighQualityImage
+    const desiredHeight = isLandscape ? 2400 : 3600; // Same as generateHighQualityImage
 
     const rect = previewContent.getBoundingClientRect();
     const outputCanvas = document.createElement('canvas');
@@ -1320,28 +1511,44 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
     outputCtx.imageSmoothingEnabled = true;
     outputCtx.imageSmoothingQuality = 'high';
 
-    const stream = outputCanvas.captureStream(30); // Match generateSmoothVideo's FPS
+    // Điều chỉnh FPS cho fast video dựa trên khả năng máy
+    const fps = Math.max(15, Math.min(hardwareCapabilities.recommendedFPS, 25)); // Fast video có FPS thấp hơn
+    const stream = outputCanvas.captureStream(fps);
+    
     let mediaRecorder;
+    let selectedMimeType = '';
+    
+    // Điều chỉnh bitrate cho fast video (thấp hơn smooth video)
+    let videoBitsPerSecond = Math.min(hardwareCapabilities.recommendedBitrate * 0.5, 3000000);
+
     try {
-      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+      // Thử các codec cho fast video
+      const codecOptions = [
+        { mimeType: 'video/webm;codecs=vp8', bitrate: videoBitsPerSecond }, // VP8 thường nhanh hơn VP9
+        { mimeType: 'video/webm;codecs=vp9', bitrate: videoBitsPerSecond },
+        { mimeType: 'video/webm', bitrate: videoBitsPerSecond },
+        { mimeType: 'video/mp4', bitrate: Math.min(videoBitsPerSecond, 2000000) }
+      ];
+
+      for (const option of codecOptions) {
+        if (MediaRecorder.isTypeSupported(option.mimeType)) {
+          selectedMimeType = option.mimeType;
+          videoBitsPerSecond = option.bitrate;
+          mediaRecorder = new MediaRecorder(stream, {
+            mimeType: option.mimeType,
+            videoBitsPerSecond: option.bitrate,
+          });
+          console.log(`Fast video using codec: ${option.mimeType} with bitrate: ${option.bitrate}`);
+          break;
+        }
+      }
+
+      if (!mediaRecorder) {
         mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'video/webm;codecs=vp9',
-          videoBitsPerSecond: 2000000, // Lower bitrate for fast video
+          videoBitsPerSecond: Math.min(videoBitsPerSecond, 2000000),
         });
-      } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-        mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'video/webm;codecs=vp8',
-          videoBitsPerSecond: 2000000,
-        });
-      } else if (MediaRecorder.isTypeSupported('video/webm')) {
-        mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'video/webm',
-          videoBitsPerSecond: 2000000,
-        });
-      } else {
-        mediaRecorder = new MediaRecorder(stream, {
-          videoBitsPerSecond: 2000000,
-        });
+        selectedMimeType = 'video/webm';
+        console.log('Fast video using default MediaRecorder');
       }
     } catch (error) {
       console.error("Error creating MediaRecorder:", error);
@@ -1349,44 +1556,104 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
     }
 
     const recordedChunks: Blob[] = [];
+    let dataIntervalId: NodeJS.Timeout | null = null;
+    let hasRecordedData = false;
+
     mediaRecorder.ondataavailable = (e) => {
+      console.log('Fast video data available:', e.data.size, 'bytes');
       if (e.data && e.data.size > 0) {
         recordedChunks.push(e.data);
+        hasRecordedData = true;
       }
     };
 
     mediaRecorder.addEventListener('start', () => {
       console.log('Fast video MediaRecorder started successfully');
-      const dataInterval = setInterval(() => {
+      hasRecordedData = false;
+      
+      // Thu thập chunks thường xuyên hơn cho fast video
+      dataIntervalId = setInterval(() => {
         if (mediaRecorder.state === 'recording') {
-          mediaRecorder.requestData();
+          try {
+            mediaRecorder.requestData();
+          } catch (error) {
+            console.warn('Error requesting fast video data:', error);
+          }
         } else {
-          clearInterval(dataInterval);
+          if (dataIntervalId) {
+            clearInterval(dataIntervalId);
+            dataIntervalId = null;
+          }
         }
-      }, 1000);
+      }, 300); // Thường xuyên hơn cho fast video
     });
 
     mediaRecorder.addEventListener('error', (e) => {
       console.error('Fast video MediaRecorder error:', e);
+      if (dataIntervalId) {
+        clearInterval(dataIntervalId);
+        dataIntervalId = null;
+      }
     });
 
     const processedVideoPromise = new Promise<string>((resolve, reject) => {
+      const stopTimeout = setTimeout(() => {
+        console.warn('Fast video processing timeout - forcing resolution with existing data');
+        if (recordedChunks.length > 0) {
+          const finalBlob = new Blob(recordedChunks, {
+            type: selectedMimeType || 'video/webm'
+          });
+          if (finalBlob.size > 0) {
+            const processedVideoUrl = URL.createObjectURL(finalBlob);
+            resolve(processedVideoUrl);
+            return;
+          }
+        }
+        reject(new Error('Fast video processing timeout - no valid data'));
+      }, 15000); // 15 giây cho fast video
+
       mediaRecorder.onstop = () => {
+        clearTimeout(stopTimeout);
+        if (dataIntervalId) {
+          clearInterval(dataIntervalId);
+          dataIntervalId = null;
+        }
+        
         console.log('Fast video MediaRecorder stopped, processing chunks:', recordedChunks.length);
+        
         if (recordedChunks.length === 0) {
           console.error('No fast video chunks recorded!');
-          reject(new Error('No video data recorded'));
+          
+          if (hasRecordedData) {
+            console.log('Attempting final data request for fast video...');
+            setTimeout(() => {
+              if (recordedChunks.length > 0) {
+                const finalBlob = new Blob(recordedChunks, {
+                  type: selectedMimeType || 'video/webm'
+                });
+                if (finalBlob.size > 0) {
+                  const processedVideoUrl = URL.createObjectURL(finalBlob);
+                  resolve(processedVideoUrl);
+                  return;
+                }
+              }
+              reject(new Error('Không thể ghi dữ liệu fast video. Vui lòng thử lại.'));
+            }, 500);
+            return;
+          }
+          
+          reject(new Error('Không thể ghi dữ liệu fast video. Vui lòng thử lại.'));
           return;
         }
 
         const finalBlob = new Blob(recordedChunks, {
-          type: 'video/webm'
+          type: selectedMimeType || 'video/webm'
         });
         console.log(`Fast video file size: ${(finalBlob.size / (1024 * 1024)).toFixed(2)} MB`);
 
         if (finalBlob.size === 0) {
           console.error('Fast video blob is empty!');
-          reject(new Error('Video data is empty'));
+          reject(new Error('Dữ liệu fast video trống. Vui lòng thử lại.'));
           return;
         }
 
@@ -1572,26 +1839,38 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
       throw new Error("Không thể phát bất kỳ video nào cho video nhanh. Vui lòng thử lại.");
     }
 
+    // Enhanced safety check cho fast video
     console.log('Fast video MediaRecorder state before start:', mediaRecorder.state);
     if (mediaRecorder.state !== 'inactive') {
       console.warn('Fast video MediaRecorder is not in inactive state, resetting...');
-      mediaRecorder.stop();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      try {
+        mediaRecorder.stop();
+        await new Promise(resolve => setTimeout(resolve, 300));
+      } catch (resetError) {
+        console.warn('Error resetting fast video MediaRecorder:', resetError);
+      }
     }
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 800)); // Đợi video ổn định
     console.log('Starting fast video MediaRecorder...');
+    
     if (mediaRecorder.state === 'inactive') {
-      mediaRecorder.start(1000);
-      console.log('Fast video MediaRecorder started with state:', mediaRecorder.state);
+      try {
+        mediaRecorder.start(200); // Timeslice ngắn hơn cho fast video
+        console.log('Fast video MediaRecorder started with state:', mediaRecorder.state);
+      } catch (startError) {
+        console.error('Error starting fast video MediaRecorder:', startError);
+        throw new Error("Không thể bắt đầu ghi fast video. Vui lòng thử lại.");
+      }
     } else {
       throw new Error("Fast video MediaRecorder không thể bắt đầu - trạng thái không hợp lệ");
     }
 
     let frameCount = 0;
-    const targetFPS = 30;
+    const targetFPS = hardwareCapabilities.recommendedFPS; // Sử dụng hardware capabilities
     const frameInterval = 1000 / targetFPS;
     let lastTime = performance.now();
+    const recordingStartTime = performance.now();
 
     const cellPositions = new Map();
     const gridContainer = selectedFrame?.isCustom
@@ -1645,21 +1924,35 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
 
     const renderFrame = () => {
       const now = performance.now();
+      const elapsedTime = (now - recordingStartTime) / 1000;
+
       if (mediaRecorder.state !== 'recording') {
         console.log('Fast video MediaRecorder stopped, ending frame rendering. Final state:', mediaRecorder.state);
         return;
       }
+      
       if (now - lastTime < frameInterval) {
         requestAnimationFrame(renderFrame);
         return;
       }
       lastTime = now;
 
-      if (frameCount > targetFPS * 2.5) {
-        console.log(`Fast video timeout reached (2.5s), stopping recording. Frame count:`, frameCount);
+      // Fast video ngắn hơn: tối đa 3 giây, tối thiểu 1.5 giây
+      const maxDuration = hardwareCapabilities.tier === 'low' ? 2.5 : Math.min(hardwareCapabilities.recommendedTimeout, 3);
+      
+      if (elapsedTime > maxDuration) {
+        console.log(`Fast video timeout reached (${maxDuration}s), stopping recording. Frame count:`, frameCount);
         if (mediaRecorder.state === 'recording') {
-          mediaRecorder.requestData();
-          mediaRecorder.stop();
+          try {
+            mediaRecorder.requestData();
+            setTimeout(() => {
+              if (mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+              }
+            }, 100);
+          } catch (stopError) {
+            console.warn('Error stopping fast video MediaRecorder on timeout:', stopError);
+          }
         }
         return;
       }
@@ -1668,17 +1961,27 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
         (video) => !video.ended && !video.paused && video.currentTime > 0
       );
 
-      if (!anyPlaying && frameCount > targetFPS * 1.5) {
-        console.log('All fast videos finished, stopping recording. Frame count:', frameCount);
+      const minRecordingTime = hardwareCapabilities.tier === 'low' ? 1.5 : 1.5;
+      
+      if (!anyPlaying && elapsedTime > minRecordingTime) {
+        console.log('All fast videos finished, stopping recording. Elapsed time:', elapsedTime.toFixed(2), 's');
         if (mediaRecorder.state === 'recording') {
-          mediaRecorder.requestData();
-          mediaRecorder.stop();
+          try {
+            mediaRecorder.requestData();
+            setTimeout(() => {
+              if (mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+              }
+            }, 100);
+          } catch (stopError) {
+            console.warn('Error stopping fast video MediaRecorder when videos finished:', stopError);
+          }
         }
         return;
       }
 
-      if (frameCount % 30 === 0) {
-        console.log(`Fast video recording progress: ${Math.floor(frameCount / targetFPS)}s, anyPlaying: ${anyPlaying}, videos: ${Array.from(cellVideoMap.values()).map(v => !v.ended && !v.paused).join(',')}`);
+      if (frameCount % Math.max(1, targetFPS) === 0) {
+        console.log(`Fast video recording progress: ${elapsedTime.toFixed(1)}s, anyPlaying: ${anyPlaying}, videos: ${Array.from(cellVideoMap.values()).map(v => !v.ended && !v.paused).join(',')}`);
       }
 
       previewCtx.fillStyle = "#FFFFFF";
@@ -1791,16 +2094,22 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
 
     requestAnimationFrame(renderFrame);
 
+    // Enhanced timeout handling cho fast video
     const videoDuration = Math.min(
-      2.5,
+      3, // Tăng từ 2.5 lên 3 giây
       Math.max(
         ...Array.from(cellVideoMap.values()).map(v => (v.duration || 0) / 2) // Account for 2x playback rate
       ) + 0.5
     );
+    
+    // Tính toán timeout phù hợp với khả năng máy cho fast video
+    const baseTimeout = hardwareCapabilities.tier === 'low' ? 2.5 : Math.min(hardwareCapabilities.recommendedTimeout, 3);
     const recordingTimeout = Math.min(
-      2.5,
-      Math.max(2, videoDuration)
+      baseTimeout,
+      Math.max(1.5, videoDuration) // Tối thiểu 1.5 giây
     );
+
+    console.log(`Fast video calculated recording timeout: ${recordingTimeout}s for ${hardwareCapabilities.tier} tier hardware`);
 
     Array.from(cellVideoMap.values()).forEach((video, index) => {
       video.loop = true;
@@ -1815,6 +2124,11 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
           console.warn('Could not refresh fast video currentTime:', error);
         }
       });
+      
+      // Thêm listener để theo dõi trạng thái video
+      video.addEventListener('canplay', () => {
+        console.log(`Fast video ${index} is ready to play`);
+      });
     });
 
     const timeoutId = setTimeout(() => {
@@ -1822,14 +2136,42 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
       try {
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.requestData();
-          mediaRecorder.stop();
+          setTimeout(() => {
+            if (mediaRecorder.state === 'recording') {
+              mediaRecorder.stop();
+            }
+          }, 200);
         }
       } catch (error) {
         console.error('Error stopping fast video MediaRecorder:', error);
       }
     }, recordingTimeout * 1000);
 
-    const result = await processedVideoPromise;
+    let result;
+    try {
+      result = await processedVideoPromise;
+      console.log('Fast video processing completed successfully');
+    } catch (videoError) {
+      console.error('Fast video processing failed:', videoError);
+      
+      // Thử khôi phục với dữ liệu hiện có
+      if (recordedChunks.length > 0) {
+        console.log('Attempting to recover fast video with existing chunks:', recordedChunks.length);
+        const recoveryBlob = new Blob(recordedChunks, {
+          type: selectedMimeType || 'video/webm'
+        });
+        if (recoveryBlob.size > 512) { // Ít nhất 512 bytes cho fast video
+          const recoveryUrl = URL.createObjectURL(recoveryBlob);
+          console.log('Fast video recovery successful, using partial video data');
+          result = recoveryUrl;
+        } else {
+          throw videoError;
+        }
+      } else {
+        throw videoError;
+      }
+    }
+
     clearTimeout(timeoutId);
 
     Array.from(cellVideoMap.values()).forEach((video, index) => {
@@ -1851,6 +2193,7 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
     console.error("Error details:", error);
     console.error("Error stack:", error instanceof Error ? error.stack : 'No stack trace');
 
+    // Cleanup tất cả video elements
     activeVideoElementsRef.current.forEach(video => {
       try {
         video.pause();
@@ -1862,18 +2205,31 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
     });
     activeVideoElementsRef.current.clear();
 
+    // Thông báo lỗi chi tiết hơn cho người dùng
     if (error instanceof Error) {
-      if (error.message.includes('MediaRecorder')) {
-        alert("❌ Lỗi khi ghi video nhanh. Vui lòng thử lại hoặc sử dụng trình duyệt khác.");
-      } else if (error.message.includes('không hỗ trợ')) {
-        alert("❌ Trình duyệt không hỗ trợ tạo video nhanh. Vui lòng sử dụng Chrome, Firefox hoặc Edge.");
+      const errorMessage = error.message.toLowerCase();
+      
+      if (errorMessage.includes('mediarecorder') || errorMessage.includes('không thể tạo mediarecorder')) {
+        console.warn("Fast video MediaRecorder error - may be browser compatibility issue");
+        // Không throw error, để tiếp tục với image generation
+        return;
+      } else if (errorMessage.includes('không hỗ trợ') || errorMessage.includes('not supported')) {
+        console.warn("Fast video not supported in this browser");
+        return;
+      } else if (errorMessage.includes('no video data') || errorMessage.includes('no video chunks')) {
+        console.warn("Fast video failed to record data - may be hardware limitation");
+        return;
+      } else if (errorMessage.includes('timeout')) {
+        console.warn("Fast video generation timeout - may be slow hardware");
+        return;
       } else {
-        alert(`❌ Có lỗi xảy ra khi tạo video nhanh: ${error.message}`);
+        console.error(`Fast video generation failed: ${error.message}`);
+        return;
       }
     } else {
-      alert("❌ Có lỗi xảy ra khi tạo video nhanh. Vui lòng thử lại.");
+      console.error("Unknown fast video generation error");
+      return;
     }
-    throw error;
   }
 };
   const generateHighQualityImage = async (isLandscape: boolean): Promise<string | void> => {
@@ -2301,7 +2657,7 @@ const generateFastVideo = async (isLandscape: boolean): Promise<string | void> =
           {renderPreview()}
         </div>
  
-
+   
         <div className="lg:col-span-1">
           <div className=" bg-zinc-200 rounded-2xl p-2 border border-indigo-500/30  ">
             <div className="flex justify-between items-center mb-3">

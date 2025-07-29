@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 
 export default function Step7() {
   const router = useRouter();
-  const { photos, selectedFrame, selectedIndices, setSelectedIndices, currentStore } = useBooth();
+  const { photos,  selectedFrame, selectedIndices, setSelectedIndices, currentStore } = useBooth();
   const handleBack = () => {
     router.push("/step/step6");
   };
@@ -193,7 +193,7 @@ export default function Step7() {
         currentStore={currentStore}
         title="HOÀN THIỆN ẢNH CỦA BẠN"
       />
-
+    
       <div className="grid grid-cols-2 gap-6 mx-32 z-30">
         <div className="lg:col-span-1 flex flex-col gap-6">
           <div className="bg-black bg-opacity-50 rounded-lg p-4 flex flex-col items-center justify-center mt-10">
