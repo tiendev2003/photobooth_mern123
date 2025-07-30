@@ -391,6 +391,30 @@ export default function Step8() {
 
       const imageResult = await imageResponse.json();
       console.log("Image API Response:", imageResult);
+        fetch("http://localhost:4000/api/print", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                "filePath": pythonServerUrl + imageResult.image,
+                "fileName": "photobooth.jpg",
+                "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
+                "quantity": selectedFrame?.isCustom ? selectedQuantity : selectedQuantity * 2 ,
+              }),
+            })
+              .then((response) => {
+                if (!response.ok) {
+                  throw new Error("Failed to print image");
+                }
+                return response.json();
+              })
+              .then((data) => {
+                console.log("Print job submitted successfully:", data);
+              })
+              .catch((error) => {
+                console.error("Error submitting print job:", error);
+              });
 
       // Update state with image result
       if (imageResult.image) {
