@@ -150,7 +150,7 @@ const nextConfig = {
   },
 
   images: {
-    domains: ["localhost",'upload.dananggo.com'],
+    domains: ["localhost",'upload.dananggo.com',"s.mayphotobooth.com"],
     remotePatterns: [
       {
         protocol: "http",
