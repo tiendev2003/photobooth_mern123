@@ -109,8 +109,7 @@ export default function Step8() {
     selectedTemplate,
     setSelectedTemplate,
     setImageQrCode,
-    setVideoQrCode,
-    setGifQrCode,
+ 
     videos,
     currentStore,
     selectedQuantity,
@@ -399,75 +398,21 @@ export default function Step8() {
         localStorage.setItem("imageQrCode", imageResult.image);
       }
 
-      // Start video processing in background (don't wait for it)
+      // Lưu thông tin video processing để step9 sử dụng
       if (videos && videos.length > 0) {
-        const videoFormData = new FormData();
-        videoFormData.append("frame_type", selectedFrame?.id ?? "1");
-        videoFormData.append("duration", "10");
-        videoFormData.append("mediaSessionCode", currentSessionCode || "");
-
-        // Convert video blob URLs to files (only videos, no photos)
-        for (let i = 0; i < videos.length; i++) {
-          try {
-            const response = await fetch(videos[i]);
-            const blob = await response.blob();
-            const file = new File([blob], `video_${i}.webm`, { type: 'video/webm' });
-            videoFormData.append("files", file);
-          } catch (error) {
-            console.error(`Error converting video ${i}:`, error);
-          }
-        }
-
-        // Add background and overlay if available
-        if (selectedTemplate && selectedTemplate.background) {
-          try {
-            const response = await fetch(selectedTemplate.background);
-            const blob = await response.blob();
-            const file = new File([blob], 'background.jpg', { type: 'image/jpeg' });
-            videoFormData.append("background", file);
-          } catch (error) {
-            console.error("Error converting background:", error);
-          }
-        }
-
-        if (selectedTemplate && selectedTemplate.overlay) {
-          try {
-            const response = await fetch(selectedTemplate.overlay);
-            const blob = await response.blob();
-            const file = new File([blob], 'overlay.png', { type: 'image/png' });
-            videoFormData.append("overlay", file);
-          } catch (error) {
-            console.error("Error converting overlay:", error);
-          }
-        }
-
-        // Call video processing API in background (don't await)
-        fetch(`${pythonServerUrl}/api/process-video`, {
-          method: 'POST',
-          body: videoFormData,
-        }).then(async (videoResponse) => {
-          if (videoResponse.ok) {
-            const videoResult = await videoResponse.json();
-            console.log("Video API Response:", videoResult);
-
-            // Update video results when available
-            if (videoResult.video) {
-              setVideoQrCode(videoResult.video);
-              localStorage.setItem("videoQrCode", videoResult.video);
-              console.log("Video URL saved:", videoResult.video);
-            }
-
-            if (videoResult.fast_video) {
-              setGifQrCode(videoResult.fast_video);
-              localStorage.setItem("gifQrCode", videoResult.fast_video);
-              console.log("Fast video URL saved:", videoResult.fast_video);
-            }
-          } else {
-            console.error("Video processing failed:", await videoResponse.text());
-          }
-        }).catch((error) => {
-          console.error("Error in video processing:", error);
-        });
+        const videoProcessingData = {
+          frameType: selectedFrame?.id ?? "1",
+          duration: "10",
+          mediaSessionCode: currentSessionCode || "",
+          hasVideos: true,
+          selectedTemplate: selectedTemplate ? {
+            background: selectedTemplate.background,
+            overlay: selectedTemplate.overlay
+          } : null
+        };
+        localStorage.setItem("videoProcessingData", JSON.stringify(videoProcessingData));
+        localStorage.setItem("videosForProcessing", JSON.stringify(videos));
+        console.log("Video processing data saved for step9:", videoProcessingData);
       }
 
       hideDialog();

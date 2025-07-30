@@ -11,13 +11,15 @@ import { useEffect, useState } from "react";
 
 export default function Step9() {
   const router = useRouter();
-  const { clearAllBoothData, currentStore } = useBooth();
+  const { clearAllBoothData, currentStore, videos, setVideoQrCode, setGifQrCode } = useBooth();
 
   // State for media session
   const [sessionCode, setSessionCode] = useState<string | null>(null);
   const [sessionUrl, setSessionUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [videoProcessing, setVideoProcessing] = useState<boolean>(false);
+  const [videoProcessingStatus, setVideoProcessingStatus] = useState<string>("Đang xử lý video...");
 
   useEffect(() => {
     const getMediaSessionCode = () => {
@@ -51,11 +53,140 @@ export default function Step9() {
     };
   }, []);
 
+  // Process video when component mounts
+  useEffect(() => {
+    const processVideos = async () => {
+      try {
+        // Kiểm tra xem có dữ liệu video processing không
+        const videoProcessingDataStr = localStorage.getItem("videoProcessingData");
+        const videosForProcessingStr = localStorage.getItem("videosForProcessing");
+        
+        if (!videoProcessingDataStr) {
+          console.log("No video processing data found");
+          return;
+        }
+
+        const videoProcessingData = JSON.parse(videoProcessingDataStr);
+        if (!videoProcessingData.hasVideos) {
+          console.log("No videos to process");
+          return;
+        }
+
+        // Lấy videos từ localStorage hoặc BoothContext
+        let videosToProcess = videos;
+        if ((!videosToProcess || videosToProcess.length === 0) && videosForProcessingStr) {
+          videosToProcess = JSON.parse(videosForProcessingStr);
+        }
+
+        if (!videosToProcess || videosToProcess.length === 0) {
+          console.log("No videos found to process");
+          return;
+        }
+
+        setVideoProcessing(true);
+        setVideoProcessingStatus("Đang chuẩn bị video...");
+
+        const pythonServerUrl = process.env.NEXT_PUBLIC_API_BACKEND || 'http://localhost:4000';
+        const videoFormData = new FormData();
+        
+        videoFormData.append("frame_type", videoProcessingData.frameType);
+        videoFormData.append("duration", videoProcessingData.duration);
+        videoFormData.append("mediaSessionCode", videoProcessingData.mediaSessionCode);
+
+        setVideoProcessingStatus("Đang tải video...");
+
+        // Convert video blob URLs to files
+        for (let i = 0; i < videosToProcess.length; i++) {
+          try {
+            const response = await fetch(videosToProcess[i]);
+            const blob = await response.blob();
+            const file = new File([blob], `video_${i}.webm`, { type: 'video/webm' });
+            videoFormData.append("files", file);
+          } catch (error) {
+            console.error(`Error converting video ${i}:`, error);
+          }
+        }
+
+        // Add background and overlay if available
+        if (videoProcessingData.selectedTemplate?.background) {
+          try {
+            const response = await fetch(videoProcessingData.selectedTemplate.background);
+            const blob = await response.blob();
+            const file = new File([blob], 'background.jpg', { type: 'image/jpeg' });
+            videoFormData.append("background", file);
+          } catch (error) {
+            console.error("Error converting background:", error);
+          }
+        }
+
+        if (videoProcessingData.selectedTemplate?.overlay) {
+          try {
+            const response = await fetch(videoProcessingData.selectedTemplate.overlay);
+            const blob = await response.blob();
+            const file = new File([blob], 'overlay.png', { type: 'image/png' });
+            videoFormData.append("overlay", file);
+          } catch (error) {
+            console.error("Error converting overlay:", error);
+          }
+        }
+
+        setVideoProcessingStatus("Đang xử lý video...");
+
+        // Call video processing API
+        const videoResponse = await fetch(`${pythonServerUrl}/api/process-video`, {
+          method: 'POST',
+          body: videoFormData,
+        });
+
+        if (videoResponse.ok) {
+          const videoResult = await videoResponse.json();
+          console.log("Video API Response:", videoResult);
+
+          // Update video results
+          if (videoResult.video) {
+            setVideoQrCode(videoResult.video);
+            localStorage.setItem("videoQrCode", videoResult.video);
+            console.log("Video URL saved:", videoResult.video);
+          }
+
+          if (videoResult.fast_video) {
+            setGifQrCode(videoResult.fast_video);
+            localStorage.setItem("gifQrCode", videoResult.fast_video);
+            console.log("Fast video URL saved:", videoResult.fast_video);
+          }
+
+          setVideoProcessingStatus("Video đã xử lý xong!");
+        } else {
+          console.error("Video processing failed:", await videoResponse.text());
+          setVideoProcessingStatus("Lỗi xử lý video");
+        }
+
+      } catch (error) {
+        console.error("Error in video processing:", error);
+        setVideoProcessingStatus("Lỗi xử lý video");
+      } finally {
+        setVideoProcessing(false);
+        // Xóa dữ liệu video processing sau khi hoàn thành
+        localStorage.removeItem("videoProcessingData");
+        localStorage.removeItem("videosForProcessing");
+      }
+    };
+
+    // Đợi một chút để component render xong
+    const timer = setTimeout(processVideos, 2000);
+    return () => clearTimeout(timer);
+  }, [videos, setVideoQrCode, setGifQrCode]);
+
   // Automatically redirect to home after 60 seconds and clear data
   useEffect(() => {
     const timer = setTimeout(() => {
       clearAllBoothData();
       localStorage.removeItem("mediaSessionCode");
+      localStorage.removeItem("videoProcessingData");
+      localStorage.removeItem("videosForProcessing");
+      localStorage.removeItem("imageQrCode");
+      localStorage.removeItem("videoQrCode");
+      localStorage.removeItem("gifQrCode");
       router.push("/");
     }, 60000);
 
@@ -106,6 +237,16 @@ export default function Step9() {
             )}
           </div>
         </div>
+
+        {/* Video Processing Status */}
+        {videoProcessing && (
+          <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg mb-8">
+            <div className="flex items-center space-x-4">
+              <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+              <p className="text-white text-lg">{videoProcessingStatus}</p>
+            </div>
+          </div>
+        )}
 
 
       </main>
