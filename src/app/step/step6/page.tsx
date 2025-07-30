@@ -15,14 +15,7 @@ export default function Step6() {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const {
-    photos,
-    setPhotos,
-    setVideos,
-    selectedFrame,
-    currentStore,
-    storeError,
-  } = useBooth();
+  const { photos, setPhotos, setVideos, videos, selectedFrame, currentStore, storeError } = useBooth();
   const storeTheme = getStoreTheme(currentStore);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
@@ -32,9 +25,7 @@ export default function Step6() {
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [permissionStatus, setPermissionStatus] = useState<string | null>(null); // Thêm state để theo dõi trạng thái quyền
 
-  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>(
-    []
-  );
+  const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>("");
   const [showCameraSelector, setShowCameraSelector] = useState<boolean>(false);
 
@@ -53,111 +44,60 @@ export default function Step6() {
 
     return () => clearTimeout(timeout);
   }, []);
-  console.log("MediaRecorder supported:", !!window.MediaRecorder);
-  console.log(
-    "VP9 supported:",
-    MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
-  );
 
-  const startRecording = useCallback(async () => {
-    if (
-      !streamRef.current ||
-      !streamRef.current
-        .getTracks()
-        .every((track) => track.readyState === "live")
-    ) {
-      console.warn("Stream invalid, reinitializing...");
-      await initializeCamera(selectedCameraId);
-    }
-    recordedChunksRef.current = [];
-
-    const mimeTypes = [
-      "video/webm;codecs=vp9",
-      "video/webm;codecs=vp8",
-      "video/mp4;codecs=avc1",
-      "video/webm",
-    ];
-
-    const supportedMimeType = mimeTypes.find((type) =>
-      MediaRecorder.isTypeSupported(type)
-    );
-    if (!supportedMimeType) {
-      console.error("No supported MIME type for MediaRecorder");
-      setCameraError("Trình duyệt không hỗ trợ quay video.");
+  const startRecording = useCallback(() => {
+    if (!streamRef.current) {
+      console.log("No stream available for recording");
       return;
     }
 
-    try {
-      if (!streamRef.current) {
-        throw new Error("Stream is not available");
-      }
+    recordedChunksRef.current = [];
+    console.log("Starting video recording...");
 
-      const mediaRecorder = new MediaRecorder(streamRef.current, {
-        mimeType: supportedMimeType,
-      });
+    try {
+      const options = { mimeType: "video/webm;codecs=vp9" };
+      const mediaRecorder = new MediaRecorder(streamRef.current, options);
+
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           recordedChunksRef.current.push(event.data);
+          console.log("Recording data chunk:", event.data.size, "bytes");
         }
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, {
-          type: supportedMimeType,
-        });
+        const blob = new Blob(recordedChunksRef.current, { type: "video/webm" });
         const videoUrl = URL.createObjectURL(blob);
-        setVideos((prev) => [videoUrl, ...prev]);
-        console.log("Video recorded with MIME type:", supportedMimeType);
+        setVideos((prev) => {
+          const newVideos = [...prev, videoUrl];
+          console.log("Video recorded and added to videos array:", videoUrl);
+          console.log("Total videos after recording:", newVideos.length);
+          return newVideos;
+        });
       };
 
       mediaRecorder.start();
+      console.log("MediaRecorder started");
     } catch (e) {
       console.error("Error starting recording:", e);
-      setCameraError("Không thể bắt đầu quay video.");
     }
-  }, [setVideos , selectedCameraId,]);
-  useEffect(() => {
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
-      if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== "inactive"
-      ) {
-        mediaRecorderRef.current.stop();
-      }
-    };
-  }, []);
-  const stopRecording = useCallback(() => {
-    return new Promise<void>((resolve) => {
-      if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== "inactive"
-      ) {
-        mediaRecorderRef.current.onstop = () => {
-          const blob = new Blob(recordedChunksRef.current, {
-            type: "video/webm",
-          });
-          const videoUrl = URL.createObjectURL(blob);
-          setVideos((prev) => [videoUrl, ...prev]);
-          resolve();
-        };
-        mediaRecorderRef.current.stop();
-      } else {
-        resolve();
-      }
-    });
   }, [setVideos]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      console.log("Stopping video recording...");
+      mediaRecorderRef.current.stop();
+    } else {
+      console.log("MediaRecorder not active, cannot stop");
+    }
+  }, []);
+
   const enumerateCameras = useCallback(async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(
-        (device) => device.kind === "videoinput"
-      );
+      const videoDevices = devices.filter((device) => device.kind === "videoinput");
       setAvailableCameras(videoDevices);
 
       if (!selectedCameraId && videoDevices.length > 0) {
@@ -179,27 +119,25 @@ export default function Step6() {
 
       const constraintConfigs: MediaStreamConstraints[] = [
         ...(deviceId
-          ? [
-              {
-                video: {
-                  deviceId: { exact: deviceId },
-                  width: { ideal: 1920, min: 1280 },
-                  height: { ideal: 1080, min: 720 },
-                  facingMode: "user",
-                  aspectRatio: { ideal: 16 / 9 },
-                },
-                audio: false,
-              },
-            ]
+          ? [{
+            video: {
+              deviceId: { exact: deviceId },
+              width: { ideal: 3840, min: 1280 }, // 4K resolution if available
+              height: { ideal: 2160, min: 720 },
+              facingMode: "user",
+              aspectRatio: { ideal: 16/9 },
+            },
+            audio: false
+          }]
           : []),
         {
           video: {
             width: { ideal: 3840, min: 1280 },
             height: { ideal: 2160, min: 720 },
             facingMode: "user",
-            aspectRatio: { ideal: 16 / 9 },
+            aspectRatio: { ideal: 16/9 },
           },
-          audio: false,
+          audio: false
         },
         {
           video: {
@@ -207,17 +145,17 @@ export default function Step6() {
             height: { ideal: 1080, min: 720 },
             facingMode: "user",
           },
-          audio: false,
+          audio: false
         },
         {
           video: {
             facingMode: "user",
           },
-          audio: false,
+          audio: false
         },
         {
           video: true,
-          audio: false,
+          audio: false
         },
       ];
 
@@ -230,25 +168,18 @@ export default function Step6() {
           break;
         } catch (error) {
           lastError = error as Error;
-          console.warn(
-            "Failed to get stream with constraints:",
-            constraints,
-            error
-          );
+          console.warn("Failed to get stream with constraints:", constraints, error);
 
           // If it's an OverconstrainedError and we're trying a specific device,
           // skip to more general constraints
-          if (error instanceof Error && error.name === "OverconstrainedError") {
+          if (error instanceof Error && error.name === 'OverconstrainedError') {
             continue;
           }
         }
       }
 
       if (!stream) {
-        throw (
-          lastError ||
-          new Error("Unable to access camera with any configuration")
-        );
+        throw lastError || new Error("Unable to access camera with any configuration");
       }
 
       if (videoRef.current) {
@@ -256,24 +187,19 @@ export default function Step6() {
         streamRef.current = stream;
         setIsCameraLoading(false);
       }
+
     } catch (error) {
       console.error("Error initializing camera:", error);
       setIsCameraLoading(false);
 
       if (error instanceof Error) {
-        if (error.name === "NotAllowedError") {
+        if (error.name === 'NotAllowedError') {
           setPermissionStatus("denied");
-          setCameraError(
-            "Quyền truy cập máy ảnh bị từ chối. Vui lòng cấp quyền để tiếp tục."
-          );
-        } else if (error.name === "NotFoundError") {
-          setCameraError(
-            "Không tìm thấy camera. Vui lòng kiểm tra kết nối camera."
-          );
-        } else if (error.name === "OverconstrainedError") {
-          setCameraError(
-            "Camera không hỗ trợ cấu hình yêu cầu. Đang thử cấu hình khác..."
-          );
+          setCameraError("Quyền truy cập máy ảnh bị từ chối. Vui lòng cấp quyền để tiếp tục.");
+        } else if (error.name === 'NotFoundError') {
+          setCameraError("Không tìm thấy camera. Vui lòng kiểm tra kết nối camera.");
+        } else if (error.name === 'OverconstrainedError') {
+          setCameraError("Camera không hỗ trợ cấu hình yêu cầu. Đang thử cấu hình khác...");
           // Try again with basic constraints
           setTimeout(() => {
             initializeCamera();
@@ -286,6 +212,7 @@ export default function Step6() {
       }
     }
   }, []);
+
 
   useEffect(() => {
     if (selectedCameraId && permissionStatus === "granted") {
@@ -348,30 +275,17 @@ export default function Step6() {
         setIsCapturing(false);
         setCountdown(null);
         setIsCompleted(true);
+        console.log("All shots completed, redirecting to step7 with videos:", videos.length);
         setTimeout(() => router.push("/step/step7"), 1500);
       }
     }
 
     return () => clearTimeout(timer);
-  }, [
-    countdown,
-    isCapturing,
-    shotCount,
-    maxShots,
-    router,
-    capturePhoto,
-    stopRecording,
-    startRecording,
-  ]);
+  }, [countdown, isCapturing, shotCount, maxShots, router, capturePhoto, stopRecording, startRecording]);
 
   const startCapture = (): void => {
-    if (
-      !isCapturing &&
-      !isCameraLoading &&
-      !cameraError &&
-      !isCompleted &&
-      permissionStatus === "granted"
-    ) {
+    if (!isCapturing && !isCameraLoading && !cameraError && !isCompleted && permissionStatus === "granted") {
+      console.log("Starting capture session - clearing previous data");
       setPhotos([]);
       setVideos([]);
       setShotCount(0);
@@ -393,6 +307,8 @@ export default function Step6() {
     [isCapturing]
   );
 
+
+
   const handleNext = () => {
     if (photos.length >= maxShots && !isCapturing && !isCameraLoading) {
       router.push("/step/step7");
@@ -411,9 +327,7 @@ export default function Step6() {
       console.error("Error requesting camera permission:", error);
       setIsCameraLoading(false);
       setPermissionStatus("denied");
-      setCameraError(
-        "Quyền truy cập máy ảnh bị từ chối. Vui lòng cấp quyền để tiếp tục."
-      );
+      setCameraError("Quyền truy cập máy ảnh bị từ chối. Vui lòng cấp quyền để tiếp tục.");
     }
   };
 
@@ -422,11 +336,9 @@ export default function Step6() {
     const checkCameraPermission = async () => {
       try {
         setIsCameraLoading(true);
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         // Stop the test stream immediately
-        stream.getTracks().forEach((track) => track.stop());
+        stream.getTracks().forEach(track => track.stop());
 
         setPermissionStatus("granted");
         await enumerateCameras();
@@ -443,27 +355,33 @@ export default function Step6() {
 
   return (
     <StoreBackground currentStore={currentStore}>
+
+
       {storeError && (
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-red-500 bg-opacity-90 text-white px-4 py-2 rounded-lg z-50">
           {storeError}
         </div>
       )}
 
-      <StoreHeader currentStore={currentStore} title="Chế độ chụp hình" />
+      <StoreHeader
+        currentStore={currentStore}
+        title="Chế độ chụp hình"
+      />
 
       {/* Main content */}
       <main className="flex flex-row items-center justify-center flex-grow z-10 gap-8 px-4 min-h-0 overflow-hidden">
         <div className="flex-1 max-w-4xl h-full flex items-center justify-center">
-          <div className="w-full max-h-full aspect-[4/3] bg-black bg-opacity-70 rounded-2xl border shadow-lg overflow-hidden relative">
+          <div className="w-full max-h-full aspect-[4/3] bg-black bg-opacity-70 rounded-2xl border shadow-lg overflow-hidden relative"
+
+          >
             {/* Camera selector button */}
             {availableCameras.length > 1 && permissionStatus === "granted" && (
               <div className="absolute top-4 right-4 z-20">
                 <button
                   onClick={() => setShowCameraSelector(!showCameraSelector)}
                   disabled={isCapturing}
-                  className={`p-3 rounded-full bg-black bg-opacity-70 border text-white hover:bg-opacity-90 transition-all ${
-                    isCapturing ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                  className={`p-3 rounded-full bg-black bg-opacity-70 border text-white hover:bg-opacity-90 transition-all ${isCapturing ? "opacity-50 cursor-not-allowed" : ""
+                    }`}
                   style={{ borderColor: storeTheme.borderColor }}
                   title="Chọn camera"
                 >
@@ -479,18 +397,12 @@ export default function Step6() {
                       <button
                         key={camera.deviceId}
                         onClick={() => handleCameraChange(camera.deviceId)}
-                        className={`block w-full px-4 py-3 text-left hover:bg-opacity-50 transition-colors ${
-                          index === 0 ? "rounded-t-lg" : ""
-                        } ${
-                          index === availableCameras.length - 1
-                            ? "rounded-b-lg"
-                            : ""
-                        }`}
+                        className={`block w-full px-4 py-3 text-left hover:bg-opacity-50 transition-colors ${index === 0 ? "rounded-t-lg" : ""} ${index === availableCameras.length - 1 ? "rounded-b-lg" : ""
+                          }`}
                         style={{
-                          backgroundColor:
-                            selectedCameraId === camera.deviceId
-                              ? `${storeTheme.primaryColor}70`
-                              : "transparent",
+                          backgroundColor: selectedCameraId === camera.deviceId
+                            ? `${storeTheme.primaryColor}70`
+                            : 'transparent'
                         }}
                         onMouseEnter={(e) => {
                           if (selectedCameraId !== camera.deviceId) {
@@ -499,16 +411,13 @@ export default function Step6() {
                         }}
                         onMouseLeave={(e) => {
                           if (selectedCameraId !== camera.deviceId) {
-                            e.currentTarget.style.backgroundColor =
-                              "transparent";
+                            e.currentTarget.style.backgroundColor = 'transparent';
                           }
                         }}
                       >
                         <div className="flex items-center gap-2">
                           <Camera size={16} />
-                          <span className="text-sm">
-                            {camera.label || `Camera ${index + 1}`}
-                          </span>
+                          <span className="text-sm">{camera.label || `Camera ${index + 1}`}</span>
                         </div>
                       </button>
                     ))}
@@ -521,9 +430,7 @@ export default function Step6() {
               <div className="w-full h-full flex items-center justify-center bg-black bg-opacity-70">
                 <div className="flex flex-col items-center text-red-500">
                   <CameraOff size={40} className="mb-2" />
-                  <p className="text-xl font-semibold text-center">
-                    {cameraError}
-                  </p>
+                  <p className="text-xl font-semibold text-center">{cameraError}</p>
                   {permissionStatus === "prompt" && (
                     <button
                       onClick={requestCameraPermission}
@@ -566,44 +473,27 @@ export default function Step6() {
             className="bg-black bg-opacity-70 rounded-xl border store-branded-border shadow-md p-4 flex flex-col items-center gap-3"
             style={storeTheme.glowStyle}
           >
-            <h2 className="text-2xl font-semibold text-white">
+            <h2
+              className="text-2xl font-semibold text-white"
+
+            >
               Bảng điều khiển
             </h2>
             <div className="text-center">
               <p className="text-gray-300 text-xl">
-                Đã chụp:{" "}
-                <span className="font-bold text-white">
-                  {shotCount}/{maxShots}
-                </span>
+                Đã chụp: <span className="font-bold text-white">{shotCount}/{maxShots}</span>
               </p>
             </div>
 
             <button
               onClick={startCapture}
-              disabled={
-                isCapturing ||
-                isCameraLoading ||
-                cameraError !== null ||
-                isCompleted ||
-                permissionStatus !== "granted"
-              }
-              className={`px-6 py-3 rounded-full font-semibold text-white flex items-center gap-2 transition-all store-branded-button ${
-                isCapturing ||
-                isCameraLoading ||
-                cameraError ||
-                isCompleted ||
-                permissionStatus !== "granted"
-                  ? "bg-gray-600 cursor-not-allowed"
-                  : "shadow-lg hover:shadow-xl"
-              }`}
+              disabled={isCapturing || isCameraLoading || cameraError !== null || isCompleted || permissionStatus !== "granted"}
+              className={`px-6 py-3 rounded-full font-semibold text-white flex items-center gap-2 transition-all store-branded-button ${isCapturing || isCameraLoading || cameraError || isCompleted || permissionStatus !== "granted"
+                ? "bg-gray-600 cursor-not-allowed"
+                : "shadow-lg hover:shadow-xl"
+                }`}
               style={
-                !(
-                  isCapturing ||
-                  isCameraLoading ||
-                  cameraError ||
-                  isCompleted ||
-                  permissionStatus !== "granted"
-                )
+                !(isCapturing || isCameraLoading || cameraError || isCompleted || permissionStatus !== "granted")
                   ? storeTheme.buttonStyle
                   : undefined
               }
@@ -612,8 +502,8 @@ export default function Step6() {
               {isCapturing
                 ? `Đang chụp (${countdown}s)`
                 : isCompleted
-                ? "Đã hoàn thành"
-                : "Bắt đầu chụp"}
+                  ? "Đã hoàn thành"
+                  : "Bắt đầu chụp"}
             </button>
 
             {isCapturing && (
@@ -631,7 +521,10 @@ export default function Step6() {
             className="flex-1 bg-black bg-opacity-70 rounded-xl border store-branded-border shadow-md p-4 overflow-hidden flex flex-col min-h-0"
             style={storeTheme.glowStyle}
           >
-            <h2 className="text-lg font-semibold mb-3">
+            <h2
+              className="text-lg font-semibold mb-3"
+
+            >
               Ảnh đã chụp ({photos.length})
             </h2>
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0">
@@ -669,9 +562,7 @@ export default function Step6() {
 
       <StoreNavigationButtons
         onNext={handleNext}
-        nextDisabled={
-          photos.length < maxShots || isCapturing || isCameraLoading
-        }
+        nextDisabled={photos.length < maxShots || isCapturing || isCameraLoading}
         currentStore={currentStore}
       />
     </StoreBackground>

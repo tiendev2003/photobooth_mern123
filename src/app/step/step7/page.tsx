@@ -11,12 +11,12 @@ import { useRouter } from "next/navigation";
 
 export default function Step7() {
   const router = useRouter();
-  const { photos,  selectedFrame, selectedIndices, setSelectedIndices, currentStore } = useBooth();
+  const { photos,   selectedFrame, selectedIndices, setSelectedIndices, currentStore } = useBooth();
   const handleBack = () => {
     router.push("/step/step6");
   };
   const {showDialog} = useDialog();
-
+ 
 
   const handleNext = () => {
     // Check if enough photos are selected
@@ -254,6 +254,7 @@ export default function Step7() {
           </div>
         </div>
       </div>
+     
 
       <StoreNavigationButtons
         onBack={handleBack}

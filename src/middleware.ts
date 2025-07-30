@@ -30,6 +30,7 @@ const publicPaths = [
   "/api/videos",
    "/api/images",
   "/api/filters",
+  "/api/process-media",
   "/login",
   "/step/step1",
   "/step/step2",
