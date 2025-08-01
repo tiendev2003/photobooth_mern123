@@ -51,7 +51,7 @@ export default function Step4() {
     };
 
     fetchPricing();
-  }, [currentStore]);
+  }, [currentStore, user]);
 
   const getPriceForQuantity = (qty: number) => {
     if (!pricing) return 0;

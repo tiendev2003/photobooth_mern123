@@ -121,7 +121,7 @@ export default function StoresPage() {
         fetchManagers();
       }
     }
-  }, [user, token]);
+  }, [user, token, showDialog]);
 
   // Generate unique account number
   const generateAccountNumber = () => {

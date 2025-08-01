@@ -66,7 +66,21 @@ const BoothContext = createContext<BoothContextType | undefined>(undefined);
 
 export const BoothProvider = ({ children }: { children: ReactNode }) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [selectedFrame, setSelectedFrame] = useState<FrameType | null>(null);
+  const [selectedFrame, setSelectedFrame] = useState<FrameType | null>(
+    {
+      id: "3",
+      name: "Khung hình 1x2",
+      image: "/uploads/type/1x2.png",
+      columns: 1,
+      rows: 2,
+      isHot: false,
+      isCustom: true, // Đánh dấu là khung tùy chỉnh
+      totalImages: 1,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  );
   const [selectedIndices, setSelectedIndices] = useState<(number | undefined)[]>(Array(8).fill(undefined));
   const [selectedFilter, setSelectedFilter] = useState<FilterOption>(filterOptions[0]);
   const [selectedTemplate, setSelectedTemplate] = useState<FrameTemplate | null>(null);

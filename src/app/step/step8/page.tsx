@@ -21,6 +21,19 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick-theme.css";
 import "slick-carousel/slick/slick.css";
 
+// Define aspect ratios based on frame configurations (columns, rows, isCustom)
+const aspect_ratios: Record<string, [number, number]> = {
+  "1,1,false": [16, 9],   // 1x1 frame (standard)
+  "1,1,true": [1, 1],     // 1x1 circle frame
+  "2,1,false": [1, 1],    // 2x1 frame
+  "2,1,true": [3, 4],     // 2x1 custom frame
+  "2,2,false": [4, 3],    // 2x2 frame
+  "3,2,false": [5, 4],    // 3x2 frame
+  "2,3,false": [13, 12],  // 2x3 frame
+  "1,4,true": [4, 3],     // 1x4 custom frame
+  "1,2,true": [3, 4]      // 1x2 custom frame
+};
+
 // Enhanced filters for skin beautification with server-side processing support
 const skinFilters = [
   {
@@ -397,7 +410,7 @@ export default function Step8() {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                "filePath": pythonServerUrl + imageResult.image,
+                "filePath": pythonServerUrl + imageResult.print_image,
                 "fileName": "photobooth.jpg",
                 "printerName": selectedFrame?.isCustom ? "DS-RX1-Cut" : "DS-RX1",
                 "quantity": selectedFrame?.isCustom ? selectedQuantity : selectedQuantity * 2 ,
@@ -471,38 +484,44 @@ export default function Step8() {
   const renderCell = (idx: number) => {
     const photoIndex = selectedIndices[idx];
 
-    const cellContent =
-      photoIndex !== undefined ? (
-        <Image
-          src={photos[photoIndex].image || "/placeholder.svg"}
-          alt={`Slot ${idx}`}
-          className={cn(
-            "h-full w-full object-cover photo-booth-image",
-            activeSkinFilter.className,
-            selectedFrame?.isCircle && "rounded-full"
-          )}
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw"
-        />
-      ) : (
-        <div
-          className={cn(
-            "flex h-full w-full flex-col items-center justify-center text-gray-400",
-            selectedFrame?.isCircle && "rounded-full"
-          )}
-        >
-          <span className="text-xs">{"Empty"}</span>
-        </div>
-      );
+    const cellContent = photoIndex !== undefined ? (
+      <Image
+        src={photos[photoIndex].image || "/placeholder.svg"}
+        alt={`Slot ${idx}`}
+        className={cn(
+          "h-full w-full object-cover photo-booth-image",
+          activeSkinFilter.className,
+          selectedFrame?.isCircle && "rounded-full"
+        )}
+        fill
+        sizes="(max-width: 768px) 100vw, 50vw"
+      />
+    ) : (
+      <div className={cn(
+        "flex h-full w-full flex-col items-center justify-center text-gray-400",
+        selectedFrame?.isCircle && "rounded-full"
+      )}>
+        <span className="text-xs">{"Empty"}</span>
+      </div>
+    );
 
-    const baseClass =
-      "relative w-full flex items-center justify-center transition-all duration-200 overflow-hidden border border-transparent";
+    // Get aspect ratio based on frame type
+    const frameKey = selectedFrame ? `${selectedFrame.columns},${selectedFrame.rows},${selectedFrame.isCustom}` : "";
+    
+    // Determine the correct aspect ratio for the cell
+    let cellAspectRatio: [number, number];
+    if (selectedFrame && selectedFrame.id === "1" && selectedFrame.columns === 1 && selectedFrame.rows === 1 && !selectedFrame.isCustom) {
+      cellAspectRatio = [16, 9]; // Special case for id=1 (1x1 horizontal)
+    } else if (selectedFrame && selectedFrame.isCircle) {
+      cellAspectRatio = [1, 1]; // Perfect square for circle
+    } else {
+      cellAspectRatio = aspect_ratios[frameKey] || [4, 3]; // Default to 4:3 if not found
+    }
+    
+    const baseClass = "relative flex items-center justify-center transition-all duration-200 overflow-hidden border border-transparent w-full h-full";
     const emptyClass = "border-dashed border-gray-200 bg-gray-50/50";
     const hasPhoto = selectedIndices[idx] !== undefined;
-    const isLandscape =
-      (selectedFrame?.columns ?? 0) > (selectedFrame?.rows ?? 0) &&
-      !selectedFrame?.isCustom;
-    const isSquare = selectedFrame?.columns === selectedFrame?.rows;
+    
     return (
       <div
         key={idx}
@@ -510,24 +529,22 @@ export default function Step8() {
           baseClass,
           !hasPhoto && emptyClass,
           hasPhoto && "cursor-pointer",
-          selectedFrame?.isCustom && selectedFrame?.rows == 4
-            ? "aspect-[4/3]"
-            : selectedFrame?.isCustom && selectedFrame?.rows == 2
-            ? " aspect-[3/4]"
-            : isSquare && selectedFrame?.columns == 2
-            ? "aspect-[3/4]"
-            : selectedFrame?.columns == 2 || selectedFrame?.isCircle
-            ? "aspect-square"
-            : isLandscape
-            ? "aspect-[5/4]"
-            : "aspect-[3/4]",
-          selectedFrame?.columns === 2 && selectedFrame?.rows === 3
-            ? "aspect-[13/12]"
-            : ""
+          selectedFrame?.isCircle && "rounded-full",
         )}
-        // No click handler needed in step8
       >
-        {cellContent}
+        <div 
+          style={{
+            width: "100%",
+            height: "100%",
+            position: "relative",
+            // This ensures the image respects the aspect ratio within the container
+            aspectRatio: selectedFrame?.id === "5" ? "4/3" : `${cellAspectRatio[0]}/${cellAspectRatio[1]}`,
+            borderRadius: selectedFrame?.isCircle ? "50%" : "0",
+            overflow: "hidden"
+          }}
+        >
+          {cellContent}
+        </div>
       </div>
     );
   };
@@ -536,14 +553,81 @@ export default function Step8() {
     if (!selectedFrame) return null;
     const commonClasses = "mx-auto overflow-hidden shadow-md";
 
-    const isLandscape =
-      selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom;
-    const isSquare = selectedFrame.columns === selectedFrame.rows;
+    // Get aspect ratio and padding based on frame type
+     
+    // Calculate padding based on frame type - using only the template string
+    let paddingTemplate = "";
+    
+    if (selectedFrame.columns === 1 && selectedFrame.rows === 1 && !selectedFrame.isCustom) {
+      // 1x1 frame (4x6 horizontal) - top, left, right = 13px, bottom = whatever
+      paddingTemplate = "px-[13px] pt-[13px] pb-0";
+    } 
+    else if (selectedFrame.columns === 1 && selectedFrame.rows === 1 && selectedFrame.isCircle) {
+      // Circle frame - equal padding on left and right sides only, positioned in the center
+      // Don't use padding template - we'll handle it with inline styles
+      paddingTemplate = "";
+    }
+    else if (selectedFrame.columns === 1 && selectedFrame.rows === 2 && selectedFrame.isCustom) {
+      // 1x2 custom frame - top, left, right = 13px, bottom = whatever
+      paddingTemplate = "px-[13px] pt-[13px] pb-0";
+    }
+    else if (selectedFrame.columns === 2 && selectedFrame.rows === 1 && !selectedFrame.isCustom) {
+      // 2x1 frame (2 items in 1 row) - all sides = 13px
+      paddingTemplate = "px-[13px] pt-[13px] pb-[13px]";
+    }
+    else if (selectedFrame.columns === 2 && selectedFrame.rows === 2 && !selectedFrame.isCustom) {
+      // 2x2 frame (horizontal) - top=13px, left=13px, bottom=13px, right=0 (remaining space on right)
+      paddingTemplate = "pl-[13px] pt-[13px] pr-0 pb-[13px]";
+    }
+    else if (selectedFrame.columns === 3 && selectedFrame.rows === 2 && !selectedFrame.isCustom) {
+      // 3x2 frame (horizontal, id=8) - top, left, right = 13px, bottom = whatever
+      paddingTemplate = "px-[13px] pt-[13px] pb-0";
+    }
+    else if (selectedFrame.columns === 2 && selectedFrame.rows === 3 && !selectedFrame.isCustom) {
+      // 2x3 frame (vertical) - top, left, right = 13px, bottom = whatever
+      paddingTemplate = "px-[13px] pt-[13px] pb-0";
+    }
+    else if (selectedFrame.columns === 1 && selectedFrame.rows === 4 && selectedFrame.isCustom) {
+      // 1x4 frame (vertical, custom) - all sides = 24px, gap = 13px
+      paddingTemplate = "px-[24px] pt-[24px] pb-[24px]";
+    }
+    else {
+      // Default padding
+      paddingTemplate = "px-[13px] pt-[13px] pb-[13px]";
+    }
 
-    const previewHeight = isLandscape ? "4.8in" : "7.2in";
-    const previewWidth = isLandscape ? "7.2in" : "4.8in";
-    const aspectRatio = isLandscape ? "3/2" : "2/3";
+    // Determine gap size based on frame type
+    const gapSize = selectedFrame.columns === 2 && selectedFrame.rows === 1 && !selectedFrame.isCustom 
+      ? "gap-[24px]" 
+      : selectedFrame.columns === 1 && selectedFrame.rows === 4 && selectedFrame.isCustom
+        ? "gap-[13px]"
+        : "gap-[13px]";
+    
+    // Set fixed frame dimensions
+    const isLandscape = selectedFrame.columns > selectedFrame.rows && !selectedFrame.isCustom || 
+                       (selectedFrame.id === "1" && selectedFrame.columns === 1 && selectedFrame.rows === 1 && !selectedFrame.isCustom);
+    
+    // Fixed frame dimensions - these are the container sizes
+    let frameWidth = isLandscape ? 720 : 480;
+    let frameHeight = isLandscape ? 480 : 720;
+    
+    // For custom frames or circle frames, use special dimensions
+    if (selectedFrame.isCustom) {
+      frameWidth = 240;
+      frameHeight = 720;
+    } else if (selectedFrame.isCircle) {
+      // For circle frame, use portrait dimensions (480x720)
+      frameWidth = 480;
+      frameHeight = 720; // Keep portrait dimensions
+    } else if(selectedFrame.id === "5") {
+      // For 2x2 frame, landscape dimensions (720x480)
+      // Each image should be exactly 220px tall ((480-39)/2) and 293px wide (220*4/3)
+      // with 13px padding on top, left, bottom and 0px on right
+      frameWidth = 720; 
+      frameHeight = 480; // Maintain landscape aspect as per requirement
+    }
 
+    // Frame background and overlay elements
     const frameBackground = selectedTemplate?.background ? (
       <div className="pointer-events-none absolute inset-0 z-0">
         <Image
@@ -552,6 +636,10 @@ export default function Step8() {
           className="h-full w-full object-contain"
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          onError={(e) => {
+            console.error("Error loading background image:", e);
+            e.currentTarget.onerror = null; 
+          }}
         />
       </div>
     ) : null;
@@ -564,75 +652,82 @@ export default function Step8() {
           className="h-full w-full object-contain"
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          onError={(e) => {
+            console.error("Error loading overlay image:", e);
+            e.currentTarget.onerror = null;
+          }}
         />
       </div>
     ) : null;
-
+    
     return (
-      <div
-        className={cn("relative w-full", commonClasses)}
-        style={{
-          height: previewHeight,
-          width: selectedFrame.isCustom ? "2.4in" : previewWidth,
-        }}
-      >
+      <div className={cn("relative w-full", commonClasses)} style={{ 
+        width: `${frameWidth}px`,
+        height: `${frameHeight}px`,
+        padding: "0",
+        boxSizing: "border-box"
+      }} >
         <div
           ref={printPreviewRef}
           data-preview
           id="photobooth-print-preview"
           className={cn(
-            "flex flex-col gap-4 print-preview photo-booth-preview bg-white px-[5%] ",
-            selectedFrame.isCustom
-              ? "pb-[10%] pt-[10%] px-[10%]"
-              : isSquare &&
-                (selectedFrame.columns == 2 || selectedFrame.columns == 1) &&
-                !selectedFrame?.isCircle
-              ? "pt-[5%]"
-              : selectedFrame.isCircle
-              ? "pt-[20%]"
-              : isLandscape
-              ? "px-[5%] pt-[5%]"
-              : "px-[5%] pt-[5%]",
-            selectedFrame?.isCircle && "px-[5%] pt-[20%]"
+            "print-preview photo-booth-preview bg-white",
+            !selectedFrame.isCircle && paddingTemplate, // Only apply padding template if not a circle
           )}
           style={{
-            height: previewHeight,
-            aspectRatio: selectedFrame.isCustom
-              ? "1/3"
-              : isSquare && selectedFrame.columns == 1
-              ? "2/3"
-              : aspectRatio,
+            width: "100%",
+            height: "100%",
+            position: "relative", // Add position relative for absolute positioning of circle
           }}
         >
-          {frameBackground}
-          {selectedFrame.isCustom ? (
-            <div className="relative z-10 grid grid-cols-1 gap-[10px]">
-              {Array.from({ length: selectedFrame.rows }, (_, idx) =>
-                renderCell(idx)
-              )}
+          {selectedFrame.isCircle ? (
+            // Special rendering for circular frame
+            <div 
+              className="absolute"
+              style={{
+                width: "calc(100% - 26px)", // Account for 13px padding on each side
+                left: "13px",
+                right: "13px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                aspectRatio: "1/1", // Perfect circle
+              }}
+            >
+              {renderCell(0)} {/* For circular frame there's only one cell */}
+            </div>
+          ) : selectedFrame.isCustom ? (
+            <div className={`relative z-10 grid grid-cols-1 ${gapSize}`}>
+              {Array.from({ length: selectedFrame.rows }, (_, idx) => renderCell(idx))}
             </div>
           ) : (
             <div
-              className={cn("relative z-10 grid gap-[20px]")}
+              className={cn(
+                "relative z-10 grid",
+                gapSize
+              )}
               style={{
-                gridTemplateColumns: `repeat(${selectedFrame.columns}, 1fr)`,
-              }}
+                display: "grid",
+                gridTemplateColumns: selectedFrame.id === "5" ? 
+                  "repeat(2, 293px)" : // Exact width for 2x2 frame
+                  `repeat(${selectedFrame.columns}, 1fr)`,
+                gridTemplateRows: selectedFrame.id === "5" ? 
+                  "repeat(2, 220px)" : // Exact height for 2x2 frame
+                  undefined,
+                gap: "13px",
+               }}
             >
-              {Array.from({ length: selectedFrame.columns }, (_, colIdx) => (
-                <div key={colIdx} className="flex flex-col gap-[20px]">
-                  {Array.from({ length: selectedFrame.rows }, (_, rowIdx) => {
-                    // Correctly calculate the index for each cell based on column and row
-                    const cellIdx = colIdx + rowIdx * selectedFrame.columns;
-                    return (
-                      <div key={rowIdx} className="">
-                        {renderCell(cellIdx)}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+              {Array.from({ length: selectedFrame.columns * selectedFrame.rows }, (_, idx) => {
+                // Determine cell position directly for all frames
+                return (
+                  <div key={idx}>
+                    {renderCell(idx)}
+                  </div>
+                );
+              })}
             </div>
           )}
+          {frameBackground}
           {frameOverlay}
         </div>
       </div>

@@ -68,7 +68,7 @@ export default function StoreEmployeesPage({ params }: { params: Promise<{ id: s
     if (user && token) {
       fetchStoreEmployees();
     }
-  }, [user, token, storeId, refreshTrigger]);
+  }, [user, token, storeId, refreshTrigger, showDialog]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);

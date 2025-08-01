@@ -281,7 +281,7 @@ export default function Step6() {
     }
 
     return () => clearTimeout(timer);
-  }, [countdown, isCapturing, shotCount, maxShots, router, capturePhoto, stopRecording, startRecording]);
+  }, [countdown, isCapturing, shotCount, maxShots, router, capturePhoto, stopRecording, startRecording, videos]);
 
   const startCapture = (): void => {
     if (!isCapturing && !isCameraLoading && !cameraError && !isCompleted && permissionStatus === "granted") {

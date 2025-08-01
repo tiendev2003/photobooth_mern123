@@ -53,7 +53,7 @@ export default function Step3() {
     };
 
     fetchPricing();
-  }, [currentStore]);
+  }, [currentStore , user]);
   const [frameTypes] = useState<FrameType[]>([
     {
       id: "1",
