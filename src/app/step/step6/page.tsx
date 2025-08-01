@@ -122,8 +122,8 @@ export default function Step6() {
           ? [{
             video: {
               deviceId: { exact: deviceId },
-              width: { ideal: 3840, min: 1280 }, // 4K resolution if available
-              height: { ideal: 2160, min: 720 },
+              width: { ideal: 3840, min: 3840 }, // 4K resolution if available
+              height: { ideal: 2160, min: 2160 },
               facingMode: "user",
               aspectRatio: { ideal: 16/9 },
             },
@@ -132,8 +132,8 @@ export default function Step6() {
           : []),
         {
           video: {
-            width: { ideal: 3840, min: 1280 },
-            height: { ideal: 2160, min: 720 },
+            width: { ideal: 3840, min: 3840 },
+            height: { ideal: 2160, min: 2160 },
             facingMode: "user",
             aspectRatio: { ideal: 16/9 },
           },
