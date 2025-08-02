@@ -18,9 +18,7 @@ export default function Step9() {
   const [sessionUrl, setSessionUrl] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [videoProcessing, setVideoProcessing] = useState<boolean>(false);
-  const [videoProcessingStatus, setVideoProcessingStatus] = useState<string>("Đang xử lý video...");
-
+ 
   useEffect(() => {
     const getMediaSessionCode = () => {
       try {
@@ -73,19 +71,40 @@ export default function Step9() {
         }
 
         // Lấy videos từ localStorage hoặc BoothContext
-        let videosToProcess = videos;
-        if ((!videosToProcess || videosToProcess.length === 0) && videosForProcessingStr) {
-          videosToProcess = JSON.parse(videosForProcessingStr);
+        let allVideos = videos;
+        if ((!allVideos || allVideos.length === 0) && videosForProcessingStr) {
+          allVideos = JSON.parse(videosForProcessingStr);
         }
 
-        if (!videosToProcess || videosToProcess.length === 0) {
+        if (!allVideos || allVideos.length === 0) {
           console.log("No videos found to process");
           return;
         }
+        
+        // Lấy selectedIndices từ localStorage (được lưu từ step8)
+        const selectedIndicesStr = localStorage.getItem("selectedIndices");
+        let selectedIndices: number[] = [];
+        
+        if (selectedIndicesStr) {
+          try {
+            selectedIndices = JSON.parse(selectedIndicesStr);
+            console.log("Using selected indices:", selectedIndices);
+          } catch (error) {
+            console.error("Error parsing selectedIndices:", error);
+          }
+        }
+        
+        // Chỉ lấy những video thuộc các ảnh đã chọn
+        const videosToProcess = selectedIndices.length > 0 
+          ? selectedIndices
+              .filter((idx: number | undefined) => idx !== undefined)
+              .map((idx: number) => allVideos[idx])
+              .filter((video: string) => video)
+          : allVideos;  
+          
+        console.log("Selected videos for processing:", videosToProcess.length);
 
-        setVideoProcessing(true);
-        setVideoProcessingStatus("Đang chuẩn bị video...");
-
+ 
         const pythonServerUrl = process.env.NEXT_PUBLIC_API_BACKEND || 'http://localhost:4000';
         const videoFormData = new FormData();
         
@@ -93,8 +112,7 @@ export default function Step9() {
         videoFormData.append("duration", videoProcessingData.duration);
         videoFormData.append("mediaSessionCode", videoProcessingData.mediaSessionCode);
 
-        setVideoProcessingStatus("Đang tải video...");
-
+ 
         // Convert video blob URLs to files
         for (let i = 0; i < videosToProcess.length; i++) {
           try {
@@ -130,8 +148,7 @@ export default function Step9() {
           }
         }
 
-        setVideoProcessingStatus("Đang xử lý video...");
-
+ 
         // Call video processing API
         const videoResponse = await fetch(`${pythonServerUrl}/api/process-video`, {
           method: 'POST',
@@ -155,20 +172,17 @@ export default function Step9() {
             console.log("Fast video URL saved:", videoResult.fast_video);
           }
 
-          setVideoProcessingStatus("Video đã xử lý xong!");
-        } else {
+         } else {
           console.error("Video processing failed:", await videoResponse.text());
-          setVideoProcessingStatus("Lỗi xử lý video");
-        }
+         }
 
       } catch (error) {
         console.error("Error in video processing:", error);
-        setVideoProcessingStatus("Lỗi xử lý video");
-      } finally {
-        setVideoProcessing(false);
-        // Xóa dữ liệu video processing sau khi hoàn thành
+       } finally {
+         // Xóa dữ liệu video processing sau khi hoàn thành
         localStorage.removeItem("videoProcessingData");
         localStorage.removeItem("videosForProcessing");
+        localStorage.removeItem("selectedIndices");
       }
     };
 
@@ -184,6 +198,7 @@ export default function Step9() {
       localStorage.removeItem("mediaSessionCode");
       localStorage.removeItem("videoProcessingData");
       localStorage.removeItem("videosForProcessing");
+      localStorage.removeItem("selectedIndices");
       localStorage.removeItem("imageQrCode");
       localStorage.removeItem("videoQrCode");
       localStorage.removeItem("gifQrCode");
@@ -237,16 +252,7 @@ export default function Step9() {
             )}
           </div>
         </div>
-
-        {/* Video Processing Status */}
-        {videoProcessing && (
-          <div className="flex flex-col items-center bg-white bg-opacity-20 p-6 rounded-lg shadow-lg mb-8">
-            <div className="flex items-center space-x-4">
-              <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-              <p className="text-white text-lg">{videoProcessingStatus}</p>
-            </div>
-          </div>
-        )}
+ 
 
 
       </main>

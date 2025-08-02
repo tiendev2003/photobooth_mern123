@@ -74,39 +74,45 @@ const skinFilters = [
   {
     id: "vintage",
     name: "Hoài cổ",
-    className: "sepia brightness-90 contrast-110",
+    className: "sepia-80 brightness-75 contrast-125 saturate-70",
     preview: "/anh/6.png",
     icon: "📸",
-  },
-  // Các filter nâng cao mới
-  {
-    id: "beauty",
-    name: "Làm đẹp",
-    className: "brightness-108 contrast-105 saturate-105 blur-[0.5px]",
-    preview: "/anh/7.png",
-    icon: "💄",
-  },
-  {
-    id: "brightSkin",
-    name: "Da sáng bóng",
-    className: "brightness-115 contrast-100 saturate-100 blur-[0.3px]",
-    preview: "/anh/8.png",
-    icon: "✨",
-  },
-  {
-    id: "pinkLips",
-    name: "Môi hồng",
-    className: "brightness-105 contrast-105 saturate-115",
-    preview: "/anh/9.png",
-    icon: "💋",
-  },
-  {
-    id: "slimFace",
-    name: "Mặt thon",
-    className: "brightness-105 contrast-105 saturate-100 blur-[0.4px]",
-    preview: "/anh/10.png",
-    icon: "😊",
-  },
+  }, {
+                id: "hdr",
+                name: "HDR",
+                className: "brightness-105 contrast-130 saturate-115 hue-rotate-[5deg]",
+                preview: "/anh/7.png",
+                icon: "🔆",
+            },
+            {
+                id: "clarity",
+                name: "Sắc nét",
+                className: "brightness-105 contrast-120 saturate-100 shadow-[0_0_8px_rgba(0,0,0,0.4)]",
+                preview: "/anh/8.png",
+                icon: "🔍",
+            },
+            {
+                id: "vivid",
+                name: "Sống động",
+                className: "brightness-110 contrast-115 saturate-140 hue-rotate-[2deg]",
+                preview: "/anh/9.png",
+                icon: "🎨",
+            },
+            {
+                id: "noir",
+                name: "Noir",
+                className: "grayscale-80 brightness-105 contrast-140",
+                preview: "/anh/10.png",
+                icon: "🖤",
+            },
+            {
+                id: "dreamy",
+                name: "Mơ màng",
+                className: "brightness-105 contrast-95 saturate-90 blur-[0.5px] hue-rotate-[5deg]",
+                preview: "/anh/11.png",
+                icon: "💭",
+            },
+  
 ];
 
 export default function Step8() {
@@ -390,6 +396,7 @@ export default function Step8() {
         }
       }
       imageFormData.append("prepare_for_printing", "true");
+      imageFormData.append("filter_id", activeSkinFilter.id);
 
       // Call image processing API and wait for result
       const pythonServerUrl = process.env.NEXT_PUBLIC_API_BACKEND || 'http://localhost:4000';
@@ -440,6 +447,9 @@ export default function Step8() {
 
       // Lưu thông tin video processing để step9 sử dụng
       if (videos && videos.length > 0) {
+        // Lưu cả selectedIndices để step9 có thể lọc video tương ứng
+        localStorage.setItem("selectedIndices", JSON.stringify(selectedIndices));
+        
         const videoProcessingData = {
           frameType: selectedFrame?.id ?? "1",
           duration: "10",
@@ -821,7 +831,7 @@ export default function Step8() {
                             : "border border-purple-400/50"
                         }`}
                       >
-                        <div className="aspect-square relative overflow-hidden bg-gradient-to-br from-purple-900/50 to-pink-900/50">
+                        <div className="aspect-[3/4] relative overflow-hidden bg-gradient-to-br from-purple-900/50 to-pink-900/50">
                           {photos && photos.length > 0 ? (
                             <Image
                               src={"/preview.png"}
@@ -855,17 +865,7 @@ export default function Step8() {
                           )}
                         </div>
 
-                        <div
-                          className={`p-2 text-center ${
-                            activeSkinFilter.id === filter.id
-                              ? "bg-pink-600/80"
-                              : "bg-purple-900/60"
-                          }`}
-                        >
-                          <span className="text-xs font-medium text-white">
-                            {filter.name}
-                          </span>
-                        </div>
+                        
                       </div>
                     </div>
                   </div>

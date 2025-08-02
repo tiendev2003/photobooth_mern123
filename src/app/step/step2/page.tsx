@@ -11,12 +11,11 @@ import { useState } from "react";
 export default function Step2() {
   const router = useRouter();
   const { currentStore } = useBooth();
-  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
+  const [selectedLanguage] = useState<string | null>("vi");
   const {showDialog} = useDialog();
 
   const handleNext = () => {
-    // Navigate to the next step if a language is selected
-    if (selectedLanguage) {
+     if (selectedLanguage) {
       router.push("/step/step3");
     } else {
       showDialog({
@@ -55,7 +54,7 @@ export default function Step2() {
           {languageOptions.map((lang) => (
             <button
               key={lang.code}
-              onClick={() => setSelectedLanguage(lang.code)}
+              // onClick={() => setSelectedLanguage(lang.code)}
               style={
                 {
                   border: selectedLanguage === lang.code ? '14px solid white' : 'none',
