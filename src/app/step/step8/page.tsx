@@ -389,13 +389,16 @@ export default function Step8() {
           console.error("Error converting overlay:", error);
         }
       }
+      imageFormData.append("prepare_for_printing", "true");
 
       // Call image processing API and wait for result
       const pythonServerUrl = process.env.NEXT_PUBLIC_API_BACKEND || 'http://localhost:4000';
       const imageResponse = await fetch(`${pythonServerUrl}/api/process-image`, {
         method: 'POST',
         body: imageFormData,
+
       });
+      console.log("Image processing response status:", imageResponse);
 
       if (!imageResponse.ok) {
         const errorText = await imageResponse.text();
