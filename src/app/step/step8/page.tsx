@@ -681,6 +681,7 @@ export default function Step8() {
             position: "relative", // Add position relative for absolute positioning of circle
           }}
         >
+           {frameBackground}
           {selectedFrame.isCircle ? (
             // Special rendering for circular frame
             <div 
@@ -727,7 +728,7 @@ export default function Step8() {
               })}
             </div>
           )}
-          {frameBackground}
+         
           {frameOverlay}
         </div>
       </div>
